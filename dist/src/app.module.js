@@ -20,6 +20,8 @@ import { ReportModule } from './report/report.module.js';
 import { AiModule } from './ai/ai.module.js';
 import { DownloaderModule } from './downloader/downloader.module.js';
 import { StatisticsModule } from './statistics/statistics.module.js';
+import { PbxModule } from './pbx/pbx.module.js';
+import { CompanyModule } from './company/company.module.js';
 import { ScheduleModule } from '@nestjs/schedule';
 let AppModule = class AppModule {
 };
@@ -40,6 +42,8 @@ AppModule = __decorate([
             AiModule,
             DownloaderModule,
             StatisticsModule,
+            PbxModule,
+            CompanyModule,
         ],
         controllers: [AppController],
         providers: [

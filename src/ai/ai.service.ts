@@ -1,11 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import FormData from 'form-data';
 import axios from 'axios';
 import * as fs from 'fs';
 import * as path from 'path';
+import { Prisma } from '@prisma/client';
 
 interface SttApiResponse {
   segments: TranscriptSegment[];
@@ -24,10 +25,17 @@ export interface AnalysisResult {
   summary?: string;
 }
 
+interface Criteria {
+  id: string;
+  name: string;
+  weight: number;
+  description: string | null;
+}
+
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
-  private readonly geminiAi: GoogleGenAI;
+  private readonly geminiAi: GoogleGenerativeAI;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -38,7 +46,7 @@ export class AiService {
       this.logger.error('GEMINI_API_KEY is not set in environment variables.');
       throw new Error('Gemini API key is missing.');
     }
-    this.geminiAi = new GoogleGenAI({ apiKey: geminiApiKey });
+    this.geminiAi = new GoogleGenerativeAI(geminiApiKey);
   }
 
   async transcribeAudio(audioFileUrl: string): Promise<TranscriptSegment[]> {
@@ -136,18 +144,11 @@ export class AiService {
 
     // Using Gemini API for LLM/Analysis
     try {
-      const geminiResponse = await this.geminiAi.models.generateContent({
-        model: 'gemini-2.5-flash', // Or configurable model
-        contents: prompt, // The prompt is already built
-        config: {
-          thinkingConfig: {
-            thinkingBudget: 0, // Disables thinking for faster responses
-          },
-        },
-      });
+      const model = this.geminiAi.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const geminiResponse = await model.generateContent({ contents: [{ role: 'user', parts: [{ text: prompt }] }] });
 
       // Assuming Gemini returns a text response that needs to be parsed into AnalysisResult
-      const analysisText = geminiResponse.text;
+      const analysisText = geminiResponse.response.text();
       if (!analysisText) {
         throw new Error('Gemini API did not return any text for analysis.');
       }
@@ -419,19 +420,12 @@ Respond in JSON format.
     model: string = 'gemini-2.5-flash',
   ): Promise<string> {
     try {
-      const response = await this.geminiAi.models.generateContent({
-        model: model,
-        contents: contents,
-        config: {
-          thinkingConfig: {
-            thinkingBudget: 0, // Disables thinking for faster responses
-          },
-        },
-      });
-      if (!response.text) {
+      const generativeModel = this.geminiAi.getGenerativeModel({ model: model });
+      const response = await generativeModel.generateContent({ contents: [{ role: 'user', parts: [{ text: contents }] }] });
+      if (!response.response.text()) {
         throw new Error('Gemini API did not return any text.');
       }
-      return response.text;
+      return response.response.text();
     } catch (error) {
       if (error instanceof Error) {
         this.logger.error(

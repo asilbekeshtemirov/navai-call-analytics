@@ -3,12 +3,20 @@ import {
   Get,
   Post,
   Body,
+  Patch,
   Param,
+  Delete,
+  UseGuards,
   Query,
   Logger,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiExcludeEndpoint, ApiBearerAuth } from '@nestjs/swagger';
 import { CallService } from './call.service.js';
+import { ApiBearerAuth, ApiOperation, ApiTags, ApiExcludeEndpoint } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/roles.guard.js';
+import { Roles } from '../auth/roles.decorator.js';
+import { UserRole } from '@prisma/client';
+import { CreateCallDto } from './dto/create-call.dto.js';
 import { UploadFromUrlDto } from './dto/upload-from-url.dto.js';
 import {
   HistoryDto,
@@ -40,6 +48,9 @@ export class CallController {
       case 'rating':
         return this.callService.handleRating(body as RatingDto);
       default:
+        this.logger.warn(`Unknown VATS webhook command: ${body.cmd}`);
+        return { status: 'ignored', message: 'Unknown command' };
+    }
   }
 
   @Post('upload-from-url')
@@ -49,6 +60,7 @@ export class CallController {
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
   create(@Body() createCallDto: CreateCallDto) {
     return this.callService.create(createCallDto);

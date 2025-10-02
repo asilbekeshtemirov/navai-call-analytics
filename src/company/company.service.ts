@@ -178,4 +178,8 @@ export class CompanyService {
       },
     });
   }
+
+  async getDashboardData() {
+    return this.getCompanyOverview();
+  }
 }

@@ -105,6 +105,36 @@ async function main() {
         },
     });
     console.log('✅ Manager created (phone: +998901234569, password: manager123)');
+    const employee701 = await prisma.user.upsert({
+        where: { phone: '998905389252' },
+        update: {},
+        create: {
+            firstName: 'Navai',
+            lastName: 'Agent 701',
+            phone: '998905389252',
+            extCode: '701',
+            role: 'EMPLOYEE',
+            passwordHash: employeePassword,
+            branchId: branch1.id,
+            departmentId: dept1.id,
+        },
+    });
+    console.log('✅ Employee 701 created (phone: 998905389252, password: employee123)');
+    const employee702 = await prisma.user.upsert({
+        where: { phone: '998932412054' },
+        update: {},
+        create: {
+            firstName: 'Navai',
+            lastName: 'Agent 702',
+            phone: '998932412054',
+            extCode: '702',
+            role: 'EMPLOYEE',
+            passwordHash: employeePassword,
+            branchId: branch1.id,
+            departmentId: dept1.id,
+        },
+    });
+    console.log('✅ Employee 702 created (phone: 998932412054, password: employee123)');
     const allCriteria = await prisma.criteria.findMany();
     await prisma.call.deleteMany({
         where: {

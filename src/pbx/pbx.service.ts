@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AiService } from '../ai/ai.service.js';
+import { CallStatus } from '@prisma/client';
 
 @Injectable()
 export class PbxService {
@@ -49,7 +50,7 @@ export class PbxService {
       const call = await this.prisma.call.upsert({
         where: { externalId: callid },
         update: {
-          status: status === 'Success' ? 'UPLOADED' : 'FAILED',
+          status: status === 'Success' ? CallStatus.UPLOADED : CallStatus.ERROR,
           durationSec: parseInt(duration) || 0,
           fileUrl: link || null,
         },
@@ -59,7 +60,7 @@ export class PbxService {
           calleeNumber: type === 'in' ? diversion : phone,
           callDate,
           fileUrl: link || null,
-          status: status === 'Success' ? 'UPLOADED' : 'FAILED',
+          status: status === 'Success' ? CallStatus.UPLOADED : CallStatus.ERROR,
           durationSec: parseInt(duration) || 0,
           employeeId: employee.id,
         },

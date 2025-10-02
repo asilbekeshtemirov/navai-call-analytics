@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { UploadFromUrlDto } from './dto/upload-from-url.dto.js';
+import { CreateCallDto } from './dto/create-call.dto.js';
 import * as https from 'https';
 import * as http from 'http';
 import * as fs from 'fs';
@@ -126,6 +127,84 @@ export class CallService {
     });
 
     return { message: 'Rating received' };
+  }
+
+  async create(createCallDto: CreateCallDto) {
+    const { employeeId, callerNumber, calleeNumber, durationSec, audioUrl } = createCallDto;
+
+    const employee = await this.prisma.user.findUnique({
+      where: { id: employeeId },
+    });
+    if (!employee) {
+      throw new BadRequestException(`Employee with ID ${employeeId} not found.`);
+    }
+
+    const call = await this.prisma.call.create({
+      data: {
+        externalId: `manual-${randomUUID()}`,
+        callDate: new Date(),
+        employeeId,
+        branchId: employee.branchId,
+        departmentId: employee.departmentId,
+        fileUrl: audioUrl || '',
+        status: 'UPLOADED',
+        callerNumber,
+        calleeNumber,
+        durationSec,
+      },
+    });
+
+    if (audioUrl) {
+      this.aiService.processCall(call.id).catch((err: any) => {
+        this.logger.error(
+          `Error processing call ${call.id} in background: ${err.message}`,
+        );
+      });
+    }
+
+    return call;
+  }
+
+  async createManualCall(data: {
+    employeeId: string;
+    callerNumber: string;
+    calleeNumber: string;
+    durationSec: number;
+    audioUrl?: string;
+  }) {
+    const { employeeId, callerNumber, calleeNumber, durationSec, audioUrl } = data;
+
+    const employee = await this.prisma.user.findUnique({
+      where: { id: employeeId },
+    });
+    if (!employee) {
+      throw new BadRequestException(`Employee with ID ${employeeId} not found.`);
+    }
+
+    const call = await this.prisma.call.create({
+      data: {
+        externalId: `manual-${randomUUID()}`,
+        callDate: new Date(),
+        employeeId,
+        branchId: employee.branchId,
+        departmentId: employee.departmentId,
+        fileUrl: audioUrl || '',
+        status: 'UPLOADED',
+        callerNumber,
+        calleeNumber,
+        durationSec,
+      },
+    });
+
+    if (audioUrl) {
+      this.aiService.processCall(call.id).catch((err: any) => {
+        this.logger.error(
+          `Error processing call ${call.id} in background: ${err.message}`,
+        );
+      });
+    }
+
+    return call;
   }
 
   async uploadFromUrl(uploadFromUrlDto: UploadFromUrlDto) {

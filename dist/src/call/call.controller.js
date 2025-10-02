@@ -11,9 +11,14 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 var CallController_1;
-import { Controller, Get, Post, Body, Param, Query, Logger, } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiExcludeEndpoint, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Logger, } from '@nestjs/common';
 import { CallService } from './call.service.js';
+import { ApiBearerAuth, ApiOperation, ApiTags, ApiExcludeEndpoint } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/roles.guard.js';
+import { Roles } from '../auth/roles.decorator.js';
+import { UserRole } from '@prisma/client';
+import { CreateCallDto } from './dto/create-call.dto.js';
 import { UploadFromUrlDto } from './dto/upload-from-url.dto.js';
 let CallController = CallController_1 = class CallController {
     callService;
@@ -33,12 +38,18 @@ let CallController = CallController_1 = class CallController {
             case 'rating':
                 return this.callService.handleRating(body);
             default:
-                this.logger.warn(`Unknown VATS command: ${body.cmd}`);
-                return;
+                this.logger.warn(`Unknown VATS webhook command: ${body.cmd}`);
+                return { status: 'ignored', message: 'Unknown command' };
         }
     }
     uploadFromUrl(uploadFromUrlDto) {
         return this.callService.uploadFromUrl(uploadFromUrlDto);
+    }
+    create(createCallDto) {
+        return this.callService.create(createCallDto);
+    }
+    async createManualCall(data) {
+        return this.callService.createManualCall(data);
     }
     findAll(branchId, departmentId, employeeId, status, dateFrom, dateTo) {
         return this.callService.findAll({
@@ -73,6 +84,24 @@ __decorate([
     __metadata("design:paramtypes", [UploadFromUrlDto]),
     __metadata("design:returntype", void 0)
 ], CallController.prototype, "uploadFromUrl", null);
+__decorate([
+    Post(),
+    UseGuards(JwtAuthGuard, RolesGuard),
+    Roles(UserRole.ADMIN, UserRole.MANAGER),
+    __param(0, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [CreateCallDto]),
+    __metadata("design:returntype", void 0)
+], CallController.prototype, "create", null);
+__decorate([
+    Post('manual'),
+    Roles(UserRole.ADMIN, UserRole.MANAGER),
+    ApiOperation({ summary: 'Manual qo\'ng\'iroq yaratish (test uchun)' }),
+    __param(0, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], CallController.prototype, "createManualCall", null);
 __decorate([
     Get(),
     ApiOperation({ summary: 'Get all calls with filters' }),

@@ -49,7 +49,7 @@ export class DownloaderService {
   }
 
   private async getApiSettings() {
-    // For now, use env variables until schema is updated
+
     return {
       sipApiUrl: this.config.get<string>('SIP_API_URL'),
       sipApiKey: this.config.get<string>('SIP_API_KEY'),

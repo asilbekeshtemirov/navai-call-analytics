@@ -10,10 +10,6 @@ export declare class SettingsController {
         excludeSeconds: number;
         pbxUrl: string | null;
         language: string | null;
-        sipApiUrl: string | null;
-        sipApiKey: string | null;
-        sttApiUrl: string | null;
-        geminiApiKey: string | null;
         updatedAt: Date;
     }>;
     update(updateSettingsDto: UpdateSettingsDto): Promise<{
@@ -23,10 +19,6 @@ export declare class SettingsController {
         excludeSeconds: number;
         pbxUrl: string | null;
         language: string | null;
-        sipApiUrl: string | null;
-        sipApiKey: string | null;
-        sttApiUrl: string | null;
-        geminiApiKey: string | null;
         updatedAt: Date;
     }>;
 }

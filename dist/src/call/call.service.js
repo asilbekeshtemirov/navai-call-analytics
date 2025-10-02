@@ -95,6 +95,64 @@ let CallService = CallService_1 = class CallService {
         });
         return { message: 'Rating received' };
     }
+    async create(createCallDto) {
+        const { employeeId, callerNumber, calleeNumber, durationSec, audioUrl } = createCallDto;
+        const employee = await this.prisma.user.findUnique({
+            where: { id: employeeId },
+        });
+        if (!employee) {
+            throw new BadRequestException(`Employee with ID ${employeeId} not found.`);
+        }
+        const call = await this.prisma.call.create({
+            data: {
+                externalId: `manual-${randomUUID()}`,
+                callDate: new Date(),
+                employeeId,
+                branchId: employee.branchId,
+                departmentId: employee.departmentId,
+                fileUrl: audioUrl || '',
+                status: 'UPLOADED',
+                callerNumber,
+                calleeNumber,
+                durationSec,
+            },
+        });
+        if (audioUrl) {
+            this.aiService.processCall(call.id).catch((err) => {
+                this.logger.error(`Error processing call ${call.id} in background: ${err.message}`);
+            });
+        }
+        return call;
+    }
+    async createManualCall(data) {
+        const { employeeId, callerNumber, calleeNumber, durationSec, audioUrl } = data;
+        const employee = await this.prisma.user.findUnique({
+            where: { id: employeeId },
+        });
+        if (!employee) {
+            throw new BadRequestException(`Employee with ID ${employeeId} not found.`);
+        }
+        const call = await this.prisma.call.create({
+            data: {
+                externalId: `manual-${randomUUID()}`,
+                callDate: new Date(),
+                employeeId,
+                branchId: employee.branchId,
+                departmentId: employee.departmentId,
+                fileUrl: audioUrl || '',
+                status: 'UPLOADED',
+                callerNumber,
+                calleeNumber,
+                durationSec,
+            },
+        });
+        if (audioUrl) {
+            this.aiService.processCall(call.id).catch((err) => {
+                this.logger.error(`Error processing call ${call.id} in background: ${err.message}`);
+            });
+        }
+        return call;
+    }
     async uploadFromUrl(uploadFromUrlDto) {
         const { url, employeeId, sipId } = uploadFromUrlDto;
         const employee = await this.prisma.user.findUnique({

@@ -11,10 +11,10 @@ var AiService_1;
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ConfigService } from '@nestjs/config';
-import axios from 'axios';
-import { GoogleGenAI } from '@google/genai';
-import * as fs from 'fs';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import FormData from 'form-data';
+import axios from 'axios';
+import * as fs from 'fs';
 let AiService = AiService_1 = class AiService {
     prisma;
     config;
@@ -28,7 +28,7 @@ let AiService = AiService_1 = class AiService {
             this.logger.error('GEMINI_API_KEY is not set in environment variables.');
             throw new Error('Gemini API key is missing.');
         }
-        this.geminiAi = new GoogleGenAI({ apiKey: geminiApiKey });
+        this.geminiAi = new GoogleGenerativeAI(geminiApiKey);
     }
     async transcribeAudio(audioFileUrl) {
         this.logger.log(`Transcribing audio from file: ${audioFileUrl}`);
@@ -104,16 +104,9 @@ let AiService = AiService_1 = class AiService {
             .join('\n');
         const prompt = this.buildAnalysisPrompt(fullTranscript, criteria, maxScore);
         try {
-            const geminiResponse = await this.geminiAi.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: prompt,
-                config: {
-                    thinkingConfig: {
-                        thinkingBudget: 0,
-                    },
-                },
-            });
-            const analysisText = geminiResponse.text;
+            const model = this.geminiAi.getGenerativeModel({ model: 'gemini-2.5-flash' });
+            const geminiResponse = await model.generateContent({ contents: [{ role: 'user', parts: [{ text: prompt }] }] });
+            const analysisText = geminiResponse.response.text();
             if (!analysisText) {
                 throw new Error('Gemini API did not return any text for analysis.');
             }
@@ -289,6 +282,7 @@ Respond in JSON format.
                 where: { id: callId },
                 data: { status: 'DONE' },
             });
+            await this.deleteAudioFile(call.fileUrl);
             this.logger.log(`Call ${callId} processed successfully`);
         }
         catch (error) {
@@ -317,19 +311,12 @@ Respond in JSON format.
     }
     async generateContent(contents, model = 'gemini-2.5-flash') {
         try {
-            const response = await this.geminiAi.models.generateContent({
-                model: model,
-                contents: contents,
-                config: {
-                    thinkingConfig: {
-                        thinkingBudget: 0,
-                    },
-                },
-            });
-            if (!response.text) {
+            const generativeModel = this.geminiAi.getGenerativeModel({ model: model });
+            const response = await generativeModel.generateContent({ contents: [{ role: 'user', parts: [{ text: contents }] }] });
+            if (!response.response.text()) {
                 throw new Error('Gemini API did not return any text.');
             }
-            return response.text;
+            return response.response.text();
         }
         catch (error) {
             if (error instanceof Error) {
@@ -369,6 +356,20 @@ Respond in JSON format.
         catch (error) {
             this.logger.error(`Error in processAllUploadedCalls: ${error.message}`);
             throw error;
+        }
+    }
+    async deleteAudioFile(filePath) {
+        try {
+            if (fs.existsSync(filePath)) {
+                await fs.promises.unlink(filePath);
+                this.logger.log(`Audio file deleted: ${filePath}`);
+            }
+            else {
+                this.logger.warn(`Audio file not found for deletion: ${filePath}`);
+            }
+        }
+        catch (error) {
+            this.logger.error(`Failed to delete audio file ${filePath}: ${error.message}`);
         }
     }
 };
