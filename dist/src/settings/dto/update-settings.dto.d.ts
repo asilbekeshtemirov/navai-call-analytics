@@ -8,5 +8,9 @@ export declare class UpdateSettingsDto {
     excludeSeconds?: number;
     pbxUrl?: string;
     language?: string;
+    sipApiUrl?: string;
+    sipApiKey?: string;
+    sttApiUrl?: string;
+    geminiApiKey?: string;
 }
 export {};

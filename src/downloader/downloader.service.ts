@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { HttpService } from '@nestjs/axios';
 import axios from 'axios';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -28,37 +29,52 @@ interface CallData {
 @Injectable()
 export class DownloaderService {
   private readonly logger = new Logger(DownloaderService.name);
-  private readonly apiUrl!: string;
-  private readonly apiKey!: string;
   private readonly saveDir = './recordings';
+  private sipApiUrl: string | undefined;
+  private sipApiKey: string | undefined;
 
   constructor(
-    private readonly configService: ConfigService,
+    private readonly config: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly http: HttpService,
     private readonly aiService: AiService,
   ) {
-    this.apiUrl = this.configService.get<string>('SIP_API_URL')!;
-    this.apiKey = this.configService.get<string>('SIP_API_KEY')!;
+    // Initialize with env values, but will be overridden by settings
+    this.sipApiUrl = this.config.get<string>('SIP_API_URL');
+    this.sipApiKey = this.config.get<string>('SIP_API_KEY');
 
-    this.logger.log(`[INIT] SIP_API_URL: ${this.apiUrl}`);
-    this.logger.log(`[INIT] SIP_API_KEY length: ${this.apiKey?.length || 0}`);
-    this.logger.log(`[INIT] SIP_API_KEY value: "${this.apiKey}"`);
+    this.logger.log(`[INIT] SIP_API_URL: ${this.sipApiUrl}`);
+    this.logger.log(`[INIT] SIP_API_KEY length: ${this.sipApiKey?.length || 0}`);
+    this.logger.log(`[INIT] SIP_API_KEY value: "${this.sipApiKey}"`);
+  }
 
-    if (!this.apiUrl || !this.apiKey) {
+  private async getApiSettings() {
+    // For now, use env variables until schema is updated
+    return {
+      sipApiUrl: this.config.get<string>('SIP_API_URL'),
+      sipApiKey: this.config.get<string>('SIP_API_KEY'),
+    };
+  }
+
+  private async initApiSettings() {
+    const { sipApiUrl, sipApiKey } = await this.getApiSettings();
+    if (!sipApiUrl || !sipApiKey) {
       this.logger.error(
-        'SIP_API_URL or SIP_API_KEY is not set in environment variables.',
+        'SIP_API_URL or SIP_API_KEY is not set in environment variables or settings.',
       );
       throw new Error('SIP API credentials are missing.');
     }
+    this.sipApiUrl = sipApiUrl;
+    this.sipApiKey = sipApiKey;
 
     if (!fs.existsSync(this.saveDir)) {
       fs.mkdirSync(this.saveDir, { recursive: true });
     }
   }
 
-  @Cron('54 13 * * *')
+  @Cron('59 23 * * *') // Har kuni 23:59 da
   async handleCron() {
-    this.logger.log('Starting daily call recording download...');
+    this.logger.log('Starting daily call recording download at 23:59...');
     await this.downloadAndProcessCalls();
   }
 
@@ -182,23 +198,23 @@ export class DownloaderService {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        this.logger.log(`Fetching calls from: ${this.apiUrl}/history/json (Attempt ${attempt}/${maxRetries})`);
-        this.logger.log(`Using API Key: ${this.apiKey ? '***' + this.apiKey.slice(-4) : 'MISSING'}`);
+        this.logger.log(`Fetching calls from: ${this.sipApiUrl!}/history/json (Attempt ${attempt}/${maxRetries})`);
+        this.logger.log(`Using API Key: ${this.sipApiKey ? '***' + this.sipApiKey.slice(-4) : 'MISSING'}`);
 
-        const { data } = await axios.get(`${this.apiUrl}/history/json`, {
+        const { data } = await axios.get(`${this.sipApiUrl!}/history/json`, {
           headers: {
-            'X-API-Key': this.apiKey,
+            'X-API-KEY': this.sipApiKey!,
             'Content-Type': 'application/json',
           },
           params: { period: 'today', type: 'all', limit: 1000 },
-          timeout: 60000, // Increased to 60 seconds
+          timeout: 60000, 
           httpsAgent: new https.Agent({
             keepAlive: true,
             timeout: 60000,
           }),
         });
 
-        this.logger.log(
+        this.logger!.log(
           `API Response: ${JSON.stringify(data).substring(0, 200)}`,
         );
         const filteredCalls = data.filter((c: CallData) => c.record);

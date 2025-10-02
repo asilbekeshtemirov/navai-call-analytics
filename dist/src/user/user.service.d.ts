@@ -2,9 +2,11 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { UserRole } from '@prisma/client';
+import { StatisticsService } from '../statistics/statistics.service.js';
 export declare class UserService {
     private prisma;
-    constructor(prisma: PrismaService);
+    private statisticsService;
+    constructor(prisma: PrismaService, statisticsService: StatisticsService);
     create(createUserDto: CreateUserDto): Promise<{
         id: string;
         updatedAt: Date;
@@ -95,5 +97,28 @@ export declare class UserService {
         role: import("@prisma/client").$Enums.UserRole;
         passwordHash: string;
         departmentId: string | null;
+    }>;
+    getUserDailyStats(userId: string, dateStr: string): Promise<any>;
+    getUserMonthlyStats(userId: string, year: number, month: number): Promise<any>;
+    getUserStatsSummary(userId: string): Promise<{
+        user: {
+            id: string;
+            firstName: string;
+            lastName: string;
+            extCode: string | null;
+            role: import("@prisma/client").$Enums.UserRole;
+        };
+        statistics: {
+            daily: any;
+            monthly: any;
+            summary: {
+                totalCallsToday: any;
+                totalDurationToday: any;
+                averageScoreToday: number;
+                totalCallsThisMonth: any;
+                totalDurationThisMonth: any;
+                averageScoreThisMonth: number;
+            };
+        };
     }>;
 }

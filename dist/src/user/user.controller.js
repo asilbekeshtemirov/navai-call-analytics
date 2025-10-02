@@ -10,11 +10,11 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, } from '@nestjs/common';
 import { UserService } from './user.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/roles.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
@@ -30,6 +30,15 @@ let UserController = class UserController {
     }
     findAll() {
         return this.userService.findAll();
+    }
+    async getUserDailyStats(id, dateStr) {
+        return this.userService.getUserDailyStats(id, dateStr);
+    }
+    async getUserMonthlyStats(id, year, month) {
+        return this.userService.getUserMonthlyStats(id, parseInt(year), parseInt(month));
+    }
+    async getUserStatsSummary(id) {
+        return this.userService.getUserStatsSummary(id);
     }
     findOne(id) {
         return this.userService.findOneById(id);
@@ -59,6 +68,39 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], UserController.prototype, "findAll", null);
+__decorate([
+    Get(':id/statistics/daily'),
+    Roles(UserRole.ADMIN, UserRole.MANAGER),
+    ApiOperation({ summary: 'Get user daily statistics' }),
+    ApiQuery({ name: 'date', required: true, description: 'Date in YYYY-MM-DD format' }),
+    __param(0, Param('id')),
+    __param(1, Query('date')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], UserController.prototype, "getUserDailyStats", null);
+__decorate([
+    Get(':id/statistics/monthly'),
+    Roles(UserRole.ADMIN, UserRole.MANAGER),
+    ApiOperation({ summary: 'Get user monthly statistics' }),
+    ApiQuery({ name: 'year', required: true, type: Number }),
+    ApiQuery({ name: 'month', required: true, type: Number }),
+    __param(0, Param('id')),
+    __param(1, Query('year')),
+    __param(2, Query('month')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String]),
+    __metadata("design:returntype", Promise)
+], UserController.prototype, "getUserMonthlyStats", null);
+__decorate([
+    Get(':id/statistics/summary'),
+    Roles(UserRole.ADMIN, UserRole.MANAGER),
+    ApiOperation({ summary: 'Get user statistics summary' }),
+    __param(0, Param('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], UserController.prototype, "getUserStatsSummary", null);
 __decorate([
     Get(':id'),
     Roles(UserRole.ADMIN, UserRole.MANAGER),

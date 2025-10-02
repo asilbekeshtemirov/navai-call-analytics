@@ -11,6 +11,7 @@ var DownloaderService_1;
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
+import { HttpService } from '@nestjs/axios';
 import axios from 'axios';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -18,32 +19,45 @@ import * as https from 'https';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AiService } from '../ai/ai.service.js';
 let DownloaderService = DownloaderService_1 = class DownloaderService {
-    configService;
+    config;
     prisma;
+    http;
     aiService;
     logger = new Logger(DownloaderService_1.name);
-    apiUrl;
-    apiKey;
     saveDir = './recordings';
-    constructor(configService, prisma, aiService) {
-        this.configService = configService;
+    sipApiUrl;
+    sipApiKey;
+    constructor(config, prisma, http, aiService) {
+        this.config = config;
         this.prisma = prisma;
+        this.http = http;
         this.aiService = aiService;
-        this.apiUrl = this.configService.get('SIP_API_URL');
-        this.apiKey = this.configService.get('SIP_API_KEY');
-        this.logger.log(`[INIT] SIP_API_URL: ${this.apiUrl}`);
-        this.logger.log(`[INIT] SIP_API_KEY length: ${this.apiKey?.length || 0}`);
-        this.logger.log(`[INIT] SIP_API_KEY value: "${this.apiKey}"`);
-        if (!this.apiUrl || !this.apiKey) {
-            this.logger.error('SIP_API_URL or SIP_API_KEY is not set in environment variables.');
+        this.sipApiUrl = this.config.get('SIP_API_URL');
+        this.sipApiKey = this.config.get('SIP_API_KEY');
+        this.logger.log(`[INIT] SIP_API_URL: ${this.sipApiUrl}`);
+        this.logger.log(`[INIT] SIP_API_KEY length: ${this.sipApiKey?.length || 0}`);
+        this.logger.log(`[INIT] SIP_API_KEY value: "${this.sipApiKey}"`);
+    }
+    async getApiSettings() {
+        return {
+            sipApiUrl: this.config.get('SIP_API_URL'),
+            sipApiKey: this.config.get('SIP_API_KEY'),
+        };
+    }
+    async initApiSettings() {
+        const { sipApiUrl, sipApiKey } = await this.getApiSettings();
+        if (!sipApiUrl || !sipApiKey) {
+            this.logger.error('SIP_API_URL or SIP_API_KEY is not set in environment variables or settings.');
             throw new Error('SIP API credentials are missing.');
         }
+        this.sipApiUrl = sipApiUrl;
+        this.sipApiKey = sipApiKey;
         if (!fs.existsSync(this.saveDir)) {
             fs.mkdirSync(this.saveDir, { recursive: true });
         }
     }
     async handleCron() {
-        this.logger.log('Starting daily call recording download...');
+        this.logger.log('Starting daily call recording download at 23:59...');
         await this.downloadAndProcessCalls();
     }
     async downloadAndProcessCalls() {
@@ -135,11 +149,11 @@ let DownloaderService = DownloaderService_1 = class DownloaderService {
         const retryDelay = 5000;
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                this.logger.log(`Fetching calls from: ${this.apiUrl}/history/json (Attempt ${attempt}/${maxRetries})`);
-                this.logger.log(`Using API Key: ${this.apiKey ? '***' + this.apiKey.slice(-4) : 'MISSING'}`);
-                const { data } = await axios.get(`${this.apiUrl}/history/json`, {
+                this.logger.log(`Fetching calls from: ${this.sipApiUrl}/history/json (Attempt ${attempt}/${maxRetries})`);
+                this.logger.log(`Using API Key: ${this.sipApiKey ? '***' + this.sipApiKey.slice(-4) : 'MISSING'}`);
+                const { data } = await axios.get(`${this.sipApiUrl}/history/json`, {
                     headers: {
-                        'X-API-Key': this.apiKey,
+                        'X-API-KEY': this.sipApiKey,
                         'Content-Type': 'application/json',
                     },
                     params: { period: 'today', type: 'all', limit: 1000 },
@@ -193,7 +207,7 @@ let DownloaderService = DownloaderService_1 = class DownloaderService {
     }
 };
 __decorate([
-    Cron('54 13 * * *'),
+    Cron('59 23 * * *'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
@@ -202,6 +216,7 @@ DownloaderService = DownloaderService_1 = __decorate([
     Injectable(),
     __metadata("design:paramtypes", [ConfigService,
         PrismaService,
+        HttpService,
         AiService])
 ], DownloaderService);
 export { DownloaderService };

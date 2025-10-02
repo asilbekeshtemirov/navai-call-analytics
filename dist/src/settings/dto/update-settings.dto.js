@@ -20,6 +20,10 @@ export class UpdateSettingsDto {
     excludeSeconds;
     pbxUrl;
     language;
+    sipApiUrl;
+    sipApiKey;
+    sttApiUrl;
+    geminiApiKey;
 }
 __decorate([
     ApiPropertyOptional({ description: 'Enable/disable analytics' }),
@@ -55,4 +59,28 @@ __decorate([
     IsString(),
     __metadata("design:type", String)
 ], UpdateSettingsDto.prototype, "language", void 0);
+__decorate([
+    ApiPropertyOptional({ description: 'SIP API URL for call downloading' }),
+    IsOptional(),
+    IsString(),
+    __metadata("design:type", String)
+], UpdateSettingsDto.prototype, "sipApiUrl", void 0);
+__decorate([
+    ApiPropertyOptional({ description: 'SIP API Key for authentication' }),
+    IsOptional(),
+    IsString(),
+    __metadata("design:type", String)
+], UpdateSettingsDto.prototype, "sipApiKey", void 0);
+__decorate([
+    ApiPropertyOptional({ description: 'STT API URL for transcription' }),
+    IsOptional(),
+    IsString(),
+    __metadata("design:type", String)
+], UpdateSettingsDto.prototype, "sttApiUrl", void 0);
+__decorate([
+    ApiPropertyOptional({ description: 'Gemini API Key for LLM analysis' }),
+    IsOptional(),
+    IsString(),
+    __metadata("design:type", String)
+], UpdateSettingsDto.prototype, "geminiApiKey", void 0);
 //# sourceMappingURL=update-settings.dto.js.map

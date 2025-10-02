@@ -40,15 +40,31 @@ export class CallController {
       case 'rating':
         return this.callService.handleRating(body as RatingDto);
       default:
-        this.logger.warn(`Unknown VATS command: ${body.cmd}`);
-        return;
-    }
   }
 
   @Post('upload-from-url')
   @ApiOperation({ summary: 'Upload call from URL' })
   uploadFromUrl(@Body() uploadFromUrlDto: UploadFromUrlDto) {
     return this.callService.uploadFromUrl(uploadFromUrlDto);
+  }
+
+  @Post()
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  create(@Body() createCallDto: CreateCallDto) {
+    return this.callService.create(createCallDto);
+  }
+
+  @Post('manual')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @ApiOperation({ summary: 'Manual qo\'ng\'iroq yaratish (test uchun)' })
+  async createManualCall(@Body() data: {
+    employeeId: string;
+    callerNumber: string;
+    calleeNumber: string;
+    durationSec: number;
+    audioUrl?: string;
+  }) {
+    return this.callService.createManualCall(data);
   }
 
   @Get()

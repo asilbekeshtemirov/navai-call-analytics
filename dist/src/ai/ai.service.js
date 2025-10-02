@@ -261,6 +261,9 @@ Respond in JSON format.
                 where: { id: callId },
                 data: { analysis: analysis },
             });
+            await this.prisma.callScore.deleteMany({
+                where: { callId }
+            });
             await this.prisma.callScore.createMany({
                 data: analysis.criteriaScores.map((cs) => ({
                     callId,
@@ -268,6 +271,9 @@ Respond in JSON format.
                     score: cs.score,
                     notes: cs.notes,
                 })),
+            });
+            await this.prisma.violation.deleteMany({
+                where: { callId }
             });
             if (analysis.violations.length > 0) {
                 await this.prisma.violation.createMany({

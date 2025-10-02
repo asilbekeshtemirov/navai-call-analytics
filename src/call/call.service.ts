@@ -99,7 +99,6 @@ export class CallService {
       };
     }
 
-    // Optional: Search in a separate contacts table if you have one
 
     throw new NotFoundException('Contact not found');
   }

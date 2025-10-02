@@ -42,4 +42,24 @@ export class UpdateSettingsDto {
   @IsOptional()
   @IsString()
   language?: string;
+
+  @ApiPropertyOptional({ description: 'SIP API URL for call downloading' })
+  @IsOptional()
+  @IsString()
+  sipApiUrl?: string;
+
+  @ApiPropertyOptional({ description: 'SIP API Key for authentication' })
+  @IsOptional()
+  @IsString()
+  sipApiKey?: string;
+
+  @ApiPropertyOptional({ description: 'STT API URL for transcription' })
+  @IsOptional()
+  @IsString()
+  sttApiUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Gemini API Key for LLM analysis' })
+  @IsOptional()
+  @IsString()
+  geminiApiKey?: string;
 }

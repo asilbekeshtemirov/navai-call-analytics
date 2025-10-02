@@ -1,16 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { Criteria, Prisma } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
-import axios from 'axios';
-import { GoogleGenAI } from '@google/genai';
-import * as fs from 'fs';
+import { GoogleGenerativeAI } from '@google/genai';
 import FormData from 'form-data';
+import axios from 'axios';
+import * as fs from 'fs';
+import * as path from 'path';
 
 interface SttApiResponse {
   segments: TranscriptSegment[];
 }
-
 export interface TranscriptSegment {
   speaker: 'agent' | 'customer';
   text: string;
@@ -343,7 +342,12 @@ Respond in JSON format.
         data: { analysis: analysis as unknown as Prisma.JsonObject },
       });
 
-      // Save scores
+      // Delete existing scores first (to avoid unique constraint error)
+      await this.prisma.callScore.deleteMany({
+        where: { callId }
+      });
+
+      // Save new scores
       await this.prisma.callScore.createMany({
         data: analysis.criteriaScores.map((cs) => ({
           callId,
@@ -353,7 +357,12 @@ Respond in JSON format.
         })),
       });
 
-      // Save violations
+      // Delete existing violations first
+      await this.prisma.violation.deleteMany({
+        where: { callId }
+      });
+
+      // Save new violations
       if (analysis.violations.length > 0) {
         await this.prisma.violation.createMany({
           data: analysis.violations.map((v) => ({
@@ -370,6 +379,9 @@ Respond in JSON format.
         where: { id: callId },
         data: { status: 'DONE' },
       });
+
+      // Audio faylni o'chirish
+      await this.deleteAudioFile(call.fileUrl);
 
       this.logger.log(`Call ${callId} processed successfully`);
     } catch (error) {
@@ -474,6 +486,21 @@ Respond in JSON format.
     } catch (error) {
       this.logger.error(`Error in processAllUploadedCalls: ${error.message}`);
       throw error;
+    }
+  }
+
+  // Audio faylni o'chirish metodi
+  private async deleteAudioFile(filePath: string): Promise<void> {
+    try {
+      if (fs.existsSync(filePath)) {
+        await fs.promises.unlink(filePath);
+        this.logger.log(`Audio file deleted: ${filePath}`);
+      } else {
+        this.logger.warn(`Audio file not found for deletion: ${filePath}`);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to delete audio file ${filePath}: ${error.message}`);
+      // Don't throw error - file deletion failure shouldn't stop the process
     }
   }
 }

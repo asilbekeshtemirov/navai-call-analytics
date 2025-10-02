@@ -6,20 +6,17 @@ import { PrismaModule } from './prisma/prisma.module.js';
 import { CallModule } from './call/call.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { UserModule } from './user/user.module.js';
-import { BranchModule } from './branch/branch.module.js';
 import { DepartmentModule } from './department/department.module.js';
 import { CriteriaModule } from './criteria/criteria.module.js';
 import { TopicModule } from './topic/topic.module.js';
 import { PromptModule } from './prompt/prompt.module.js';
 import { ReportModule } from './report/report.module.js';
-import { SipModule } from './sip/sip.module.js';
 import { AiModule } from './ai/ai.module.js';
-import { SettingsModule } from './settings/settings.module.js';
-import { DashboardModule } from './dashboard/dashboard.module.js';
-import { ScheduleModule } from '@nestjs/schedule';
 import { DownloaderModule } from './downloader/downloader.module.js';
-import { APP_GUARD, Reflector } from '@nestjs/core';
-import { JwtAuthGuard } from './auth/jwt-auth.guard.js';
+import { StatisticsModule } from './statistics/statistics.module.js';
+import { PbxModule } from './pbx/pbx.module.js';
+import { CompanyModule } from './company/company.module.js';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -29,25 +26,20 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard.js';
     CallModule,
     AuthModule,
     UserModule,
-    BranchModule,
     DepartmentModule,
     CriteriaModule,
     TopicModule,
     PromptModule,
     ReportModule,
-    SipModule,
     AiModule,
-    SettingsModule,
-    DashboardModule,
     DownloaderModule,
+    StatisticsModule,
+    PbxModule,
+    CompanyModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
   ],
 })
 export class AppModule {}
