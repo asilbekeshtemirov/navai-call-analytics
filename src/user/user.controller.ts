@@ -1,14 +1,24 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+} from '@nestjs/common';
 import { UserService } from './user.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/roles.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
 import { UserRole } from '@prisma/client';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto.js';
 @ApiTags('users')
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard, RolesGuard) // Apply guards to the entire controller
 @Controller('users')
 export class UserController {
@@ -21,7 +31,7 @@ export class UserController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER) 
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
   findAll() {
     return this.userService.findAll();
   }
@@ -47,7 +57,10 @@ export class UserController {
   @Patch(':id/role')
   @Roles(UserRole.ADMIN) // Only ADMIN can update user roles
   @ApiOperation({ summary: 'Update user role' })
-  async updateUserRole(@Param('id') id: string, @Body() updateUserRoleDto: UpdateUserRoleDto) {
+  async updateUserRole(
+    @Param('id') id: string,
+    @Body() updateUserRoleDto: UpdateUserRoleDto,
+  ) {
     return this.userService.updateUserRole(id, updateUserRoleDto.role);
   }
 }

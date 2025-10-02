@@ -8,13 +8,13 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 var CallService_1;
-import { Injectable, InternalServerErrorException, BadRequestException, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, BadRequestException, Logger, NotFoundException, } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import * as https from 'https';
 import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
-import { randomUUID } from "crypto";
+import { randomUUID } from 'crypto';
 import { AiService } from '../ai/ai.service.js';
 let CallService = CallService_1 = class CallService {
     prisma;
@@ -26,18 +26,23 @@ let CallService = CallService_1 = class CallService {
     }
     async handleHistory(data) {
         this.logger.log(`Handling 'history' command for callId: ${data.callid}`);
-        const user = await this.prisma.user.findFirst({ where: { OR: [{ id: data.user }, { extCode: data.user }] } });
+        const user = await this.prisma.user.findFirst({
+            where: { OR: [{ id: data.user }, { extCode: data.user }] },
+        });
         if (!user) {
             throw new NotFoundException(`User not found with identifier: ${data.user}`);
         }
-        const existingCall = await this.prisma.call.findUnique({ where: { sipId: data.callid } });
+        const existingCall = await this.prisma.call.findUnique({
+            where: { externalId: data.callid },
+        });
         if (existingCall) {
-            this.logger.warn(`Call with sipId ${data.callid} already exists. Skipping creation.`);
+            this.logger.warn(`Call with externalId ${data.callid} already exists. Skipping creation.`);
             return { message: 'Call already exists' };
         }
         const call = await this.prisma.call.create({
             data: {
-                sipId: data.callid,
+                externalId: data.callid,
+                callDate: new Date(),
                 employeeId: user.id,
                 branchId: user.branchId,
                 departmentId: user.departmentId,
@@ -49,7 +54,10 @@ let CallService = CallService_1 = class CallService {
         this.aiService.processCall(call.id).catch((err) => {
             this.logger.error(`Error processing call ${call.id} in background: ${err.message}`);
         });
-        return { message: 'Call received and is being processed.', callId: call.id };
+        return {
+            message: 'Call received and is being processed.',
+            callId: call.id,
+        };
     }
     async handleEvent(data) {
         this.logger.log(`Handling 'event' command: ${data.type} for callId: ${data.callid}`);
@@ -70,9 +78,11 @@ let CallService = CallService_1 = class CallService {
     }
     async handleRating(data) {
         this.logger.log(`Handling 'rating' command for callId: ${data.callid}`);
-        const call = await this.prisma.call.findUnique({ where: { sipId: data.callid } });
+        const call = await this.prisma.call.findUnique({
+            where: { externalId: data.callid },
+        });
         if (!call) {
-            throw new NotFoundException(`Call with sipId ${data.callid} not found`);
+            throw new NotFoundException(`Call with externalId ${data.callid} not found`);
         }
         await this.prisma.call.update({
             where: { id: call.id },
@@ -87,13 +97,17 @@ let CallService = CallService_1 = class CallService {
     }
     async uploadFromUrl(uploadFromUrlDto) {
         const { url, employeeId, sipId } = uploadFromUrlDto;
-        const employee = await this.prisma.user.findUnique({ where: { id: employeeId } });
+        const employee = await this.prisma.user.findUnique({
+            where: { id: employeeId },
+        });
         if (!employee) {
             throw new BadRequestException(`Employee with ID ${employeeId} not found.`);
         }
-        const existingCall = await this.prisma.call.findFirst({ where: { sipId } });
+        const existingCall = await this.prisma.call.findFirst({
+            where: { externalId: sipId },
+        });
         if (existingCall) {
-            throw new BadRequestException(`Call with sipId ${sipId} already exists.`);
+            throw new BadRequestException(`Call with externalId ${sipId} already exists.`);
         }
         const parsedUrl = new URL(url);
         const protocol = parsedUrl.protocol === 'https:' ? https : http;
@@ -108,7 +122,9 @@ let CallService = CallService_1 = class CallService {
         try {
             await new Promise((resolve, reject) => {
                 const request = protocol.get(url, (response) => {
-                    if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
+                    if (!response.statusCode ||
+                        response.statusCode < 200 ||
+                        response.statusCode >= 300) {
                         return reject(new Error(`Failed to download file, status code: ${response.statusCode || 'unknown'}`));
                     }
                     response.pipe(file);
@@ -132,7 +148,8 @@ let CallService = CallService_1 = class CallService {
         }
         const call = await this.prisma.call.create({
             data: {
-                sipId,
+                externalId: sipId,
+                callDate: new Date(),
                 employeeId,
                 branchId: employee.branchId,
                 departmentId: employee.departmentId,
@@ -162,7 +179,9 @@ let CallService = CallService_1 = class CallService {
         return this.prisma.call.findMany({
             where,
             include: {
-                employee: { select: { id: true, firstName: true, lastName: true, extCode: true } },
+                employee: {
+                    select: { id: true, firstName: true, lastName: true, extCode: true },
+                },
                 branch: { select: { id: true, name: true } },
                 department: { select: { id: true, name: true } },
                 scores: { include: { criteria: true } },

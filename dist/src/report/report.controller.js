@@ -13,7 +13,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 import { Controller, Post, Body } from '@nestjs/common';
 import { ReportService } from './report.service.js';
 import { GenerateReportDto } from './dto/generate-report.dto.js';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 let ReportController = class ReportController {
     reportService;
     constructor(reportService) {
@@ -32,6 +32,7 @@ __decorate([
 ], ReportController.prototype, "create", null);
 ReportController = __decorate([
     ApiTags('reports'),
+    ApiBearerAuth('access-token'),
     Controller('reports'),
     __metadata("design:paramtypes", [ReportService])
 ], ReportController);

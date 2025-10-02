@@ -31,4 +31,5 @@ export declare class AiService {
     private buildAnalysisPrompt;
     processCall(callId: string): Promise<void>;
     generateContent(contents: string, model?: string): Promise<string>;
+    processAllUploadedCalls(): Promise<void>;
 }

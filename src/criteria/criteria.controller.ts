@@ -1,10 +1,19 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { CriteriaService } from './criteria.service.js';
 import { CreateCriteriaDto } from './dto/create-criteria.dto.js';
 import { UpdateCriteriaDto } from './dto/update-criteria.dto.js';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('criteria')
+@ApiBearerAuth('access-token')
 @Controller('criteria')
 export class CriteriaController {
   constructor(private readonly criteriaService: CriteriaService) {}
@@ -25,7 +34,10 @@ export class CriteriaController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCriteriaDto: UpdateCriteriaDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateCriteriaDto: UpdateCriteriaDto,
+  ) {
     return this.criteriaService.update(id, updateCriteriaDto);
   }
 

@@ -10,11 +10,11 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, } from '@nestjs/common';
 import { PromptService } from './prompt.service.js';
 import { CreatePromptDto } from './dto/create-prompt.dto.js';
 import { UpdatePromptDto } from './dto/update-prompt.dto.js';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 let PromptController = class PromptController {
     promptService;
     constructor(promptService) {
@@ -73,6 +73,7 @@ __decorate([
 ], PromptController.prototype, "remove", null);
 PromptController = __decorate([
     ApiTags('prompts'),
+    ApiBearerAuth('access-token'),
     Controller('prompts'),
     __metadata("design:paramtypes", [PromptService])
 ], PromptController);

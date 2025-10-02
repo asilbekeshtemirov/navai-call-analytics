@@ -1,13 +1,24 @@
-import { Injectable, InternalServerErrorException, BadRequestException, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  BadRequestException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { UploadFromUrlDto } from './dto/upload-from-url.dto.js';
 import * as https from 'https';
 import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
-import { randomUUID } from "crypto";
+import { randomUUID } from 'crypto';
 import { AiService } from '../ai/ai.service.js';
-import { HistoryDto, EventDto, ContactDto, RatingDto } from './dto/vats-webhook.dto.js';
+import {
+  HistoryDto,
+  EventDto,
+  ContactDto,
+  RatingDto,
+} from './dto/vats-webhook.dto.js';
 
 @Injectable()
 export class CallService {
@@ -21,20 +32,29 @@ export class CallService {
   async handleHistory(data: HistoryDto) {
     this.logger.log(`Handling 'history' command for callId: ${data.callid}`);
 
-    const user = await this.prisma.user.findFirst({ where: { OR: [{ id: data.user }, { extCode: data.user }] } });
+    const user = await this.prisma.user.findFirst({
+      where: { OR: [{ id: data.user }, { extCode: data.user }] },
+    });
     if (!user) {
-      throw new NotFoundException(`User not found with identifier: ${data.user}`);
+      throw new NotFoundException(
+        `User not found with identifier: ${data.user}`,
+      );
     }
 
-    const existingCall = await this.prisma.call.findUnique({ where: { sipId: data.callid } });
+    const existingCall = await this.prisma.call.findUnique({
+      where: { externalId: data.callid },
+    });
     if (existingCall) {
-      this.logger.warn(`Call with sipId ${data.callid} already exists. Skipping creation.`);
+      this.logger.warn(
+        `Call with externalId ${data.callid} already exists. Skipping creation.`,
+      );
       return { message: 'Call already exists' };
     }
 
     const call = await this.prisma.call.create({
       data: {
-        sipId: data.callid,
+        externalId: data.callid,
+        callDate: new Date(),
         employeeId: user.id,
         branchId: user.branchId,
         departmentId: user.departmentId,
@@ -47,14 +67,21 @@ export class CallService {
 
     // Asynchronously process the call for analysis
     this.aiService.processCall(call.id).catch((err: any) => {
-      this.logger.error(`Error processing call ${call.id} in background: ${err.message}`);
+      this.logger.error(
+        `Error processing call ${call.id} in background: ${err.message}`,
+      );
     });
 
-    return { message: 'Call received and is being processed.', callId: call.id };
+    return {
+      message: 'Call received and is being processed.',
+      callId: call.id,
+    };
   }
 
   async handleEvent(data: EventDto) {
-    this.logger.log(`Handling 'event' command: ${data.type} for callId: ${data.callid}`);
+    this.logger.log(
+      `Handling 'event' command: ${data.type} for callId: ${data.callid}`,
+    );
     // TODO: Implement logic for real-time events, e.g., showing a customer card in the CRM.
     return { message: 'Event received' };
   }
@@ -79,17 +106,21 @@ export class CallService {
 
   async handleRating(data: RatingDto) {
     this.logger.log(`Handling 'rating' command for callId: ${data.callid}`);
-    const call = await this.prisma.call.findUnique({ where: { sipId: data.callid } });
+    const call = await this.prisma.call.findUnique({
+      where: { externalId: data.callid },
+    });
 
     if (!call) {
-      throw new NotFoundException(`Call with sipId ${data.callid} not found`);
+      throw new NotFoundException(
+        `Call with externalId ${data.callid} not found`,
+      );
     }
 
     await this.prisma.call.update({
       where: { id: call.id },
       data: {
         analysis: {
-          ...(call.analysis as any || {}),
+          ...((call.analysis as any) || {}),
           customerRating: data.rating,
         },
       },
@@ -101,14 +132,22 @@ export class CallService {
   async uploadFromUrl(uploadFromUrlDto: UploadFromUrlDto) {
     const { url, employeeId, sipId } = uploadFromUrlDto;
 
-    const employee = await this.prisma.user.findUnique({ where: { id: employeeId } });
+    const employee = await this.prisma.user.findUnique({
+      where: { id: employeeId },
+    });
     if (!employee) {
-        throw new BadRequestException(`Employee with ID ${employeeId} not found.`);
+      throw new BadRequestException(
+        `Employee with ID ${employeeId} not found.`,
+      );
     }
 
-    const existingCall = await this.prisma.call.findFirst({ where: { sipId } });
+    const existingCall = await this.prisma.call.findFirst({
+      where: { externalId: sipId },
+    });
     if (existingCall) {
-        throw new BadRequestException(`Call with sipId ${sipId} already exists.`);
+      throw new BadRequestException(
+        `Call with externalId ${sipId} already exists.`,
+      );
     }
 
     const parsedUrl = new URL(url);
@@ -126,33 +165,44 @@ export class CallService {
     const file = fs.createWriteStream(filePath);
 
     try {
-        await new Promise((resolve, reject) => {
-          const request = protocol.get(url, (response) => {
-            if (!response.statusCode || response.statusCode < 200 || response.statusCode >= 300) {
-                return reject(new Error(`Failed to download file, status code: ${response.statusCode || 'unknown'}`));
-            }
-            response.pipe(file);
-            file.on('finish', () => {
-              file.close();
-              resolve(void 0);
-            });
-            response.on('error', (err: any) => {
-                fs.unlink(filePath, () => {});
-                reject(err);
-            });
+      await new Promise((resolve, reject) => {
+        const request = protocol.get(url, (response) => {
+          if (
+            !response.statusCode ||
+            response.statusCode < 200 ||
+            response.statusCode >= 300
+          ) {
+            return reject(
+              new Error(
+                `Failed to download file, status code: ${response.statusCode || 'unknown'}`,
+              ),
+            );
+          }
+          response.pipe(file);
+          file.on('finish', () => {
+            file.close();
+            resolve(void 0);
           });
-          request.on('error', (err) => {
+          response.on('error', (err: any) => {
             fs.unlink(filePath, () => {});
             reject(err);
           });
         });
+        request.on('error', (err) => {
+          fs.unlink(filePath, () => {});
+          reject(err);
+        });
+      });
     } catch (error) {
-        throw new InternalServerErrorException(`Failed to download file from URL: ${url}. Error: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to download file from URL: ${url}. Error: ${error.message}`,
+      );
     }
 
     const call = await this.prisma.call.create({
       data: {
-        sipId,
+        externalId: sipId,
+        callDate: new Date(),
         employeeId,
         branchId: employee.branchId,
         departmentId: employee.departmentId,
@@ -173,7 +223,7 @@ export class CallService {
     dateTo?: string;
   }) {
     const where: any = {};
-    
+
     if (filters?.branchId) where.branchId = filters.branchId;
     if (filters?.departmentId) where.departmentId = filters.departmentId;
     if (filters?.employeeId) where.employeeId = filters.employeeId;
@@ -187,7 +237,9 @@ export class CallService {
     return this.prisma.call.findMany({
       where,
       include: {
-        employee: { select: { id: true, firstName: true, lastName: true, extCode: true } },
+        employee: {
+          select: { id: true, firstName: true, lastName: true, extCode: true },
+        },
         branch: { select: { id: true, name: true } },
         department: { select: { id: true, name: true } },
         scores: { include: { criteria: true } },

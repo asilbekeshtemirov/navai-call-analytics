@@ -33,12 +33,19 @@ export class BranchService {
         phone: true,
       },
     });
-    
-    return managers.map((m: { id: string; firstName: string; lastName: string; phone: string }) => ({
-      id: m.id,
-      name: `${m.firstName} ${m.lastName}`,
-      phone: m.phone,
-    }));
+
+    return managers.map(
+      (m: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        phone: string;
+      }) => ({
+        id: m.id,
+        name: `${m.firstName} ${m.lastName}`,
+        phone: m.phone,
+      }),
+    );
   }
 
   findOne(id: string) {

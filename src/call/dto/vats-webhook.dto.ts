@@ -1,4 +1,16 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsIn } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsNumber,
+  IsIn,
+} from 'class-validator';
+
+export class VatsWebhookDto {
+  @IsString()
+  @IsNotEmpty()
+  cmd: string;
+}
 
 export class HistoryDto {
   @IsString()
@@ -53,12 +65,19 @@ export class EventDto {
 
   @IsString()
   @IsNotEmpty()
-  @IsIn(['INCOMING', 'ACCEPTED', 'COMPLETED', 'CANCELLED', 'OUTGOING', 'TRANSFERRED'])
-  type: string;
+  callid: string;
 
   @IsString()
   @IsNotEmpty()
-  callid: string;
+  @IsIn([
+    'INCOMING',
+    'ACCEPTED',
+    'COMPLETED',
+    'CANCELLED',
+    'OUTGOING',
+    'TRANSFERRED',
+  ])
+  type: string;
 
   @IsString()
   @IsNotEmpty()

@@ -1,10 +1,24 @@
-import { Controller, Get, Post, Body, Param, Query, Logger } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiExcludeEndpoint } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  Logger,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiExcludeEndpoint, ApiBearerAuth } from '@nestjs/swagger';
 import { CallService } from './call.service.js';
 import { UploadFromUrlDto } from './dto/upload-from-url.dto.js';
-import { HistoryDto, EventDto, ContactDto, RatingDto } from './dto/vats-webhook.dto.js';
+import {
+  HistoryDto,
+  EventDto,
+  ContactDto,
+  RatingDto,
+} from './dto/vats-webhook.dto.js';
 
 @ApiTags('calls')
+@ApiBearerAuth('access-token')
 @Controller('calls')
 export class CallController {
   private readonly logger = new Logger(CallController.name);
@@ -12,7 +26,9 @@ export class CallController {
 
   @Post('vats')
   @ApiExcludeEndpoint()
-  async handleVatsWebhook(@Body() body: any) {
+  async handleVatsWebhook(
+    @Body() body: HistoryDto | EventDto | ContactDto | RatingDto,
+  ) {
     this.logger.log(`Received VATS webhook with command: ${body.cmd}`);
     switch (body.cmd) {
       case 'history':
@@ -45,7 +61,14 @@ export class CallController {
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
   ) {
-    return this.callService.findAll({ branchId, departmentId, employeeId, status, dateFrom, dateTo });
+    return this.callService.findAll({
+      branchId,
+      departmentId,
+      employeeId,
+      status,
+      dateFrom,
+      dateTo,
+    });
   }
 
   @Get(':id')

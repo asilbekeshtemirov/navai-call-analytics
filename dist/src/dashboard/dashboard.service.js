@@ -200,8 +200,14 @@ let DashboardService = class DashboardService {
             totalOverallScore += analysis.overallScore || 0;
             for (const critScore of analysis.criteriaScores || []) {
                 if (!criteriaScores[critScore.criteriaId]) {
-                    const criteria = await this.prisma.criteria.findUnique({ where: { id: critScore.criteriaId } });
-                    criteriaScores[critScore.criteriaId] = { totalScore: 0, count: 0, name: criteria?.name || 'Unknown Criteria' };
+                    const criteria = await this.prisma.criteria.findUnique({
+                        where: { id: critScore.criteriaId },
+                    });
+                    criteriaScores[critScore.criteriaId] = {
+                        totalScore: 0,
+                        count: 0,
+                        name: criteria?.name || 'Unknown Criteria',
+                    };
                 }
                 criteriaScores[critScore.criteriaId].totalScore += critScore.score || 0;
                 criteriaScores[critScore.criteriaId].count += 1;

@@ -106,11 +106,17 @@ async function main() {
     });
     console.log('✅ Manager created (phone: +998901234569, password: manager123)');
     const allCriteria = await prisma.criteria.findMany();
-    const call1 = await prisma.call.upsert({
-        where: { sipId: 'test-sip-1' },
-        update: {},
-        create: {
-            sipId: 'test-sip-1',
+    await prisma.call.deleteMany({
+        where: {
+            externalId: {
+                in: ['test-sip-1', 'test-sip-2']
+            }
+        }
+    });
+    const call1 = await prisma.call.create({
+        data: {
+            externalId: 'test-sip-1',
+            callDate: new Date(),
             employeeId: employee1.id,
             managerId: manager.id,
             branchId: branch1.id,
@@ -131,11 +137,10 @@ async function main() {
             }
         }
     });
-    const call2 = await prisma.call.upsert({
-        where: { sipId: 'test-sip-2' },
-        update: {},
-        create: {
-            sipId: 'test-sip-2',
+    const call2 = await prisma.call.create({
+        data: {
+            externalId: 'test-sip-2',
+            callDate: new Date(),
             employeeId: employee1.id,
             managerId: manager.id,
             branchId: branch1.id,

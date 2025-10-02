@@ -77,13 +77,16 @@ model Prompt {
 
 model Call {
   id             String              @id @default(uuid())
-  sipId          String              @unique
+  externalId     String              @unique
   employeeId     String
   managerId      String?
   branchId       String?
   departmentId   String?
   fileUrl        String
   status         CallStatus          @default(UPLOADED)
+  callerNumber   String?
+  calleeNumber   String?
+  callDate       DateTime
   createdAt      DateTime            @default(now())
   durationSec    Int?
   transcription  String?

@@ -11,8 +11,8 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 var CallController_1;
-import { Controller, Get, Post, Body, Param, Query, Logger } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiExcludeEndpoint } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Param, Query, Logger, } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiExcludeEndpoint, ApiBearerAuth } from '@nestjs/swagger';
 import { CallService } from './call.service.js';
 import { UploadFromUrlDto } from './dto/upload-from-url.dto.js';
 let CallController = CallController_1 = class CallController {
@@ -41,7 +41,14 @@ let CallController = CallController_1 = class CallController {
         return this.callService.uploadFromUrl(uploadFromUrlDto);
     }
     findAll(branchId, departmentId, employeeId, status, dateFrom, dateTo) {
-        return this.callService.findAll({ branchId, departmentId, employeeId, status, dateFrom, dateTo });
+        return this.callService.findAll({
+            branchId,
+            departmentId,
+            employeeId,
+            status,
+            dateFrom,
+            dateTo,
+        });
     }
     findOne(id) {
         return this.callService.findOne(id);
@@ -97,6 +104,7 @@ __decorate([
 ], CallController.prototype, "getTranscript", null);
 CallController = CallController_1 = __decorate([
     ApiTags('calls'),
+    ApiBearerAuth('access-token'),
     Controller('calls'),
     __metadata("design:paramtypes", [CallService])
 ], CallController);

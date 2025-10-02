@@ -28,7 +28,11 @@ export class DashboardService {
       where,
       select: { durationSec: true },
     });
-    const totalDuration = callsWithDuration.reduce((sum: number, c: { durationSec: number | null }) => sum + (c.durationSec || 0), 0);
+    const totalDuration = callsWithDuration.reduce(
+      (sum: number, c: { durationSec: number | null }) =>
+        sum + (c.durationSec || 0),
+      0,
+    );
 
     // Total departments
     const departments = await this.prisma.call.findMany({
@@ -36,7 +40,9 @@ export class DashboardService {
       select: { departmentId: true },
       distinct: ['departmentId'],
     });
-    const totalDepartments = departments.filter((d: { departmentId: string | null }) => d.departmentId).length;
+    const totalDepartments = departments.filter(
+      (d: { departmentId: string | null }) => d.departmentId,
+    ).length;
 
     // Total employees
     const employees = await this.prisma.call.findMany({
@@ -74,11 +80,14 @@ export class DashboardService {
     });
 
     // Group by date
-    const grouped = calls.reduce((acc: Record<string, number>, call: { createdAt: Date }) => {
-      const date = call.createdAt.toISOString().split('T')[0];
-      acc[date] = (acc[date] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const grouped = calls.reduce(
+      (acc: Record<string, number>, call: { createdAt: Date }) => {
+        const date = call.createdAt.toISOString().split('T')[0];
+        acc[date] = (acc[date] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return Object.entries(grouped).map(([date, count]) => ({ date, count }));
   }
@@ -104,22 +113,32 @@ export class DashboardService {
     });
 
     // Calculate average score per employee
-    const employeeScores = calls.reduce((acc: Record<string, any>, call: { employeeId: string; employee: any; scores: any[] }) => {
-      const empId = call.employeeId;
-      if (!acc[empId]) {
-        acc[empId] = {
-          employee: call.employee,
-          totalScore: 0,
-          count: 0,
-        };
-      }
-      const avgCallScore = call.scores.length > 0
-        ? call.scores.reduce((sum: number, s: { score: number }) => sum + s.score, 0) / call.scores.length
-        : 0;
-      acc[empId].totalScore += avgCallScore;
-      acc[empId].count += 1;
-      return acc;
-    }, {} as Record<string, any>);
+    const employeeScores = calls.reduce(
+      (
+        acc: Record<string, any>,
+        call: { employeeId: string; employee: any; scores: any[] },
+      ) => {
+        const empId = call.employeeId;
+        if (!acc[empId]) {
+          acc[empId] = {
+            employee: call.employee,
+            totalScore: 0,
+            count: 0,
+          };
+        }
+        const avgCallScore =
+          call.scores.length > 0
+            ? call.scores.reduce(
+                (sum: number, s: { score: number }) => sum + s.score,
+                0,
+              ) / call.scores.length
+            : 0;
+        acc[empId].totalScore += avgCallScore;
+        acc[empId].count += 1;
+        return acc;
+      },
+      {} as Record<string, any>,
+    );
 
     const performers = Object.values(employeeScores)
       .map((emp: any) => ({
@@ -159,10 +178,13 @@ export class DashboardService {
     });
 
     // Group by type
-    const grouped = violations.reduce((acc: Record<string, number>, v: { type: string }) => {
-      acc[v.type] = (acc[v.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const grouped = violations.reduce(
+      (acc: Record<string, number>, v: { type: string }) => {
+        acc[v.type] = (acc[v.type] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return Object.entries(grouped)
       .map(([type, count]) => ({ type, count }))
@@ -198,7 +220,10 @@ export class DashboardService {
     }
 
     let totalOverallScore = 0;
-    const criteriaScores: Record<string, { totalScore: number; count: number; name: string }> = {};
+    const criteriaScores: Record<
+      string,
+      { totalScore: number; count: number; name: string }
+    > = {};
 
     for (const call of calls) {
       const analysis = call.analysis as any;
@@ -208,8 +233,14 @@ export class DashboardService {
 
       for (const critScore of analysis.criteriaScores || []) {
         if (!criteriaScores[critScore.criteriaId]) {
-          const criteria = await this.prisma.criteria.findUnique({ where: { id: critScore.criteriaId }});
-          criteriaScores[critScore.criteriaId] = { totalScore: 0, count: 0, name: criteria?.name || 'Unknown Criteria' };
+          const criteria = await this.prisma.criteria.findUnique({
+            where: { id: critScore.criteriaId },
+          });
+          criteriaScores[critScore.criteriaId] = {
+            totalScore: 0,
+            count: 0,
+            name: criteria?.name || 'Unknown Criteria',
+          };
         }
         criteriaScores[critScore.criteriaId].totalScore += critScore.score || 0;
         criteriaScores[critScore.criteriaId].count += 1;
@@ -218,11 +249,13 @@ export class DashboardService {
 
     const avgOverallScore = totalOverallScore / calls.length;
 
-    const criteriaStats = Object.entries(criteriaScores).map(([criteriaId, data]) => ({
-      criteriaId,
-      name: data.name,
-      avgScore: data.totalScore / data.count,
-    }));
+    const criteriaStats = Object.entries(criteriaScores).map(
+      ([criteriaId, data]) => ({
+        criteriaId,
+        name: data.name,
+        avgScore: data.totalScore / data.count,
+      }),
+    );
 
     return {
       avgOverallScore,

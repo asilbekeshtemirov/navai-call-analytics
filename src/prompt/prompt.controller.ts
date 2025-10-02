@@ -1,10 +1,19 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { PromptService } from './prompt.service.js';
 import { CreatePromptDto } from './dto/create-prompt.dto.js';
 import { UpdatePromptDto } from './dto/update-prompt.dto.js';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('prompts')
+@ApiBearerAuth('access-token')
 @Controller('prompts')
 export class PromptController {
   constructor(private readonly promptService: PromptService) {}

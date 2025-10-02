@@ -3,7 +3,10 @@ import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service.js';
 import { DashboardFilterDto } from './dto/dashboard-filter.dto.js';
 
+import { ApiBearerAuth } from '@nestjs/swagger';
+
 @ApiTags('dashboard')
+@ApiBearerAuth('access-token')
 @Controller('dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
@@ -23,7 +26,10 @@ export class DashboardController {
   @Get('top-performers')
   @ApiOperation({ summary: 'Get top performing employees' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  getTopPerformers(@Query() filters: DashboardFilterDto, @Query('limit') limit?: number) {
+  getTopPerformers(
+    @Query() filters: DashboardFilterDto,
+    @Query('limit') limit?: number,
+  ) {
     return this.dashboardService.getTopPerformers(filters, limit ? +limit : 10);
   }
 

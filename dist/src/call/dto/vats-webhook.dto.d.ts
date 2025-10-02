@@ -1,3 +1,6 @@
+export declare class VatsWebhookDto {
+    cmd: string;
+}
 export declare class HistoryDto {
     cmd: string;
     type: string;
@@ -13,8 +16,8 @@ export declare class HistoryDto {
 export declare class EventDto {
     cmd: string;
     crm_token: string;
-    type: string;
     callid: string;
+    type: string;
     phone: string;
     user: string;
     direction: string;

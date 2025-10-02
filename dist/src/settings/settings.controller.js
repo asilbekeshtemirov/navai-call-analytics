@@ -14,6 +14,7 @@ import { Controller, Get, Patch, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { SettingsService } from './settings.service.js';
 import { UpdateSettingsDto } from './dto/update-settings.dto.js';
+import { ApiBearerAuth } from '@nestjs/swagger';
 let SettingsController = class SettingsController {
     settingsService;
     constructor(settingsService) {
@@ -43,6 +44,7 @@ __decorate([
 ], SettingsController.prototype, "update", null);
 SettingsController = __decorate([
     ApiTags('settings'),
+    ApiBearerAuth('access-token'),
     Controller('settings'),
     __metadata("design:paramtypes", [SettingsService])
 ], SettingsController);

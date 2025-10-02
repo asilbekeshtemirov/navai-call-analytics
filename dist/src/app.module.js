@@ -22,12 +22,17 @@ import { SipModule } from './sip/sip.module.js';
 import { AiModule } from './ai/ai.module.js';
 import { SettingsModule } from './settings/settings.module.js';
 import { DashboardModule } from './dashboard/dashboard.module.js';
+import { ScheduleModule } from '@nestjs/schedule';
+import { DownloaderModule } from './downloader/downloader.module.js';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './auth/jwt-auth.guard.js';
 let AppModule = class AppModule {
 };
 AppModule = __decorate([
     Module({
         imports: [
             ConfigModule.forRoot({ isGlobal: true }),
+            ScheduleModule.forRoot(),
             PrismaModule,
             CallModule,
             AuthModule,
@@ -42,9 +47,16 @@ AppModule = __decorate([
             AiModule,
             SettingsModule,
             DashboardModule,
+            DownloaderModule,
         ],
         controllers: [AppController],
-        providers: [AppService],
+        providers: [
+            AppService,
+            {
+                provide: APP_GUARD,
+                useClass: JwtAuthGuard,
+            },
+        ],
     })
 ], AppModule);
 export { AppModule };

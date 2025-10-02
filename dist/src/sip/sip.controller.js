@@ -13,6 +13,8 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 import { Body, Controller, Post, HttpCode, HttpStatus } from '@nestjs/common';
 import { SipService } from './sip.service.js';
 import { SipregsErrorDto } from './dto/sipregs-error.dto.js';
+import { Public } from '../auth/public.decorator.js';
+import { ApiTags } from '@nestjs/swagger';
 let SipController = class SipController {
     sipService;
     constructor(sipService) {
@@ -23,6 +25,7 @@ let SipController = class SipController {
     }
 };
 __decorate([
+    Public(),
     Post('webhook'),
     HttpCode(HttpStatus.NO_CONTENT),
     __param(0, Body()),
@@ -31,6 +34,7 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], SipController.prototype, "handleSipregsError", null);
 SipController = __decorate([
+    ApiTags('sip'),
     Controller('sip'),
     __metadata("design:paramtypes", [SipService])
 ], SipController);

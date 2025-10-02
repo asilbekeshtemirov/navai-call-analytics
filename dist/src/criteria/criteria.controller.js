@@ -10,11 +10,11 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, } from '@nestjs/common';
 import { CriteriaService } from './criteria.service.js';
 import { CreateCriteriaDto } from './dto/create-criteria.dto.js';
 import { UpdateCriteriaDto } from './dto/update-criteria.dto.js';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 let CriteriaController = class CriteriaController {
     criteriaService;
     constructor(criteriaService) {
@@ -73,6 +73,7 @@ __decorate([
 ], CriteriaController.prototype, "remove", null);
 CriteriaController = __decorate([
     ApiTags('criteria'),
+    ApiBearerAuth('access-token'),
     Controller('criteria'),
     __metadata("design:paramtypes", [CriteriaService])
 ], CriteriaController);

@@ -10,11 +10,11 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, } from '@nestjs/common';
 import { BranchService } from './branch.service.js';
 import { CreateBranchDto } from './dto/create-branch.dto.js';
 import { UpdateBranchDto } from './dto/update-branch.dto.js';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 let BranchController = class BranchController {
     branchService;
     constructor(branchService) {
@@ -88,6 +88,7 @@ __decorate([
 ], BranchController.prototype, "remove", null);
 BranchController = __decorate([
     ApiTags('branches'),
+    ApiBearerAuth('access-token'),
     Controller('branches'),
     __metadata("design:paramtypes", [BranchService])
 ], BranchController);

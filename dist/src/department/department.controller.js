@@ -10,11 +10,11 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, } from '@nestjs/common';
 import { DepartmentService } from './department.service.js';
 import { CreateDepartmentDto } from './dto/create-department.dto.js';
 import { UpdateDepartmentDto } from './dto/update-department.dto.js';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 let DepartmentController = class DepartmentController {
     departmentService;
     constructor(departmentService) {
@@ -73,6 +73,7 @@ __decorate([
 ], DepartmentController.prototype, "remove", null);
 DepartmentController = __decorate([
     ApiTags('departments'),
+    ApiBearerAuth('access-token'),
     Controller('departments'),
     __metadata("design:paramtypes", [DepartmentService])
 ], DepartmentController);

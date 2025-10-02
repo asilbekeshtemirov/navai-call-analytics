@@ -1,4 +1,11 @@
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 enum ScoringMode {
@@ -12,7 +19,10 @@ export class UpdateSettingsDto {
   @IsBoolean()
   analyticsStatus?: boolean;
 
-  @ApiPropertyOptional({ enum: ScoringMode, description: 'Scoring mode: 10 or 100 point scale' })
+  @ApiPropertyOptional({
+    enum: ScoringMode,
+    description: 'Scoring mode: 10 or 100 point scale',
+  })
   @IsOptional()
   @IsEnum(ScoringMode)
   scoringMode?: ScoringMode;

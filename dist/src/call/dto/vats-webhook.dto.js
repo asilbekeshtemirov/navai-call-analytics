@@ -7,7 +7,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsIn } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsNumber, IsIn, } from 'class-validator';
+export class VatsWebhookDto {
+    cmd;
+}
+__decorate([
+    IsString(),
+    IsNotEmpty(),
+    __metadata("design:type", String)
+], VatsWebhookDto.prototype, "cmd", void 0);
 export class HistoryDto {
     cmd;
     type;
@@ -73,8 +81,8 @@ __decorate([
 export class EventDto {
     cmd;
     crm_token;
-    type;
     callid;
+    type;
     phone;
     user;
     direction;
@@ -98,14 +106,21 @@ __decorate([
 __decorate([
     IsString(),
     IsNotEmpty(),
-    IsIn(['INCOMING', 'ACCEPTED', 'COMPLETED', 'CANCELLED', 'OUTGOING', 'TRANSFERRED']),
     __metadata("design:type", String)
-], EventDto.prototype, "type", void 0);
+], EventDto.prototype, "callid", void 0);
 __decorate([
     IsString(),
     IsNotEmpty(),
+    IsIn([
+        'INCOMING',
+        'ACCEPTED',
+        'COMPLETED',
+        'CANCELLED',
+        'OUTGOING',
+        'TRANSFERRED',
+    ]),
     __metadata("design:type", String)
-], EventDto.prototype, "callid", void 0);
+], EventDto.prototype, "type", void 0);
 __decorate([
     IsString(),
     IsNotEmpty(),

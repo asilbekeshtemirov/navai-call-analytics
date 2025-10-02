@@ -7,7 +7,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Min, } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 var ScoringMode;
 (function (ScoringMode) {
@@ -28,7 +28,10 @@ __decorate([
     __metadata("design:type", Boolean)
 ], UpdateSettingsDto.prototype, "analyticsStatus", void 0);
 __decorate([
-    ApiPropertyOptional({ enum: ScoringMode, description: 'Scoring mode: 10 or 100 point scale' }),
+    ApiPropertyOptional({
+        enum: ScoringMode,
+        description: 'Scoring mode: 10 or 100 point scale',
+    }),
     IsOptional(),
     IsEnum(ScoringMode),
     __metadata("design:type", String)

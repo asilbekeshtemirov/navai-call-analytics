@@ -14,6 +14,7 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service.js';
 import { DashboardFilterDto } from './dto/dashboard-filter.dto.js';
+import { ApiBearerAuth } from '@nestjs/swagger';
 let DashboardController = class DashboardController {
     dashboardService;
     constructor(dashboardService) {
@@ -79,6 +80,7 @@ __decorate([
 ], DashboardController.prototype, "getAnalysisStats", null);
 DashboardController = __decorate([
     ApiTags('dashboard'),
+    ApiBearerAuth('access-token'),
     Controller('dashboard'),
     __metadata("design:paramtypes", [DashboardService])
 ], DashboardController);

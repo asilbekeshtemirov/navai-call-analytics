@@ -8,7 +8,7 @@ export class SettingsService {
 
   async get() {
     let settings = await this.prisma.setting.findFirst();
-    
+
     // Create default settings if none exist
     if (!settings) {
       settings = await this.prisma.setting.create({
@@ -22,13 +22,13 @@ export class SettingsService {
         },
       });
     }
-    
+
     return settings;
   }
 
   async update(updateSettingsDto: UpdateSettingsDto) {
     const settings = await this.get();
-    
+
     return this.prisma.setting.update({
       where: { id: settings.id },
       data: updateSettingsDto,

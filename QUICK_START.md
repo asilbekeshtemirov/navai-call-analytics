@@ -48,12 +48,6 @@ Migration nomi so'ralganda: `init` deb yozing va Enter bosing.
 npm run db:seed
 ```
 
-Bu quyidagilarni yaratadi:
-- ✅ Admin: `+998901234567` / `admin123`
-- ✅ Employee: `+998901234568` / `employee123`
-- ✅ Manager: `+998901234569` / `manager123`
-- ✅ Filial, Bo'lim, Kriteriyalar
-
 ## 🎯 5-Qadam: Serverni Ishga Tushirish
 
 ```bash

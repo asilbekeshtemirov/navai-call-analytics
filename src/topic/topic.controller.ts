@@ -1,10 +1,19 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { TopicService } from './topic.service.js';
 import { CreateTopicDto } from './dto/create-topic.dto.js';
 import { UpdateTopicDto } from './dto/update-topic.dto.js';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('topics')
+@ApiBearerAuth('access-token')
 @Controller('topics')
 export class TopicController {
   constructor(private readonly topicService: TopicService) {}

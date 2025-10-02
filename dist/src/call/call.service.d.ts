@@ -27,13 +27,16 @@ export declare class CallService {
     uploadFromUrl(uploadFromUrlDto: UploadFromUrlDto): Promise<{
         id: string;
         createdAt: Date;
-        branchId: string | null;
-        departmentId: string | null;
-        sipId: string;
+        externalId: string;
         employeeId: string;
         managerId: string | null;
+        branchId: string | null;
+        departmentId: string | null;
         fileUrl: string;
         status: import("@prisma/client").$Enums.CallStatus;
+        callerNumber: string | null;
+        calleeNumber: string | null;
+        callDate: Date;
         durationSec: number | null;
         transcription: string | null;
         analysis: import("@prisma/client/runtime/library").JsonValue | null;
@@ -46,6 +49,22 @@ export declare class CallService {
         dateFrom?: string;
         dateTo?: string;
     }): Promise<({
+        scores: ({
+            criteria: {
+                id: string;
+                name: string;
+                weight: number;
+                description: string | null;
+                createdAt: Date;
+                updatedAt: Date;
+            };
+        } & {
+            id: string;
+            score: number;
+            callId: string;
+            criteriaId: string;
+            notes: string | null;
+        })[];
         branch: {
             id: string;
             name: string;
@@ -54,22 +73,6 @@ export declare class CallService {
             id: string;
             name: string;
         } | null;
-        scores: ({
-            criteria: {
-                id: string;
-                updatedAt: Date;
-                name: string;
-                createdAt: Date;
-                weight: number;
-                description: string | null;
-            };
-        } & {
-            id: string;
-            criteriaId: string;
-            notes: string | null;
-            score: number;
-            callId: string;
-        })[];
         employee: {
             id: string;
             firstName: string;
@@ -78,81 +81,84 @@ export declare class CallService {
         };
         violations: {
             id: string;
-            type: string;
-            timestampMs: number;
-            details: string | null;
             callId: string;
+            timestampMs: number;
+            type: string;
+            details: string | null;
         }[];
     } & {
         id: string;
         createdAt: Date;
-        branchId: string | null;
-        departmentId: string | null;
-        sipId: string;
+        externalId: string;
         employeeId: string;
         managerId: string | null;
+        branchId: string | null;
+        departmentId: string | null;
         fileUrl: string;
         status: import("@prisma/client").$Enums.CallStatus;
+        callerNumber: string | null;
+        calleeNumber: string | null;
+        callDate: Date;
         durationSec: number | null;
         transcription: string | null;
         analysis: import("@prisma/client/runtime/library").JsonValue | null;
     })[]>;
     findOne(id: string): Promise<({
-        branch: {
-            id: string;
-            updatedAt: Date;
-            name: string;
-            address: string | null;
-            createdAt: Date;
-        } | null;
-        department: {
-            id: string;
-            updatedAt: Date;
-            name: string;
-            createdAt: Date;
-            branchId: string;
-        } | null;
         scores: ({
             criteria: {
                 id: string;
-                updatedAt: Date;
                 name: string;
-                createdAt: Date;
                 weight: number;
                 description: string | null;
+                createdAt: Date;
+                updatedAt: Date;
             };
         } & {
             id: string;
-            criteriaId: string;
-            notes: string | null;
             score: number;
             callId: string;
+            criteriaId: string;
+            notes: string | null;
         })[];
+        branch: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            address: string | null;
+        } | null;
+        department: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            branchId: string;
+        } | null;
         employee: {
             id: string;
-            updatedAt: Date;
             createdAt: Date;
+            updatedAt: Date;
             branchId: string | null;
-            phone: string;
+            departmentId: string | null;
             firstName: string;
             lastName: string;
+            phone: string;
             extCode: string | null;
             role: import("@prisma/client").$Enums.UserRole;
             passwordHash: string;
-            departmentId: string | null;
         };
         manager: {
             id: string;
-            updatedAt: Date;
             createdAt: Date;
+            updatedAt: Date;
             branchId: string | null;
-            phone: string;
+            departmentId: string | null;
             firstName: string;
             lastName: string;
+            phone: string;
             extCode: string | null;
             role: import("@prisma/client").$Enums.UserRole;
             passwordHash: string;
-            departmentId: string | null;
         } | null;
         segments: {
             id: string;
@@ -164,21 +170,24 @@ export declare class CallService {
         }[];
         violations: {
             id: string;
-            type: string;
-            timestampMs: number;
-            details: string | null;
             callId: string;
+            timestampMs: number;
+            type: string;
+            details: string | null;
         }[];
     } & {
         id: string;
         createdAt: Date;
-        branchId: string | null;
-        departmentId: string | null;
-        sipId: string;
+        externalId: string;
         employeeId: string;
         managerId: string | null;
+        branchId: string | null;
+        departmentId: string | null;
         fileUrl: string;
         status: import("@prisma/client").$Enums.CallStatus;
+        callerNumber: string | null;
+        calleeNumber: string | null;
+        callDate: Date;
         durationSec: number | null;
         transcription: string | null;
         analysis: import("@prisma/client/runtime/library").JsonValue | null;

@@ -31,7 +31,10 @@ let ReportService = class ReportService {
         const totalCalls = calls.length;
         const totalDuration = calls.reduce((sum, call) => sum + (call.durationSec || 0), 0);
         const allScores = calls.flatMap((call) => call.scores.map((score) => score.score));
-        const avgScore = allScores.length > 0 ? allScores.reduce((sum, score) => sum + score, 0) / allScores.length : 0;
+        const avgScore = allScores.length > 0
+            ? allScores.reduce((sum, score) => sum + score, 0) /
+                allScores.length
+            : 0;
         const summary = `Report for user ${userId} from ${dateFrom} to ${dateTo}. Total calls: ${totalCalls}. Average score: ${avgScore.toFixed(2)}.`;
         return this.prisma.report.create({
             data: {
