@@ -1,0 +1,172 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Branch {
+  id          String       @id @default(uuid())
+  name        String       @db.VarChar(255)
+  address     String?      @db.VarChar(255)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  calls       Call[]
+  departments Department[]
+  users       User[]
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  branchId  String
+  name      String   @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  calls     Call[]
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  users     User[]
+}
+
+model User {
+  id              String      @id @default(uuid())
+  firstName       String      @db.VarChar(120)
+  lastName        String      @db.VarChar(120)
+  phone           String      @unique @db.VarChar(32)
+  extCode         String?     @db.VarChar(16)
+  role            UserRole    @default(EMPLOYEE)
+  passwordHash    String
+  branchId        String?
+  departmentId    String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  callsAsEmployee Call[]      @relation("EmployeeCalls")
+  callsAsManager  Call[]      @relation("ManagerCalls")
+  reports         Report[]
+  branch          Branch?     @relation(fields: [branchId], references: [id])
+  department      Department? @relation(fields: [departmentId], references: [id])
+}
+
+model Criteria {
+  id          String      @id @default(uuid())
+  name        String      @unique @db.VarChar(255)
+  weight      Int         @default(1)
+  description String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  scores      CallScore[]
+}
+
+model Topic {
+  id        String   @id @default(uuid())
+  name      String   @unique @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  prompts   Prompt[]
+}
+
+model Prompt {
+  id        String   @id @default(uuid())
+  topicId   String
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  topic     Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+}
+
+model Call {
+  id             String              @id @default(uuid())
+  sipId          String              @unique
+  employeeId     String
+  managerId      String?
+  branchId       String?
+  departmentId   String?
+  fileUrl        String
+  status         CallStatus          @default(UPLOADED)
+  createdAt      DateTime            @default(now())
+  durationSec    Int?
+  transcription  String?
+  analysis       Json?
+  branch         Branch?             @relation(fields: [branchId], references: [id])
+  department     Department?         @relation(fields: [departmentId], references: [id])
+  employee       User                @relation("EmployeeCalls", fields: [employeeId], references: [id])
+  manager        User?               @relation("ManagerCalls", fields: [managerId], references: [id])
+  scores         CallScore[]
+  segments       TranscriptSegment[]
+  violations     Violation[]
+}
+
+model TranscriptSegment {
+  id      String @id @default(uuid())
+  callId  String
+  startMs Int
+  endMs   Int
+  speaker String @db.VarChar(32)
+  text    String
+  call    Call   @relation(fields: [callId], references: [id], onDelete: Cascade)
+}
+
+model CallScore {
+  id         String   @id @default(uuid())
+  callId     String
+  criteriaId String
+  score      Int
+  notes      String?
+  call       Call     @relation(fields: [callId], references: [id], onDelete: Cascade)
+  criteria   Criteria @relation(fields: [criteriaId], references: [id], onDelete: Cascade)
+
+  @@unique([callId, criteriaId])
+}
+
+model Violation {
+  id          String  @id @default(uuid())
+  callId      String
+  type        String  @db.VarChar(255)
+  timestampMs Int
+  details     String?
+  call        Call    @relation(fields: [callId], references: [id], onDelete: Cascade)
+}
+
+model Report {
+  id            String   @id @default(uuid())
+  userId        String
+  dateFrom      DateTime
+  dateTo        DateTime
+  totalCalls    Int
+  totalDuration Int
+  avgScore      Float
+  summary       String?
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Setting {
+  id              Int         @id @default(1)
+  analyticsStatus Boolean     @default(true)
+  scoringMode     ScoringMode @default(TEN)
+  excludeSeconds  Int         @default(0)
+  pbxUrl          String?     @db.VarChar(255)
+  language        String?     @db.VarChar(16)
+  updatedAt       DateTime    @updatedAt
+
+  @@map("settings")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+enum CallStatus {
+  UPLOADED
+  PROCESSING
+  DONE
+  ERROR
+}
+
+enum ScoringMode {
+  TEN
+  HUNDRED
+}
