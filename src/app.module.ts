@@ -17,6 +17,7 @@ import { StatisticsModule } from './statistics/statistics.module.js';
 import { PbxModule } from './pbx/pbx.module.js';
 import { CompanyModule } from './company/company.module.js';
 import { ScheduleModule } from '@nestjs/schedule';
+import { BranchModule } from './branch/branch.module.js';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     StatisticsModule,
     PbxModule,
     CompanyModule,
+    BranchModule,
   ],
   controllers: [AppController],
   providers: [

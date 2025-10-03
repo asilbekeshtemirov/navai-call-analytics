@@ -125,7 +125,7 @@ async function main() {
   });
   console.log('✅ Manager created (phone: +998901234569, password: manager123)');
 
-  // Create additional employees with extCode 701 and 702
+  
   const employee701 = await prisma.user.upsert({
     where: { phone: '998905389252' },
     update: {},

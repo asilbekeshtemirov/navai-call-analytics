@@ -23,6 +23,7 @@ import { StatisticsModule } from './statistics/statistics.module.js';
 import { PbxModule } from './pbx/pbx.module.js';
 import { CompanyModule } from './company/company.module.js';
 import { ScheduleModule } from '@nestjs/schedule';
+import { BranchModule } from './branch/branch.module.js';
 let AppModule = class AppModule {
 };
 AppModule = __decorate([
@@ -44,6 +45,7 @@ AppModule = __decorate([
             StatisticsModule,
             PbxModule,
             CompanyModule,
+            BranchModule,
         ],
         controllers: [AppController],
         providers: [
