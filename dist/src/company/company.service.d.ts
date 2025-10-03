@@ -1,21 +1,10 @@
 import { PrismaService } from '../prisma/prisma.service.js';
 import { StatisticsService } from '../statistics/statistics.service.js';
+import { UnifiedStatisticsDto } from './dto/unified-statistics.dto.js';
 export declare class CompanyService {
     private prisma;
     private statisticsService;
     constructor(prisma: PrismaService, statisticsService: StatisticsService);
-    getCompanyOverview(): Promise<{
-        totalEmployees: number;
-        totalCalls: number;
-        todayCalls: number;
-        monthCalls: number;
-        totalDurationToday: any;
-        avgScoreToday: number;
-        dailyStats: any;
-        monthlyStats: any;
-    }>;
-    getCompanyDailyStats(dateStr?: string): Promise<any>;
-    getCompanyMonthlyStats(year?: number, month?: number): Promise<any>;
     getEmployeesPerformance(period?: string): Promise<{
         employee: {
             id: string;
@@ -30,35 +19,31 @@ export declare class CompanyService {
     }[]>;
     getRecentCalls(limit?: number): Promise<({
         employee: {
+            extCode: string | null;
             firstName: string;
             lastName: string;
-            extCode: string | null;
         };
     } & {
         id: string;
-        createdAt: Date;
+        externalId: string;
+        employeeId: string;
+        managerId: string | null;
         branchId: string | null;
         departmentId: string | null;
-        externalId: string;
         fileUrl: string;
         status: import("@prisma/client").$Enums.CallStatus;
         callerNumber: string | null;
         calleeNumber: string | null;
         callDate: Date;
+        createdAt: Date;
         durationSec: number | null;
         transcription: string | null;
         analysis: import("@prisma/client/runtime/library").JsonValue | null;
-        employeeId: string;
-        managerId: string | null;
     })[]>;
-    getDashboardData(): Promise<{
-        totalEmployees: number;
-        totalCalls: number;
-        todayCalls: number;
-        monthCalls: number;
-        totalDurationToday: any;
-        avgScoreToday: number;
-        dailyStats: any;
-        monthlyStats: any;
-    }>;
+    getUnifiedStatistics(filters: UnifiedStatisticsDto): Promise<any>;
+    private getFilteredOverview;
+    private getFilteredDailyStats;
+    private getFilteredMonthlyStats;
+    private getFilteredDashboardData;
+    private getFilteredSummary;
 }

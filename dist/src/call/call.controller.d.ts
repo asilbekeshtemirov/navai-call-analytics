@@ -1,77 +1,8 @@
 import { CallService } from './call.service.js';
-import { CreateCallDto } from './dto/create-call.dto.js';
-import { UploadFromUrlDto } from './dto/upload-from-url.dto.js';
-import { HistoryDto, EventDto, ContactDto, RatingDto } from './dto/vats-webhook.dto.js';
 export declare class CallController {
     private readonly callService;
     private readonly logger;
     constructor(callService: CallService);
-    handleVatsWebhook(body: HistoryDto | EventDto | ContactDto | RatingDto): Promise<{
-        message: string;
-    } | {
-        contact_name: string;
-        responsible: string;
-    } | {
-        status: string;
-        message: string;
-    }>;
-    uploadFromUrl(uploadFromUrlDto: UploadFromUrlDto): Promise<{
-        id: string;
-        createdAt: Date;
-        branchId: string | null;
-        departmentId: string | null;
-        externalId: string;
-        fileUrl: string;
-        status: import("@prisma/client").$Enums.CallStatus;
-        callerNumber: string | null;
-        calleeNumber: string | null;
-        callDate: Date;
-        durationSec: number | null;
-        transcription: string | null;
-        analysis: import("@prisma/client/runtime/library").JsonValue | null;
-        employeeId: string;
-        managerId: string | null;
-    }>;
-    create(createCallDto: CreateCallDto): Promise<{
-        id: string;
-        createdAt: Date;
-        branchId: string | null;
-        departmentId: string | null;
-        externalId: string;
-        fileUrl: string;
-        status: import("@prisma/client").$Enums.CallStatus;
-        callerNumber: string | null;
-        calleeNumber: string | null;
-        callDate: Date;
-        durationSec: number | null;
-        transcription: string | null;
-        analysis: import("@prisma/client/runtime/library").JsonValue | null;
-        employeeId: string;
-        managerId: string | null;
-    }>;
-    createManualCall(data: {
-        employeeId: string;
-        callerNumber: string;
-        calleeNumber: string;
-        durationSec: number;
-        audioUrl?: string;
-    }): Promise<{
-        id: string;
-        createdAt: Date;
-        branchId: string | null;
-        departmentId: string | null;
-        externalId: string;
-        fileUrl: string;
-        status: import("@prisma/client").$Enums.CallStatus;
-        callerNumber: string | null;
-        calleeNumber: string | null;
-        callDate: Date;
-        durationSec: number | null;
-        transcription: string | null;
-        analysis: import("@prisma/client/runtime/library").JsonValue | null;
-        employeeId: string;
-        managerId: string | null;
-    }>;
     findAll(branchId?: string, departmentId?: string, employeeId?: string, status?: string, dateFrom?: string, dateTo?: string): Promise<({
         branch: {
             id: string;
@@ -81,109 +12,109 @@ export declare class CallController {
             id: string;
             name: string;
         } | null;
-        scores: ({
-            criteria: {
-                id: string;
-                updatedAt: Date;
-                name: string;
-                createdAt: Date;
-                weight: number;
-                description: string | null;
-            };
-        } & {
-            id: string;
-            criteriaId: string;
-            notes: string | null;
-            score: number;
-            callId: string;
-        })[];
         employee: {
             id: string;
             firstName: string;
             lastName: string;
             extCode: string | null;
         };
+        scores: ({
+            criteria: {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                name: string;
+                weight: number;
+                description: string | null;
+            };
+        } & {
+            id: string;
+            callId: string;
+            criteriaId: string;
+            score: number;
+            notes: string | null;
+        })[];
         violations: {
             id: string;
+            callId: string;
             type: string;
             timestampMs: number;
             details: string | null;
-            callId: string;
         }[];
     } & {
-        id: string;
-        createdAt: Date;
         branchId: string | null;
         departmentId: string | null;
-        externalId: string;
-        fileUrl: string;
+        employeeId: string;
         status: import("@prisma/client").$Enums.CallStatus;
+        id: string;
+        externalId: string;
+        managerId: string | null;
+        fileUrl: string;
         callerNumber: string | null;
         calleeNumber: string | null;
         callDate: Date;
+        createdAt: Date;
         durationSec: number | null;
         transcription: string | null;
         analysis: import("@prisma/client/runtime/library").JsonValue | null;
-        employeeId: string;
-        managerId: string | null;
     })[]>;
     findOne(id: string): Promise<({
         branch: {
             id: string;
+            createdAt: Date;
             updatedAt: Date;
             name: string;
             address: string | null;
-            createdAt: Date;
         } | null;
         department: {
+            branchId: string;
             id: string;
+            createdAt: Date;
             updatedAt: Date;
             name: string;
+        } | null;
+        employee: {
+            branchId: string | null;
+            departmentId: string | null;
+            id: string;
             createdAt: Date;
-            branchId: string;
+            firstName: string;
+            lastName: string;
+            phone: string;
+            extCode: string | null;
+            role: import("@prisma/client").$Enums.UserRole;
+            passwordHash: string;
+            updatedAt: Date;
+        };
+        manager: {
+            branchId: string | null;
+            departmentId: string | null;
+            id: string;
+            createdAt: Date;
+            firstName: string;
+            lastName: string;
+            phone: string;
+            extCode: string | null;
+            role: import("@prisma/client").$Enums.UserRole;
+            passwordHash: string;
+            updatedAt: Date;
         } | null;
         scores: ({
             criteria: {
                 id: string;
+                createdAt: Date;
                 updatedAt: Date;
                 name: string;
-                createdAt: Date;
                 weight: number;
                 description: string | null;
             };
         } & {
             id: string;
-            criteriaId: string;
-            notes: string | null;
-            score: number;
             callId: string;
+            criteriaId: string;
+            score: number;
+            notes: string | null;
         })[];
-        employee: {
-            id: string;
-            updatedAt: Date;
-            createdAt: Date;
-            branchId: string | null;
-            phone: string;
-            firstName: string;
-            lastName: string;
-            extCode: string | null;
-            role: import("@prisma/client").$Enums.UserRole;
-            passwordHash: string;
-            departmentId: string | null;
-        };
-        manager: {
-            id: string;
-            updatedAt: Date;
-            createdAt: Date;
-            branchId: string | null;
-            phone: string;
-            firstName: string;
-            lastName: string;
-            extCode: string | null;
-            role: import("@prisma/client").$Enums.UserRole;
-            passwordHash: string;
-            departmentId: string | null;
-        } | null;
         segments: {
             id: string;
             callId: string;
@@ -194,27 +125,27 @@ export declare class CallController {
         }[];
         violations: {
             id: string;
+            callId: string;
             type: string;
             timestampMs: number;
             details: string | null;
-            callId: string;
         }[];
     } & {
-        id: string;
-        createdAt: Date;
         branchId: string | null;
         departmentId: string | null;
-        externalId: string;
-        fileUrl: string;
+        employeeId: string;
         status: import("@prisma/client").$Enums.CallStatus;
+        id: string;
+        externalId: string;
+        managerId: string | null;
+        fileUrl: string;
         callerNumber: string | null;
         calleeNumber: string | null;
         callDate: Date;
+        createdAt: Date;
         durationSec: number | null;
         transcription: string | null;
         analysis: import("@prisma/client/runtime/library").JsonValue | null;
-        employeeId: string;
-        managerId: string | null;
     }) | null>;
     getTranscript(id: string): Promise<{
         id: string;

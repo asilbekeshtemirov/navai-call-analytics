@@ -18,6 +18,7 @@ import { RolesGuard } from '../auth/roles.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
 import { UserRole } from '@prisma/client';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto.js';
+import { UnifiedUserStatisticsDto } from './dto/unified-user-statistics.dto.js';
 @ApiTags('users')
 @ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard, RolesGuard) // Apply guards to the entire controller
@@ -37,35 +38,17 @@ export class UserController {
     return this.userService.findAll();
   }
 
-  @Get(':id/statistics/daily')
+  @Get(':id/statistics')
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'Get user daily statistics' })
-  @ApiQuery({ name: 'date', required: true, description: 'Date in YYYY-MM-DD format' })
-  async getUserDailyStats(
+  @ApiOperation({ 
+    summary: 'Birlashtirilgan user statistika - barcha statistika turlarini bir joyda olish',
+    description: 'Bu endpoint orqali daily, monthly, summary ma\'lumotlarini sana oralig\'i bilan filter qilish mumkin'
+  })
+  async getUnifiedUserStatistics(
     @Param('id') id: string,
-    @Query('date') dateStr: string,
+    @Query() filters: UnifiedUserStatisticsDto
   ) {
-    return this.userService.getUserDailyStats(id, dateStr);
-  }
-
-  @Get(':id/statistics/monthly')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'Get user monthly statistics' })
-  @ApiQuery({ name: 'year', required: true, type: Number })
-  @ApiQuery({ name: 'month', required: true, type: Number })
-  async getUserMonthlyStats(
-    @Param('id') id: string,
-    @Query('year') year: string,
-    @Query('month') month: string,
-  ) {
-    return this.userService.getUserMonthlyStats(id, parseInt(year), parseInt(month));
-  }
-
-  @Get(':id/statistics/summary')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'Get user statistics summary' })
-  async getUserStatsSummary(@Param('id') id: string) {
-    return this.userService.getUserStatsSummary(id);
+    return this.userService.getUnifiedUserStatistics(id, filters);
   }
 
   @Get(':id')

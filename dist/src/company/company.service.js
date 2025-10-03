@@ -10,67 +10,13 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { StatisticsService } from '../statistics/statistics.service.js';
+import { StatisticsType } from './dto/unified-statistics.dto.js';
 let CompanyService = class CompanyService {
     prisma;
     statisticsService;
     constructor(prisma, statisticsService) {
         this.prisma = prisma;
         this.statisticsService = statisticsService;
-    }
-    async getCompanyOverview() {
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const currentMonth = today.getMonth() + 1;
-        const currentYear = today.getFullYear();
-        const [totalEmployees, totalCalls, todayCalls, monthCalls, dailyStats, monthlyStats,] = await Promise.all([
-            this.prisma.user.count({ where: { role: 'EMPLOYEE' } }),
-            this.prisma.call.count({ where: { status: 'DONE' } }),
-            this.prisma.call.count({
-                where: {
-                    status: 'DONE',
-                    callDate: {
-                        gte: yesterday,
-                        lt: today,
-                    },
-                },
-            }),
-            this.prisma.call.count({
-                where: {
-                    status: 'DONE',
-                    callDate: {
-                        gte: new Date(currentYear, currentMonth - 1, 1),
-                        lt: new Date(currentYear, currentMonth, 1),
-                    },
-                },
-            }),
-            this.statisticsService.getDailyStats(yesterday),
-            this.statisticsService.getMonthlyStats(currentYear, currentMonth),
-        ]);
-        const totalDurationToday = dailyStats.reduce((sum, stat) => sum + stat.totalDuration, 0);
-        const avgScoreToday = dailyStats.length > 0
-            ? dailyStats.reduce((sum, stat) => sum + (stat.averageScore || 0), 0) / dailyStats.length
-            : 0;
-        return {
-            totalEmployees,
-            totalCalls,
-            todayCalls,
-            monthCalls,
-            totalDurationToday,
-            avgScoreToday: Math.round(avgScoreToday * 100) / 100,
-            dailyStats,
-            monthlyStats,
-        };
-    }
-    async getCompanyDailyStats(dateStr) {
-        const date = dateStr ? new Date(dateStr) : new Date();
-        return this.statisticsService.getDailyStats(date);
-    }
-    async getCompanyMonthlyStats(year, month) {
-        const currentDate = new Date();
-        const targetYear = year || currentDate.getFullYear();
-        const targetMonth = month || currentDate.getMonth() + 1;
-        return this.statisticsService.getMonthlyStats(targetYear, targetMonth);
     }
     async getEmployeesPerformance(period = 'today') {
         let startDate;
@@ -147,8 +93,180 @@ let CompanyService = class CompanyService {
             },
         });
     }
-    async getDashboardData() {
-        return this.getCompanyOverview();
+    async getUnifiedStatistics(filters) {
+        const { type, dateFrom, dateTo, extCode, employeeId, departmentId, branchId } = filters;
+        const startDate = dateFrom ? new Date(dateFrom) : null;
+        const endDate = dateTo ? new Date(dateTo) : null;
+        const result = {
+            filters: {
+                type: type || StatisticsType.ALL,
+                dateFrom: startDate?.toISOString(),
+                dateTo: endDate?.toISOString(),
+                extCode,
+                employeeId,
+                departmentId,
+                branchId
+            },
+            data: {}
+        };
+        try {
+            if (type === StatisticsType.ALL || type === StatisticsType.OVERVIEW) {
+                result.data.overview = await this.getFilteredOverview(filters);
+            }
+            if (type === StatisticsType.ALL || type === StatisticsType.DAILY) {
+                result.data.daily = await this.getFilteredDailyStats(filters);
+            }
+            if (type === StatisticsType.ALL || type === StatisticsType.MONTHLY) {
+                result.data.monthly = await this.getFilteredMonthlyStats(filters);
+            }
+            if (type === StatisticsType.ALL || type === StatisticsType.DASHBOARD) {
+                result.data.dashboard = await this.getFilteredDashboardData(filters);
+            }
+            result.data.summary = await this.getFilteredSummary(filters);
+            return result;
+        }
+        catch (error) {
+            throw new Error(`Unified statistics error: ${error.message}`);
+        }
+    }
+    async getFilteredOverview(filters) {
+        const { dateFrom, dateTo, extCode, employeeId, departmentId, branchId } = filters;
+        const whereCondition = { status: 'DONE' };
+        if (dateFrom || dateTo) {
+            whereCondition.callDate = {};
+            if (dateFrom)
+                whereCondition.callDate.gte = new Date(dateFrom);
+            if (dateTo)
+                whereCondition.callDate.lte = new Date(dateTo);
+        }
+        if (employeeId) {
+            whereCondition.employeeId = employeeId;
+        }
+        else if (extCode) {
+            whereCondition.employee = { extCode };
+        }
+        if (departmentId || branchId) {
+            whereCondition.employee = {
+                ...whereCondition.employee,
+                ...(departmentId && { departmentId }),
+                ...(branchId && { department: { branchId } })
+            };
+        }
+        const [totalCalls, totalEmployees] = await Promise.all([
+            this.prisma.call.count({ where: whereCondition }),
+            this.prisma.user.count({
+                where: {
+                    role: 'EMPLOYEE',
+                    ...(employeeId && { id: employeeId }),
+                    ...(extCode && { extCode }),
+                    ...(departmentId && { departmentId }),
+                    ...(branchId && { department: { branchId } })
+                }
+            })
+        ]);
+        const calls = await this.prisma.call.findMany({
+            where: whereCondition,
+            select: {
+                durationSec: true,
+                analysis: true
+            }
+        });
+        const totalDuration = calls.reduce((sum, call) => sum + (call.durationSec || 0), 0);
+        const avgScore = calls.length > 0
+            ? calls.reduce((sum, call) => {
+                const analysis = call.analysis;
+                return sum + (analysis?.overallScore || 0);
+            }, 0) / calls.length
+            : 0;
+        return {
+            totalEmployees,
+            totalCalls,
+            totalDuration,
+            avgScore: Math.round(avgScore * 100) / 100,
+            period: {
+                from: dateFrom,
+                to: dateTo
+            }
+        };
+    }
+    async getFilteredDailyStats(filters) {
+        const { dateFrom, dateTo, extCode } = filters;
+        if (dateFrom && dateTo) {
+            const stats = [];
+            const currentDate = new Date(dateFrom);
+            const endDate = new Date(dateTo);
+            while (currentDate <= endDate) {
+                const dailyStat = await this.statisticsService.getDailyStats(new Date(currentDate), extCode);
+                stats.push({
+                    date: currentDate.toISOString().split('T')[0],
+                    stats: dailyStat
+                });
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            return stats;
+        }
+        else if (dateFrom) {
+            return await this.statisticsService.getDailyStats(new Date(dateFrom), extCode);
+        }
+        else {
+            return await this.statisticsService.getDailyStats(new Date(), extCode);
+        }
+    }
+    async getFilteredMonthlyStats(filters) {
+        const { dateFrom, dateTo, extCode } = filters;
+        if (dateFrom && dateTo) {
+            const stats = [];
+            const startDate = new Date(dateFrom);
+            const endDate = new Date(dateTo);
+            let currentYear = startDate.getFullYear();
+            let currentMonth = startDate.getMonth() + 1;
+            while (currentYear < endDate.getFullYear() ||
+                (currentYear === endDate.getFullYear() && currentMonth <= endDate.getMonth() + 1)) {
+                const monthlyStat = await this.statisticsService.getMonthlyStats(currentYear, currentMonth, extCode);
+                stats.push({
+                    year: currentYear,
+                    month: currentMonth,
+                    stats: monthlyStat
+                });
+                currentMonth++;
+                if (currentMonth > 12) {
+                    currentMonth = 1;
+                    currentYear++;
+                }
+            }
+            return stats;
+        }
+        else {
+            const now = new Date();
+            return await this.statisticsService.getMonthlyStats(now.getFullYear(), now.getMonth() + 1, extCode);
+        }
+    }
+    async getFilteredDashboardData(filters) {
+        return await this.getFilteredOverview(filters);
+    }
+    async getFilteredSummary(filters) {
+        const overview = await this.getFilteredOverview(filters);
+        return {
+            totalMetrics: {
+                calls: overview.totalCalls,
+                employees: overview.totalEmployees,
+                duration: overview.totalDuration,
+                averageScore: overview.avgScore
+            },
+            period: {
+                from: filters.dateFrom,
+                to: filters.dateTo,
+                daysCount: filters.dateFrom && filters.dateTo
+                    ? Math.ceil((new Date(filters.dateTo).getTime() - new Date(filters.dateFrom).getTime()) / (1000 * 60 * 60 * 24)) + 1
+                    : 1
+            },
+            appliedFilters: {
+                extCode: filters.extCode,
+                employeeId: filters.employeeId,
+                departmentId: filters.departmentId,
+                branchId: filters.branchId
+            }
+        };
     }
 };
 CompanyService = __decorate([

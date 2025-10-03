@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/roles.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
 import { UserRole } from '@prisma/client';
+import { UnifiedStatisticsDto } from './dto/unified-statistics.dto.js';
 
 @ApiTags('company')
 @ApiBearerAuth('access-token')
@@ -13,35 +14,6 @@ import { UserRole } from '@prisma/client';
 export class CompanyController {
   constructor(private readonly companyService: CompanyService) {}
 
-  @Get('statistics/overview')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'Company umumiy statistika' })
-  async getCompanyOverview() {
-    return this.companyService.getCompanyOverview();
-  }
-
-  @Get('statistics/daily')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'Company kunlik statistika' })
-  @ApiQuery({ name: 'date', required: false, description: 'Date in YYYY-MM-DD format' })
-  async getCompanyDailyStats(@Query('date') dateStr?: string) {
-    return this.companyService.getCompanyDailyStats(dateStr);
-  }
-
-  @Get('statistics/monthly')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'Company oylik statistika' })
-  @ApiQuery({ name: 'year', required: false, type: Number })
-  @ApiQuery({ name: 'month', required: false, type: Number })
-  async getCompanyMonthlyStats(
-    @Query('year') year?: string,
-    @Query('month') month?: string,
-  ) {
-    return this.companyService.getCompanyMonthlyStats(
-      year ? parseInt(year) : undefined,
-      month ? parseInt(month) : undefined,
-    );
-  }
 
   @Get('employees/performance')
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
@@ -59,10 +31,14 @@ export class CompanyController {
     return this.companyService.getRecentCalls(limit ? parseInt(limit) : 50);
   }
 
-  @Get('dashboard')
+
+  @Get('statistics')
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ summary: 'Dashboard uchun barcha ma\'lumotlar' })
-  async getDashboardData() {
-    return this.companyService.getDashboardData();
+  @ApiOperation({ 
+    summary: 'Birlashtirilgan statistika - barcha statistika turlarini bir joyda olish',
+    description: 'Bu endpoint orqali overview, daily, monthly, dashboard ma\'lumotlarini sana oralig\'i bilan filter qilish mumkin'
+  })
+  async getUnifiedStatistics(@Query() filters: UnifiedStatisticsDto) {
+    return this.companyService.getUnifiedStatistics(filters);
   }
 }

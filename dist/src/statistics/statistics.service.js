@@ -11,6 +11,7 @@ var StatisticsService_1;
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { Cron } from '@nestjs/schedule';
+import { StatisticsType } from './dto/unified-statistics.dto.js';
 let StatisticsService = StatisticsService_1 = class StatisticsService {
     prisma;
     logger = new Logger(StatisticsService_1.name);
@@ -166,6 +167,116 @@ let StatisticsService = StatisticsService_1 = class StatisticsService {
             where,
             orderBy: { extCode: 'asc' },
         });
+    }
+    async getUnifiedStatistics(filters) {
+        const { type, dateFrom, dateTo, extCode } = filters;
+        const result = {
+            filters: {
+                type: type || StatisticsType.ALL,
+                dateFrom: dateFrom ? new Date(dateFrom).toISOString() : null,
+                dateTo: dateTo ? new Date(dateTo).toISOString() : null,
+                extCode: extCode || null,
+            },
+            data: {}
+        };
+        try {
+            if (type === StatisticsType.ALL || type === StatisticsType.DAILY) {
+                result.data.daily = await this.getFilteredDailyStats(filters);
+            }
+            if (type === StatisticsType.ALL || type === StatisticsType.MONTHLY) {
+                result.data.monthly = await this.getFilteredMonthlyStats(filters);
+            }
+            if (type === StatisticsType.ALL || type === StatisticsType.SUMMARY) {
+                result.data.summary = await this.getFilteredSummary(filters);
+            }
+            return result;
+        }
+        catch (error) {
+            throw new Error(`Unified statistics error: ${error.message}`);
+        }
+    }
+    async getFilteredDailyStats(filters) {
+        const { dateFrom, dateTo, extCode } = filters;
+        if (dateFrom && dateTo) {
+            const stats = [];
+            const currentDate = new Date(dateFrom);
+            const endDate = new Date(dateTo);
+            while (currentDate <= endDate) {
+                const dailyStat = await this.getDailyStats(new Date(currentDate), extCode);
+                stats.push({
+                    date: currentDate.toISOString().split('T')[0],
+                    stats: dailyStat
+                });
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            return stats;
+        }
+        else if (dateFrom) {
+            return await this.getDailyStats(new Date(dateFrom), extCode);
+        }
+        else {
+            return await this.getDailyStats(new Date(), extCode);
+        }
+    }
+    async getFilteredMonthlyStats(filters) {
+        const { dateFrom, dateTo, extCode } = filters;
+        if (dateFrom && dateTo) {
+            const stats = [];
+            const startDate = new Date(dateFrom);
+            const endDate = new Date(dateTo);
+            let currentYear = startDate.getFullYear();
+            let currentMonth = startDate.getMonth() + 1;
+            while (currentYear < endDate.getFullYear() ||
+                (currentYear === endDate.getFullYear() && currentMonth <= endDate.getMonth() + 1)) {
+                const monthlyStat = await this.getMonthlyStats(currentYear, currentMonth, extCode);
+                stats.push({
+                    year: currentYear,
+                    month: currentMonth,
+                    stats: monthlyStat
+                });
+                currentMonth++;
+                if (currentMonth > 12) {
+                    currentMonth = 1;
+                    currentYear++;
+                }
+            }
+            return stats;
+        }
+        else {
+            const now = new Date();
+            return await this.getMonthlyStats(now.getFullYear(), now.getMonth() + 1, extCode);
+        }
+    }
+    async getFilteredSummary(filters) {
+        const { dateFrom, dateTo, extCode } = filters;
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const currentMonth = today.getMonth() + 1;
+        const currentYear = today.getFullYear();
+        const startDate = dateFrom ? new Date(dateFrom) : yesterday;
+        const endDate = dateTo ? new Date(dateTo) : today;
+        const [dailyStats, monthlyStats] = await Promise.all([
+            this.getDailyStats(startDate, extCode),
+            this.getMonthlyStats(currentYear, currentMonth, extCode),
+        ]);
+        return {
+            period: {
+                from: startDate.toISOString().split('T')[0],
+                to: endDate.toISOString().split('T')[0],
+                daysCount: Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+            },
+            totalCallsInPeriod: dailyStats.reduce((sum, stat) => sum + stat.callsCount, 0),
+            totalDurationInPeriod: dailyStats.reduce((sum, stat) => sum + stat.totalDuration, 0),
+            averageScoreInPeriod: dailyStats.length > 0
+                ? dailyStats.reduce((sum, stat) => sum + (stat.averageScore || 0), 0) / dailyStats.length
+                : 0,
+            totalCallsThisMonth: monthlyStats.reduce((sum, stat) => sum + stat.callsCount, 0),
+            totalDurationThisMonth: monthlyStats.reduce((sum, stat) => sum + stat.totalDuration, 0),
+            averageScoreThisMonth: monthlyStats.length > 0
+                ? monthlyStats.reduce((sum, stat) => sum + (stat.averageScore || 0), 0) / monthlyStats.length
+                : 0,
+        };
     }
 };
 __decorate([

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { StatisticsService } from '../statistics/statistics.service.js';
+import { UnifiedStatisticsDto, StatisticsType } from './dto/unified-statistics.dto.js';
 
 @Injectable()
 export class CompanyService {
@@ -9,85 +10,6 @@ export class CompanyService {
     private statisticsService: StatisticsService,
   ) {}
 
-  // Company umumiy statistika
-  async getCompanyOverview() {
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    const currentMonth = today.getMonth() + 1;
-    const currentYear = today.getFullYear();
-
-    const [
-      totalEmployees,
-      totalCalls,
-      todayCalls,
-      monthCalls,
-      dailyStats,
-      monthlyStats,
-    ] = await Promise.all([
-      this.prisma.user.count({ where: { role: 'EMPLOYEE' } }),
-      this.prisma.call.count({ where: { status: 'DONE' } }),
-      this.prisma.call.count({
-        where: {
-          status: 'DONE',
-          callDate: {
-            gte: yesterday,
-            lt: today,
-          },
-        },
-      }),
-      this.prisma.call.count({
-        where: {
-          status: 'DONE',
-          callDate: {
-            gte: new Date(currentYear, currentMonth - 1, 1),
-            lt: new Date(currentYear, currentMonth, 1),
-          },
-        },
-      }),
-      this.statisticsService.getDailyStats(yesterday),
-      this.statisticsService.getMonthlyStats(currentYear, currentMonth),
-    ]);
-
-    const totalDurationToday = dailyStats.reduce(
-      (sum: number, stat: any) => sum + stat.totalDuration,
-      0,
-    );
-    const avgScoreToday =
-      dailyStats.length > 0
-        ? dailyStats.reduce(
-            (sum: number, stat: any) => sum + (stat.averageScore || 0),
-            0,
-          ) / dailyStats.length
-        : 0;
-
-    return {
-      totalEmployees,
-      totalCalls,
-      todayCalls,
-      monthCalls,
-      totalDurationToday,
-      avgScoreToday: Math.round(avgScoreToday * 100) / 100,
-      dailyStats,
-      monthlyStats,
-    };
-  }
-
-  // Company kunlik statistika
-  async getCompanyDailyStats(dateStr?: string) {
-    const date = dateStr ? new Date(dateStr) : new Date();
-    return this.statisticsService.getDailyStats(date);
-  }
-
-  // Company oylik statistika
-  async getCompanyMonthlyStats(year?: number, month?: number) {
-    const currentDate = new Date();
-    const targetYear = year || currentDate.getFullYear();
-    const targetMonth = month || currentDate.getMonth() + 1;
-
-    return this.statisticsService.getMonthlyStats(targetYear, targetMonth);
-  }
 
   // Barcha xodimlar performance
   async getEmployeesPerformance(period: string = 'today') {
@@ -179,7 +101,224 @@ export class CompanyService {
     });
   }
 
-  async getDashboardData() {
-    return this.getCompanyOverview();
+
+  // Birlashtirilgan statistika - barcha endpoint larni bir joyga birlashtiradi
+  async getUnifiedStatistics(filters: UnifiedStatisticsDto) {
+    const { type, dateFrom, dateTo, extCode, employeeId, departmentId, branchId } = filters;
+    
+    // Sana oralig'ini aniqlash
+    const startDate = dateFrom ? new Date(dateFrom) : null;
+    const endDate = dateTo ? new Date(dateTo) : null;
+    
+    const result: any = {
+      filters: {
+        type: type || StatisticsType.ALL,
+        dateFrom: startDate?.toISOString(),
+        dateTo: endDate?.toISOString(),
+        extCode,
+        employeeId,
+        departmentId,
+        branchId
+      },
+      data: {}
+    };
+
+    try {
+      // Agar type ALL yoki OVERVIEW bo'lsa
+      if (type === StatisticsType.ALL || type === StatisticsType.OVERVIEW) {
+        result.data.overview = await this.getFilteredOverview(filters);
+      }
+
+      // Agar type ALL yoki DAILY bo'lsa
+      if (type === StatisticsType.ALL || type === StatisticsType.DAILY) {
+        result.data.daily = await this.getFilteredDailyStats(filters);
+      }
+
+      // Agar type ALL yoki MONTHLY bo'lsa
+      if (type === StatisticsType.ALL || type === StatisticsType.MONTHLY) {
+        result.data.monthly = await this.getFilteredMonthlyStats(filters);
+      }
+
+      // Agar type ALL yoki DASHBOARD bo'lsa
+      if (type === StatisticsType.ALL || type === StatisticsType.DASHBOARD) {
+        result.data.dashboard = await this.getFilteredDashboardData(filters);
+      }
+
+      // Qo'shimcha ma'lumotlar
+      result.data.summary = await this.getFilteredSummary(filters);
+      
+      return result;
+    } catch (error) {
+      throw new Error(`Unified statistics error: ${error.message}`);
+    }
+  }
+
+  // Filterlangan overview ma'lumotlari
+  private async getFilteredOverview(filters: UnifiedStatisticsDto) {
+    const { dateFrom, dateTo, extCode, employeeId, departmentId, branchId } = filters;
+    
+    const whereCondition: any = { status: 'DONE' };
+    
+    // Sana filtri
+    if (dateFrom || dateTo) {
+      whereCondition.callDate = {};
+      if (dateFrom) whereCondition.callDate.gte = new Date(dateFrom);
+      if (dateTo) whereCondition.callDate.lte = new Date(dateTo);
+    }
+    
+    // Employee filtri
+    if (employeeId) {
+      whereCondition.employeeId = employeeId;
+    } else if (extCode) {
+      whereCondition.employee = { extCode };
+    }
+    
+    // Department va branch filtrlari
+    if (departmentId || branchId) {
+      whereCondition.employee = {
+        ...whereCondition.employee,
+        ...(departmentId && { departmentId }),
+        ...(branchId && { department: { branchId } })
+      };
+    }
+
+    const [totalCalls, totalEmployees] = await Promise.all([
+      this.prisma.call.count({ where: whereCondition }),
+      this.prisma.user.count({ 
+        where: { 
+          role: 'EMPLOYEE',
+          ...(employeeId && { id: employeeId }),
+          ...(extCode && { extCode }),
+          ...(departmentId && { departmentId }),
+          ...(branchId && { department: { branchId } })
+        } 
+      })
+    ]);
+
+    const calls = await this.prisma.call.findMany({
+      where: whereCondition,
+      select: {
+        durationSec: true,
+        analysis: true
+      }
+    });
+
+    const totalDuration = calls.reduce((sum, call) => sum + (call.durationSec || 0), 0);
+    const avgScore = calls.length > 0 
+      ? calls.reduce((sum, call) => {
+          const analysis = call.analysis as any;
+          return sum + (analysis?.overallScore || 0);
+        }, 0) / calls.length 
+      : 0;
+
+    return {
+      totalEmployees,
+      totalCalls,
+      totalDuration,
+      avgScore: Math.round(avgScore * 100) / 100,
+      period: {
+        from: dateFrom,
+        to: dateTo
+      }
+    };
+  }
+
+  // Filterlangan kunlik statistika
+  private async getFilteredDailyStats(filters: UnifiedStatisticsDto) {
+    const { dateFrom, dateTo, extCode } = filters;
+    
+    if (dateFrom && dateTo) {
+      // Sana oralig'idagi har bir kun uchun statistika
+      const stats = [];
+      const currentDate = new Date(dateFrom);
+      const endDate = new Date(dateTo);
+      
+      while (currentDate <= endDate) {
+        const dailyStat = await this.statisticsService.getDailyStats(new Date(currentDate), extCode);
+        stats.push({
+          date: currentDate.toISOString().split('T')[0],
+          stats: dailyStat
+        });
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      return stats;
+    } else if (dateFrom) {
+      // Faqat bitta kun
+      return await this.statisticsService.getDailyStats(new Date(dateFrom), extCode);
+    } else {
+      // Bugungi kun
+      return await this.statisticsService.getDailyStats(new Date(), extCode);
+    }
+  }
+
+  // Filterlangan oylik statistika
+  private async getFilteredMonthlyStats(filters: UnifiedStatisticsDto) {
+    const { dateFrom, dateTo, extCode } = filters;
+    
+    if (dateFrom && dateTo) {
+      // Sana oralig'idagi oylar uchun statistika
+      const stats = [];
+      const startDate = new Date(dateFrom);
+      const endDate = new Date(dateTo);
+      
+      let currentYear = startDate.getFullYear();
+      let currentMonth = startDate.getMonth() + 1;
+      
+      while (currentYear < endDate.getFullYear() || 
+             (currentYear === endDate.getFullYear() && currentMonth <= endDate.getMonth() + 1)) {
+        const monthlyStat = await this.statisticsService.getMonthlyStats(currentYear, currentMonth, extCode);
+        stats.push({
+          year: currentYear,
+          month: currentMonth,
+          stats: monthlyStat
+        });
+        
+        currentMonth++;
+        if (currentMonth > 12) {
+          currentMonth = 1;
+          currentYear++;
+        }
+      }
+      
+      return stats;
+    } else {
+      // Joriy oy
+      const now = new Date();
+      return await this.statisticsService.getMonthlyStats(now.getFullYear(), now.getMonth() + 1, extCode);
+    }
+  }
+
+  // Filterlangan dashboard ma'lumotlari
+  private async getFilteredDashboardData(filters: UnifiedStatisticsDto) {
+    // Dashboard uchun asosiy ma'lumotlarni qaytarish
+    return await this.getFilteredOverview(filters);
+  }
+
+  // Filterlangan umumiy xulosalar
+  private async getFilteredSummary(filters: UnifiedStatisticsDto) {
+    const overview = await this.getFilteredOverview(filters);
+    
+    return {
+      totalMetrics: {
+        calls: overview.totalCalls,
+        employees: overview.totalEmployees,
+        duration: overview.totalDuration,
+        averageScore: overview.avgScore
+      },
+      period: {
+        from: filters.dateFrom,
+        to: filters.dateTo,
+        daysCount: filters.dateFrom && filters.dateTo 
+          ? Math.ceil((new Date(filters.dateTo).getTime() - new Date(filters.dateFrom).getTime()) / (1000 * 60 * 60 * 24)) + 1
+          : 1
+      },
+      appliedFilters: {
+        extCode: filters.extCode,
+        employeeId: filters.employeeId,
+        departmentId: filters.departmentId,
+        branchId: filters.branchId
+      }
+    };
   }
 }

@@ -11,45 +11,18 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 var CallController_1;
-import { Controller, Get, Post, Body, Param, UseGuards, Query, Logger, } from '@nestjs/common';
+import { Controller, Get, Param, Query, Logger, UseGuards, } from '@nestjs/common';
 import { CallService } from './call.service.js';
-import { ApiBearerAuth, ApiOperation, ApiTags, ApiExcludeEndpoint } from '@nestjs/swagger';
+import { ApiOperation, ApiTags, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/roles.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
 import { UserRole } from '@prisma/client';
-import { CreateCallDto } from './dto/create-call.dto.js';
-import { UploadFromUrlDto } from './dto/upload-from-url.dto.js';
 let CallController = CallController_1 = class CallController {
     callService;
     logger = new Logger(CallController_1.name);
     constructor(callService) {
         this.callService = callService;
-    }
-    async handleVatsWebhook(body) {
-        this.logger.log(`Received VATS webhook with command: ${body.cmd}`);
-        switch (body.cmd) {
-            case 'history':
-                return this.callService.handleHistory(body);
-            case 'event':
-                return this.callService.handleEvent(body);
-            case 'contact':
-                return this.callService.handleContact(body);
-            case 'rating':
-                return this.callService.handleRating(body);
-            default:
-                this.logger.warn(`Unknown VATS webhook command: ${body.cmd}`);
-                return { status: 'ignored', message: 'Unknown command' };
-        }
-    }
-    uploadFromUrl(uploadFromUrlDto) {
-        return this.callService.uploadFromUrl(uploadFromUrlDto);
-    }
-    create(createCallDto) {
-        return this.callService.create(createCallDto);
-    }
-    async createManualCall(data) {
-        return this.callService.createManualCall(data);
     }
     findAll(branchId, departmentId, employeeId, status, dateFrom, dateTo) {
         return this.callService.findAll({
@@ -69,42 +42,15 @@ let CallController = CallController_1 = class CallController {
     }
 };
 __decorate([
-    Post('vats'),
-    ApiExcludeEndpoint(),
-    __param(0, Body()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], CallController.prototype, "handleVatsWebhook", null);
-__decorate([
-    Post('upload-from-url'),
-    ApiOperation({ summary: 'Upload call from URL' }),
-    __param(0, Body()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [UploadFromUrlDto]),
-    __metadata("design:returntype", void 0)
-], CallController.prototype, "uploadFromUrl", null);
-__decorate([
-    Post(),
-    UseGuards(JwtAuthGuard, RolesGuard),
-    Roles(UserRole.ADMIN, UserRole.MANAGER),
-    __param(0, Body()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [CreateCallDto]),
-    __metadata("design:returntype", void 0)
-], CallController.prototype, "create", null);
-__decorate([
-    Post('manual'),
-    Roles(UserRole.ADMIN, UserRole.MANAGER),
-    ApiOperation({ summary: 'Manual qo\'ng\'iroq yaratish (test uchun)' }),
-    __param(0, Body()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], CallController.prototype, "createManualCall", null);
-__decorate([
     Get(),
+    Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE),
     ApiOperation({ summary: 'Get all calls with filters' }),
+    ApiQuery({ name: 'branchId', required: false, description: 'Ixtiyoriy: Filial ID si bo\'yicha filter' }),
+    ApiQuery({ name: 'departmentId', required: false, description: 'Ixtiyoriy: Bo\'lim ID si bo\'yicha filter' }),
+    ApiQuery({ name: 'employeeId', required: false, description: 'Ixtiyoriy: Xodim ID si bo\'yicha filter' }),
+    ApiQuery({ name: 'status', required: false, description: 'Ixtiyoriy: Qo\'ng\'iroq holati bo\'yicha filter (UPLOADED, PROCESSING, DONE, ERROR)' }),
+    ApiQuery({ name: 'dateFrom', required: false, description: 'Ixtiyoriy: Boshlanish sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)' }),
+    ApiQuery({ name: 'dateTo', required: false, description: 'Ixtiyoriy: Tugash sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)' }),
     __param(0, Query('branchId')),
     __param(1, Query('departmentId')),
     __param(2, Query('employeeId')),
@@ -117,6 +63,7 @@ __decorate([
 ], CallController.prototype, "findAll", null);
 __decorate([
     Get(':id'),
+    Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE),
     ApiOperation({ summary: 'Get call by ID with full details' }),
     __param(0, Param('id')),
     __metadata("design:type", Function),
@@ -125,6 +72,7 @@ __decorate([
 ], CallController.prototype, "findOne", null);
 __decorate([
     Get(':id/transcript'),
+    Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE),
     ApiOperation({ summary: 'Get call transcript segments' }),
     __param(0, Param('id')),
     __metadata("design:type", Function),
@@ -134,6 +82,7 @@ __decorate([
 CallController = CallController_1 = __decorate([
     ApiTags('calls'),
     ApiBearerAuth('access-token'),
+    UseGuards(JwtAuthGuard, RolesGuard),
     Controller('calls'),
     __metadata("design:paramtypes", [CallService])
 ], CallController);

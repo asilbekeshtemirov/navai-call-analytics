@@ -38,6 +38,7 @@ npm run start:dev
 - **Tezkor Boshlash**: `QUICK_START.md`
 - **To'liq Sozlash**: `SETUP.md`
 - **API Endpoints**: `API_ENDPOINTS.md`
+- **Birlashtirilgan Statistika API**: `docs/unified-statistics-api.md`
 - **Loyiha Xulosasi**: `PROJECT_SUMMARY.md`
 
 ## ✨ Xususiyatlar

@@ -11,6 +11,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import * as bcrypt from 'bcrypt';
 import { StatisticsService } from '../statistics/statistics.service.js';
+import { UserStatisticsType } from './dto/unified-user-statistics.dto.js';
 let UserService = class UserService {
     prisma;
     statisticsService;
@@ -61,42 +62,15 @@ let UserService = class UserService {
             data: { role },
         });
     }
-    async getUserDailyStats(userId, dateStr) {
+    async getUnifiedUserStatistics(userId, filters) {
+        const { type, dateFrom, dateTo } = filters;
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
         });
         if (!user) {
             throw new Error('User not found');
         }
-        const date = new Date(dateStr);
-        return this.statisticsService.getDailyStats(date, user.extCode || undefined);
-    }
-    async getUserMonthlyStats(userId, year, month) {
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-        });
-        if (!user) {
-            throw new Error('User not found');
-        }
-        return this.statisticsService.getMonthlyStats(year, month, user.extCode || undefined);
-    }
-    async getUserStatsSummary(userId) {
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-        });
-        if (!user) {
-            throw new Error('User not found');
-        }
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const currentMonth = today.getMonth() + 1;
-        const currentYear = today.getFullYear();
-        const [dailyStats, monthlyStats] = await Promise.all([
-            this.statisticsService.getDailyStats(yesterday, user.extCode || undefined),
-            this.statisticsService.getMonthlyStats(currentYear, currentMonth, user.extCode || undefined),
-        ]);
-        return {
+        const result = {
             user: {
                 id: user.id,
                 firstName: user.firstName,
@@ -104,22 +78,110 @@ let UserService = class UserService {
                 extCode: user.extCode,
                 role: user.role,
             },
-            statistics: {
-                daily: dailyStats,
-                monthly: monthlyStats,
-                summary: {
-                    totalCallsToday: dailyStats.reduce((sum, stat) => sum + stat.callsCount, 0),
-                    totalDurationToday: dailyStats.reduce((sum, stat) => sum + stat.totalDuration, 0),
-                    averageScoreToday: dailyStats.length > 0
-                        ? dailyStats.reduce((sum, stat) => sum + (stat.averageScore || 0), 0) / dailyStats.length
-                        : 0,
-                    totalCallsThisMonth: monthlyStats.reduce((sum, stat) => sum + stat.callsCount, 0),
-                    totalDurationThisMonth: monthlyStats.reduce((sum, stat) => sum + stat.totalDuration, 0),
-                    averageScoreThisMonth: monthlyStats.length > 0
-                        ? monthlyStats.reduce((sum, stat) => sum + (stat.averageScore || 0), 0) / monthlyStats.length
-                        : 0,
+            filters: {
+                type: type || UserStatisticsType.ALL,
+                dateFrom: dateFrom ? new Date(dateFrom).toISOString() : null,
+                dateTo: dateTo ? new Date(dateTo).toISOString() : null,
+            },
+            data: {}
+        };
+        try {
+            if (type === UserStatisticsType.ALL || type === UserStatisticsType.DAILY) {
+                result.data.daily = await this.getFilteredUserDailyStats(user.extCode, filters);
+            }
+            if (type === UserStatisticsType.ALL || type === UserStatisticsType.MONTHLY) {
+                result.data.monthly = await this.getFilteredUserMonthlyStats(user.extCode, filters);
+            }
+            if (type === UserStatisticsType.ALL || type === UserStatisticsType.SUMMARY) {
+                result.data.summary = await this.getFilteredUserSummary(user.extCode, filters);
+            }
+            return result;
+        }
+        catch (error) {
+            throw new Error(`Unified user statistics error: ${error.message}`);
+        }
+    }
+    async getFilteredUserDailyStats(extCode, filters) {
+        const { dateFrom, dateTo } = filters;
+        if (dateFrom && dateTo) {
+            const stats = [];
+            const currentDate = new Date(dateFrom);
+            const endDate = new Date(dateTo);
+            while (currentDate <= endDate) {
+                const dailyStat = await this.statisticsService.getDailyStats(new Date(currentDate), extCode || undefined);
+                stats.push({
+                    date: currentDate.toISOString().split('T')[0],
+                    stats: dailyStat
+                });
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            return stats;
+        }
+        else if (dateFrom) {
+            return await this.statisticsService.getDailyStats(new Date(dateFrom), extCode || undefined);
+        }
+        else {
+            return await this.statisticsService.getDailyStats(new Date(), extCode || undefined);
+        }
+    }
+    async getFilteredUserMonthlyStats(extCode, filters) {
+        const { dateFrom, dateTo } = filters;
+        if (dateFrom && dateTo) {
+            const stats = [];
+            const startDate = new Date(dateFrom);
+            const endDate = new Date(dateTo);
+            let currentYear = startDate.getFullYear();
+            let currentMonth = startDate.getMonth() + 1;
+            while (currentYear < endDate.getFullYear() ||
+                (currentYear === endDate.getFullYear() && currentMonth <= endDate.getMonth() + 1)) {
+                const monthlyStat = await this.statisticsService.getMonthlyStats(currentYear, currentMonth, extCode || undefined);
+                stats.push({
+                    year: currentYear,
+                    month: currentMonth,
+                    stats: monthlyStat
+                });
+                currentMonth++;
+                if (currentMonth > 12) {
+                    currentMonth = 1;
+                    currentYear++;
                 }
             }
+            return stats;
+        }
+        else {
+            const now = new Date();
+            return await this.statisticsService.getMonthlyStats(now.getFullYear(), now.getMonth() + 1, extCode || undefined);
+        }
+    }
+    async getFilteredUserSummary(extCode, filters) {
+        const { dateFrom, dateTo } = filters;
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const currentMonth = today.getMonth() + 1;
+        const currentYear = today.getFullYear();
+        const startDate = dateFrom ? new Date(dateFrom) : yesterday;
+        const endDate = dateTo ? new Date(dateTo) : today;
+        const [dailyStats, monthlyStats] = await Promise.all([
+            this.statisticsService.getDailyStats(startDate, extCode || undefined),
+            this.statisticsService.getMonthlyStats(currentYear, currentMonth, extCode || undefined),
+        ]);
+        return {
+            period: {
+                from: startDate.toISOString().split('T')[0],
+                to: endDate.toISOString().split('T')[0],
+                daysCount: Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+            },
+            totalCallsInPeriod: dailyStats.reduce((sum, stat) => sum + stat.callsCount, 0),
+            totalDurationInPeriod: dailyStats.reduce((sum, stat) => sum + stat.totalDuration, 0),
+            averageScoreInPeriod: dailyStats.length > 0
+                ? dailyStats.reduce((sum, stat) => sum + (stat.averageScore || 0), 0) / dailyStats.length
+                : 0,
+            totalCallsThisMonth: monthlyStats.reduce((sum, stat) => sum + stat.callsCount, 0),
+            totalDurationThisMonth: monthlyStats.reduce((sum, stat) => sum + stat.totalDuration, 0),
+            averageScoreThisMonth: monthlyStats.length > 0
+                ? monthlyStats.reduce((sum, stat) => sum + (stat.averageScore || 0), 0) / monthlyStats.length
+                : 0,
         };
     }
 };
