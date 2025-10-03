@@ -32,13 +32,6 @@ npm run start:dev
 - **Swagger Docs**: http://localhost:3000/api/docs
 - **Prisma Studio**: `npm run prisma:studio`
 
-## 🔑 Test Credentials
-
-```
-Admin:    +998901234567 / admin123
-Employee: +998901234568 / employee123
-Manager:  +998901234569 / manager123
-```
 
 ## 📚 Hujjatlar
 
