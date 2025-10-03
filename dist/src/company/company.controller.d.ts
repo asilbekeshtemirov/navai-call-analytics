@@ -33,21 +33,21 @@ export declare class CompanyController {
             extCode: string | null;
         };
     } & {
-        status: import("@prisma/client").$Enums.CallStatus;
         id: string;
+        createdAt: Date;
         branchId: string | null;
         departmentId: string | null;
-        createdAt: Date;
         externalId: string;
-        employeeId: string;
-        managerId: string | null;
         fileUrl: string;
+        status: import("@prisma/client").$Enums.CallStatus;
         callerNumber: string | null;
         calleeNumber: string | null;
         callDate: Date;
         durationSec: number | null;
         transcription: string | null;
         analysis: import("@prisma/client/runtime/library").JsonValue | null;
+        employeeId: string;
+        managerId: string | null;
     })[]>;
     getDashboardData(): Promise<{
         totalEmployees: number;
