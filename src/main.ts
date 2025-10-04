@@ -11,7 +11,10 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Enable CORS
-  app.enableCors();
+  app.enableCors({
+    origin: 'https://analytic.navai.pro',
+    credentials: true,
+  });
 
   // Handle application/x-www-form-urlencoded
   app.use(express.urlencoded({ extended: true }));
