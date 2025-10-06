@@ -1,10 +1,12 @@
 import { PrismaService } from '../prisma/prisma.service.js';
 import { StatisticsService } from '../statistics/statistics.service.js';
+import { SipuniService } from '../sipuni/sipuni.service.js';
 import { UnifiedStatisticsDto } from './dto/unified-statistics.dto.js';
 export declare class CompanyService {
     private prisma;
     private statisticsService;
-    constructor(prisma: PrismaService, statisticsService: StatisticsService);
+    private sipuniService;
+    constructor(prisma: PrismaService, statisticsService: StatisticsService, sipuniService: SipuniService);
     getEmployeesPerformance(period?: string): Promise<{
         employee: {
             id: string;
@@ -19,9 +21,9 @@ export declare class CompanyService {
     }[]>;
     getRecentCalls(limit?: number): Promise<({
         employee: {
-            extCode: string | null;
             firstName: string;
             lastName: string;
+            extCode: string | null;
         };
     } & {
         id: string;
@@ -45,5 +47,6 @@ export declare class CompanyService {
     private getFilteredDailyStats;
     private getFilteredMonthlyStats;
     private getFilteredDashboardData;
+    private getFilteredSipuniStats;
     private getFilteredSummary;
 }

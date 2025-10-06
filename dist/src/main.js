@@ -7,7 +7,10 @@ import { fileURLToPath } from 'url';
 import * as express from 'express';
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
-    app.enableCors();
+    app.enableCors({
+        origin: 'https://analytic.navai.pro',
+        credentials: true,
+    });
     app.use(express.urlencoded({ extended: true }));
     app.useStaticAssets(join(dirname(fileURLToPath(import.meta.url)), '..', 'uploads'), {
         prefix: '/uploads/',

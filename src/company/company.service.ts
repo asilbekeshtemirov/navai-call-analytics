@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { StatisticsService } from '../statistics/statistics.service.js';
+import { SipuniService } from '../sipuni/sipuni.service.js';
 import { UnifiedStatisticsDto, StatisticsType } from './dto/unified-statistics.dto.js';
 
 @Injectable()
@@ -8,6 +9,7 @@ export class CompanyService {
   constructor(
     private prisma: PrismaService,
     private statisticsService: StatisticsService,
+    private sipuniService: SipuniService,
   ) {}
 
 
@@ -142,6 +144,11 @@ export class CompanyService {
       // Agar type ALL yoki DASHBOARD bo'lsa
       if (type === StatisticsType.ALL || type === StatisticsType.DASHBOARD) {
         result.data.dashboard = await this.getFilteredDashboardData(filters);
+      }
+
+      // Agar type ALL yoki SIPUNI bo'lsa
+      if (type === StatisticsType.ALL || type === StatisticsType.SIPUNI) {
+        result.data.sipuni = await this.getFilteredSipuniStats(filters);
       }
 
       // Qo'shimcha ma'lumotlar
@@ -293,6 +300,80 @@ export class CompanyService {
   private async getFilteredDashboardData(filters: UnifiedStatisticsDto) {
     // Dashboard uchun asosiy ma'lumotlarni qaytarish
     return await this.getFilteredOverview(filters);
+  }
+
+  // Filterlangan Sipuni statistikalari
+  private async getFilteredSipuniStats(filters: UnifiedStatisticsDto) {
+    try {
+      const { dateFrom, dateTo } = filters;
+      
+      // Sana formatini Sipuni API uchun o'zgartirish (dd.mm.yyyy)
+      const fromDate = dateFrom 
+        ? new Date(dateFrom).toLocaleDateString('ru-RU')
+        : new Date().toLocaleDateString('ru-RU');
+      
+      const toDate = dateTo 
+        ? new Date(dateTo).toLocaleDateString('ru-RU')
+        : new Date().toLocaleDateString('ru-RU');
+
+      // Sipuni dan call records olish
+      const sipuniRecords = await this.sipuniService.fetchCallRecords(fromDate, toDate);
+      
+      // Sipuni ma'lumotlarini tahlil qilish
+      const totalSipuniCalls = sipuniRecords.length;
+      const totalSipuniDuration = sipuniRecords.reduce((sum, record) => sum + (record.duration || 0), 0);
+      
+      // Sipuni qo'ng'iroqlarini tizimda mavjud qo'ng'iroqlar bilan solishtirish
+      const processedCalls = await this.prisma.call.count({
+        where: {
+          externalId: {
+            in: sipuniRecords.map(r => r.uid)
+          },
+          status: 'DONE'
+        }
+      });
+
+      return {
+        sipuniData: {
+          totalRecords: totalSipuniCalls,
+          totalDuration: totalSipuniDuration,
+          recordsWithAudio: sipuniRecords.filter(r => r.record).length,
+          processedInSystem: processedCalls,
+          processingRate: totalSipuniCalls > 0 ? Math.round((processedCalls / totalSipuniCalls) * 100) : 0
+        },
+        recentRecords: sipuniRecords.slice(0, 10).map(record => ({
+          uid: record.uid,
+          caller: record.caller,
+          client: record.client,
+          start: record.start,
+          duration: record.duration,
+          hasRecording: !!record.record,
+          status: record.status
+        })),
+        period: {
+          from: fromDate,
+          to: toDate
+        },
+        lastSync: new Date().toISOString()
+      };
+    } catch (error) {
+      return {
+        error: `Sipuni statistics error: ${error.message}`,
+        sipuniData: {
+          totalRecords: 0,
+          totalDuration: 0,
+          recordsWithAudio: 0,
+          processedInSystem: 0,
+          processingRate: 0
+        },
+        recentRecords: [],
+        period: {
+          from: filters.dateFrom,
+          to: filters.dateTo
+        },
+        lastSync: new Date().toISOString()
+      };
+    }
   }
 
   // Filterlangan umumiy xulosalar

@@ -4,21 +4,29 @@ export declare class SettingsService {
     private readonly prisma;
     constructor(prisma: PrismaService);
     get(): Promise<{
-        id: number;
         analyticsStatus: boolean;
         scoringMode: import("@prisma/client").$Enums.ScoringMode;
         excludeSeconds: number;
         pbxUrl: string | null;
         language: string | null;
+        sipuniApiUrl: string | null;
+        sipuniApiKey: string | null;
+        sipuniUserId: string | null;
+        dataSource: import("@prisma/client").$Enums.DataSource;
+        id: number;
         updatedAt: Date;
     }>;
     update(updateSettingsDto: UpdateSettingsDto): Promise<{
-        id: number;
         analyticsStatus: boolean;
         scoringMode: import("@prisma/client").$Enums.ScoringMode;
         excludeSeconds: number;
         pbxUrl: string | null;
         language: string | null;
+        sipuniApiUrl: string | null;
+        sipuniApiKey: string | null;
+        sipuniUserId: string | null;
+        dataSource: import("@prisma/client").$Enums.DataSource;
+        id: number;
         updatedAt: Date;
     }>;
 }

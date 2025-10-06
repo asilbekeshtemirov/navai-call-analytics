@@ -15,6 +15,7 @@ export var StatisticsType;
     StatisticsType["DAILY"] = "daily";
     StatisticsType["MONTHLY"] = "monthly";
     StatisticsType["DASHBOARD"] = "dashboard";
+    StatisticsType["SIPUNI"] = "sipuni";
     StatisticsType["ALL"] = "all";
 })(StatisticsType || (StatisticsType = {}));
 export class UnifiedStatisticsDto {

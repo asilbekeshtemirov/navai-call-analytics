@@ -9,11 +9,12 @@ import { CompanyController } from './company.controller.js';
 import { CompanyService } from './company.service.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
 import { StatisticsModule } from '../statistics/statistics.module.js';
+import { SipuniModule } from '../sipuni/sipuni.module.js';
 let CompanyModule = class CompanyModule {
 };
 CompanyModule = __decorate([
     Module({
-        imports: [PrismaModule, StatisticsModule],
+        imports: [PrismaModule, StatisticsModule, SipuniModule],
         controllers: [CompanyController],
         providers: [CompanyService],
         exports: [CompanyService],

@@ -10,13 +10,16 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { StatisticsService } from '../statistics/statistics.service.js';
+import { SipuniService } from '../sipuni/sipuni.service.js';
 import { StatisticsType } from './dto/unified-statistics.dto.js';
 let CompanyService = class CompanyService {
     prisma;
     statisticsService;
-    constructor(prisma, statisticsService) {
+    sipuniService;
+    constructor(prisma, statisticsService, sipuniService) {
         this.prisma = prisma;
         this.statisticsService = statisticsService;
+        this.sipuniService = sipuniService;
     }
     async getEmployeesPerformance(period = 'today') {
         let startDate;
@@ -121,6 +124,9 @@ let CompanyService = class CompanyService {
             }
             if (type === StatisticsType.ALL || type === StatisticsType.DASHBOARD) {
                 result.data.dashboard = await this.getFilteredDashboardData(filters);
+            }
+            if (type === StatisticsType.ALL || type === StatisticsType.SIPUNI) {
+                result.data.sipuni = await this.getFilteredSipuniStats(filters);
             }
             result.data.summary = await this.getFilteredSummary(filters);
             return result;
@@ -244,6 +250,69 @@ let CompanyService = class CompanyService {
     async getFilteredDashboardData(filters) {
         return await this.getFilteredOverview(filters);
     }
+    async getFilteredSipuniStats(filters) {
+        try {
+            const { dateFrom, dateTo } = filters;
+            const fromDate = dateFrom
+                ? new Date(dateFrom).toLocaleDateString('ru-RU')
+                : new Date().toLocaleDateString('ru-RU');
+            const toDate = dateTo
+                ? new Date(dateTo).toLocaleDateString('ru-RU')
+                : new Date().toLocaleDateString('ru-RU');
+            const sipuniRecords = await this.sipuniService.fetchCallRecords(fromDate, toDate);
+            const totalSipuniCalls = sipuniRecords.length;
+            const totalSipuniDuration = sipuniRecords.reduce((sum, record) => sum + (record.duration || 0), 0);
+            const processedCalls = await this.prisma.call.count({
+                where: {
+                    externalId: {
+                        in: sipuniRecords.map(r => r.uid)
+                    },
+                    status: 'DONE'
+                }
+            });
+            return {
+                sipuniData: {
+                    totalRecords: totalSipuniCalls,
+                    totalDuration: totalSipuniDuration,
+                    recordsWithAudio: sipuniRecords.filter(r => r.record).length,
+                    processedInSystem: processedCalls,
+                    processingRate: totalSipuniCalls > 0 ? Math.round((processedCalls / totalSipuniCalls) * 100) : 0
+                },
+                recentRecords: sipuniRecords.slice(0, 10).map(record => ({
+                    uid: record.uid,
+                    caller: record.caller,
+                    client: record.client,
+                    start: record.start,
+                    duration: record.duration,
+                    hasRecording: !!record.record,
+                    status: record.status
+                })),
+                period: {
+                    from: fromDate,
+                    to: toDate
+                },
+                lastSync: new Date().toISOString()
+            };
+        }
+        catch (error) {
+            return {
+                error: `Sipuni statistics error: ${error.message}`,
+                sipuniData: {
+                    totalRecords: 0,
+                    totalDuration: 0,
+                    recordsWithAudio: 0,
+                    processedInSystem: 0,
+                    processingRate: 0
+                },
+                recentRecords: [],
+                period: {
+                    from: filters.dateFrom,
+                    to: filters.dateTo
+                },
+                lastSync: new Date().toISOString()
+            };
+        }
+    }
     async getFilteredSummary(filters) {
         const overview = await this.getFilteredOverview(filters);
         return {
@@ -272,7 +341,8 @@ let CompanyService = class CompanyService {
 CompanyService = __decorate([
     Injectable(),
     __metadata("design:paramtypes", [PrismaService,
-        StatisticsService])
+        StatisticsService,
+        SipuniService])
 ], CompanyService);
 export { CompanyService };
 //# sourceMappingURL=company.service.js.map

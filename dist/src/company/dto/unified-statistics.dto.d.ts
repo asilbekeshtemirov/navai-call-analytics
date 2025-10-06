@@ -3,6 +3,7 @@ export declare enum StatisticsType {
     DAILY = "daily",
     MONTHLY = "monthly",
     DASHBOARD = "dashboard",
+    SIPUNI = "sipuni",
     ALL = "all"
 }
 export declare class UnifiedStatisticsDto {

@@ -14,6 +14,11 @@ var ScoringMode;
     ScoringMode["TEN"] = "TEN";
     ScoringMode["HUNDRED"] = "HUNDRED";
 })(ScoringMode || (ScoringMode = {}));
+var DataSource;
+(function (DataSource) {
+    DataSource["PBX"] = "PBX";
+    DataSource["SIPUNI"] = "SIPUNI";
+})(DataSource || (DataSource = {}));
 export class UpdateSettingsDto {
     analyticsStatus;
     scoringMode;
@@ -24,6 +29,10 @@ export class UpdateSettingsDto {
     sipApiKey;
     sttApiUrl;
     geminiApiKey;
+    sipuniApiUrl;
+    sipuniApiKey;
+    sipuniUserId;
+    dataSource;
 }
 __decorate([
     ApiPropertyOptional({ description: 'Enable/disable analytics' }),
@@ -83,4 +92,31 @@ __decorate([
     IsString(),
     __metadata("design:type", String)
 ], UpdateSettingsDto.prototype, "geminiApiKey", void 0);
+__decorate([
+    ApiPropertyOptional({ description: 'Sipuni API URL' }),
+    IsOptional(),
+    IsString(),
+    __metadata("design:type", String)
+], UpdateSettingsDto.prototype, "sipuniApiUrl", void 0);
+__decorate([
+    ApiPropertyOptional({ description: 'Sipuni API Key' }),
+    IsOptional(),
+    IsString(),
+    __metadata("design:type", String)
+], UpdateSettingsDto.prototype, "sipuniApiKey", void 0);
+__decorate([
+    ApiPropertyOptional({ description: 'Sipuni User ID' }),
+    IsOptional(),
+    IsString(),
+    __metadata("design:type", String)
+], UpdateSettingsDto.prototype, "sipuniUserId", void 0);
+__decorate([
+    ApiPropertyOptional({
+        enum: DataSource,
+        description: 'Data source selection: PBX or SIPUNI'
+    }),
+    IsOptional(),
+    IsEnum(DataSource),
+    __metadata("design:type", String)
+], UpdateSettingsDto.prototype, "dataSource", void 0);
 //# sourceMappingURL=update-settings.dto.js.map

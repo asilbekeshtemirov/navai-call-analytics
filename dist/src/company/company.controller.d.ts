@@ -17,9 +17,9 @@ export declare class CompanyController {
     }[]>;
     getRecentCalls(limit?: string): Promise<({
         employee: {
-            extCode: string | null;
             firstName: string;
             lastName: string;
+            extCode: string | null;
         };
     } & {
         id: string;

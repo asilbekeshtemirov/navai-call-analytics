@@ -24,6 +24,8 @@ import { PbxModule } from './pbx/pbx.module.js';
 import { CompanyModule } from './company/company.module.js';
 import { ScheduleModule } from '@nestjs/schedule';
 import { BranchModule } from './branch/branch.module.js';
+import { SipuniModule } from './sipuni/sipuni.module.js';
+import { SettingsModule } from './settings/settings.module.js';
 let AppModule = class AppModule {
 };
 AppModule = __decorate([
@@ -45,7 +47,9 @@ AppModule = __decorate([
             StatisticsModule,
             PbxModule,
             CompanyModule,
+            SettingsModule,
             BranchModule,
+            SipuniModule,
         ],
         controllers: [AppController],
         providers: [

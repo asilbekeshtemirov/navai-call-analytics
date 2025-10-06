@@ -151,24 +151,31 @@ let AiService = AiService_1 = class AiService {
         }
     }
     buildAnalysisPrompt(transcript, criteria, maxScore) {
+        const criteriaNames = criteria.map(c => `"${c.name}"`).join(', ');
         const criteriaList = criteria
-            .map((c) => `- ${c.name} (weight: ${c.weight}): ${c.description || 'N/A'}`)
+            .map((c) => `- ${c.name} (og'irligi: ${c.weight}): ${c.description || 'Tavsif yo\'q'}`)
             .join('\n');
         return `
-You are an expert call quality analyst. Analyze the following call transcript and provide scores based on these criteria:
+Siz qo'ng'iroq sifatini tahlil qiluvchi mutaxassassiz. Quyidagi qo'ng'iroq transkripsiyasini tahlil qiling va ushbu mezonlar asosida ball bering:
 
 ${criteriaList}
 
-Transcript:
+Transkripsiya:
 ${transcript}
 
-Provide:
-1. Overall score (0-${maxScore})
-2. Score for each criterion (0-${maxScore})
-3. List of violations/mistakes with timestamps
-4. Brief summary of performance
+Javobni AYNAN quyidagi JSON formatida bering:
+{
+  "overall_score": <umumiy ball 0-${maxScore} orasida>,
+  "criterion_scores": {
+    ${criteria.map(c => `"${c.name}": <ball 0-${maxScore} orasida>`).join(',\n    ')}
+  },
+  "violations_mistakes": [
+    {"description": "Xato tavsifi", "timestamp": "00:00"}
+  ],
+  "summary_of_performance": "Qisqacha xulosa O'zbek tilida"
+}
 
-Respond in JSON format.
+MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushuntirish bermaslik kerak.
     `.trim();
     }
     async processCall(callId) {

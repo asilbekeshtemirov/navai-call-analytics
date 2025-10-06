@@ -6,6 +6,7 @@ export enum StatisticsType {
   DAILY = 'daily',
   MONTHLY = 'monthly',
   DASHBOARD = 'dashboard',
+  SIPUNI = 'sipuni',
   ALL = 'all'
 }
 

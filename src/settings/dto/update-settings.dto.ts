@@ -13,6 +13,11 @@ enum ScoringMode {
   HUNDRED = 'HUNDRED',
 }
 
+enum DataSource {
+  PBX = 'PBX',
+  SIPUNI = 'SIPUNI',
+}
+
 export class UpdateSettingsDto {
   @ApiPropertyOptional({ description: 'Enable/disable analytics' })
   @IsOptional()
@@ -62,4 +67,27 @@ export class UpdateSettingsDto {
   @IsOptional()
   @IsString()
   geminiApiKey?: string;
+
+  @ApiPropertyOptional({ description: 'Sipuni API URL' })
+  @IsOptional()
+  @IsString()
+  sipuniApiUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Sipuni API Key' })
+  @IsOptional()
+  @IsString()
+  sipuniApiKey?: string;
+
+  @ApiPropertyOptional({ description: 'Sipuni User ID' })
+  @IsOptional()
+  @IsString()
+  sipuniUserId?: string;
+
+  @ApiPropertyOptional({
+    enum: DataSource,
+    description: 'Data source selection: PBX or SIPUNI'
+  })
+  @IsOptional()
+  @IsEnum(DataSource)
+  dataSource?: DataSource;
 }

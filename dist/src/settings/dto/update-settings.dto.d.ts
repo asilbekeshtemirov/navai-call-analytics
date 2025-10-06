@@ -2,6 +2,10 @@ declare enum ScoringMode {
     TEN = "TEN",
     HUNDRED = "HUNDRED"
 }
+declare enum DataSource {
+    PBX = "PBX",
+    SIPUNI = "SIPUNI"
+}
 export declare class UpdateSettingsDto {
     analyticsStatus?: boolean;
     scoringMode?: ScoringMode;
@@ -12,5 +16,9 @@ export declare class UpdateSettingsDto {
     sipApiKey?: string;
     sttApiUrl?: string;
     geminiApiKey?: string;
+    sipuniApiUrl?: string;
+    sipuniApiKey?: string;
+    sipuniUserId?: string;
+    dataSource?: DataSource;
 }
 export {};

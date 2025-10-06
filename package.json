@@ -24,7 +24,10 @@
     "prisma:db:push": "dotenv -e .env -- npx prisma db push",
     "prisma:studio": "dotenv -e .env -- npx prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "setup": "npm install && npm run prisma:generate && npm run prisma:migrate"
+    "setup": "npm install && npm run prisma:generate && npm run prisma:migrate",
+    "sipuni:initial-sync": "node scripts/initial-sync-sipuni.js",
+    "sipuni:test": "curl http://localhost:3000/sipuni/test-connection",
+    "check:db": "node check-db.js"
   },
   "dependencies": {
     "@google/genai": "^1.21.0",
