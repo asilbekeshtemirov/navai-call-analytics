@@ -6,4 +6,5 @@ import { CriteriaController } from './criteria.controller.js';
   controllers: [CriteriaController],
   providers: [CriteriaService],
 })
+  
 export class CriteriaModule {}
