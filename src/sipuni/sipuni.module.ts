@@ -6,11 +6,7 @@ import { PrismaModule } from '../prisma/prisma.module.js';
 import { AiModule } from '../ai/ai.module.js';
 
 @Module({
-  imports: [
-    HttpModule,
-    PrismaModule,
-    forwardRef(() => AiModule),
-  ],
+  imports: [HttpModule, PrismaModule, forwardRef(() => AiModule)],
   controllers: [SipuniController],
   providers: [SipuniService],
   exports: [SipuniService],

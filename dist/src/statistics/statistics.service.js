@@ -11,7 +11,7 @@ var StatisticsService_1;
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { Cron } from '@nestjs/schedule';
-import { StatisticsType } from './dto/unified-statistics.dto.js';
+import { StatisticsType, } from './dto/unified-statistics.dto.js';
 let StatisticsService = StatisticsService_1 = class StatisticsService {
     prisma;
     logger = new Logger(StatisticsService_1.name);
@@ -177,7 +177,7 @@ let StatisticsService = StatisticsService_1 = class StatisticsService {
                 dateTo: dateTo ? new Date(dateTo).toISOString() : null,
                 extCode: extCode || null,
             },
-            data: {}
+            data: {},
         };
         try {
             if (type === StatisticsType.ALL || type === StatisticsType.DAILY) {
@@ -205,7 +205,7 @@ let StatisticsService = StatisticsService_1 = class StatisticsService {
                 const dailyStat = await this.getDailyStats(new Date(currentDate), extCode);
                 stats.push({
                     date: currentDate.toISOString().split('T')[0],
-                    stats: dailyStat
+                    stats: dailyStat,
                 });
                 currentDate.setDate(currentDate.getDate() + 1);
             }
@@ -227,12 +227,13 @@ let StatisticsService = StatisticsService_1 = class StatisticsService {
             let currentYear = startDate.getFullYear();
             let currentMonth = startDate.getMonth() + 1;
             while (currentYear < endDate.getFullYear() ||
-                (currentYear === endDate.getFullYear() && currentMonth <= endDate.getMonth() + 1)) {
+                (currentYear === endDate.getFullYear() &&
+                    currentMonth <= endDate.getMonth() + 1)) {
                 const monthlyStat = await this.getMonthlyStats(currentYear, currentMonth, extCode);
                 stats.push({
                     year: currentYear,
                     month: currentMonth,
-                    stats: monthlyStat
+                    stats: monthlyStat,
                 });
                 currentMonth++;
                 if (currentMonth > 12) {
@@ -264,7 +265,7 @@ let StatisticsService = StatisticsService_1 = class StatisticsService {
             period: {
                 from: startDate.toISOString().split('T')[0],
                 to: endDate.toISOString().split('T')[0],
-                daysCount: Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+                daysCount: Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1,
             },
             totalCallsInPeriod: dailyStats.reduce((sum, stat) => sum + stat.callsCount, 0),
             totalDurationInPeriod: dailyStats.reduce((sum, stat) => sum + stat.totalDuration, 0),

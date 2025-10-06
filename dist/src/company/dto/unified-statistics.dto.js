@@ -31,7 +31,7 @@ __decorate([
     ApiPropertyOptional({
         description: 'Type of statistics to retrieve',
         enum: StatisticsType,
-        default: StatisticsType.ALL
+        default: StatisticsType.ALL,
     }),
     IsOptional(),
     IsEnum(StatisticsType),
@@ -39,7 +39,7 @@ __decorate([
 ], UnifiedStatisticsDto.prototype, "type", void 0);
 __decorate([
     ApiPropertyOptional({
-        description: 'Start date for filtering (ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ)'
+        description: 'Start date for filtering (ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ)',
     }),
     IsOptional(),
     IsDateString(),
@@ -47,7 +47,7 @@ __decorate([
 ], UnifiedStatisticsDto.prototype, "dateFrom", void 0);
 __decorate([
     ApiPropertyOptional({
-        description: 'End date for filtering (ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ)'
+        description: 'End date for filtering (ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ)',
     }),
     IsOptional(),
     IsDateString(),
@@ -55,7 +55,7 @@ __decorate([
 ], UnifiedStatisticsDto.prototype, "dateTo", void 0);
 __decorate([
     ApiPropertyOptional({
-        description: 'Filter by employee extension code'
+        description: 'Filter by employee extension code',
     }),
     IsOptional(),
     IsString(),
@@ -63,7 +63,7 @@ __decorate([
 ], UnifiedStatisticsDto.prototype, "extCode", void 0);
 __decorate([
     ApiPropertyOptional({
-        description: 'Filter by employee ID'
+        description: 'Filter by employee ID',
     }),
     IsOptional(),
     IsString(),
@@ -71,7 +71,7 @@ __decorate([
 ], UnifiedStatisticsDto.prototype, "employeeId", void 0);
 __decorate([
     ApiPropertyOptional({
-        description: 'Filter by department ID'
+        description: 'Filter by department ID',
     }),
     IsOptional(),
     IsString(),
@@ -79,7 +79,7 @@ __decorate([
 ], UnifiedStatisticsDto.prototype, "departmentId", void 0);
 __decorate([
     ApiPropertyOptional({
-        description: 'Filter by branch ID'
+        description: 'Filter by branch ID',
     }),
     IsOptional(),
     IsString(),

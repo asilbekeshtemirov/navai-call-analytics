@@ -110,7 +110,11 @@ __decorate([
     __metadata("design:type", String)
 ], SipuniExportDto.prototype, "numbersRinged", void 0);
 __decorate([
-    ApiProperty({ description: 'Numbers involved', example: '0', required: false }),
+    ApiProperty({
+        description: 'Numbers involved',
+        example: '0',
+        required: false,
+    }),
     IsOptional(),
     IsString(),
     __metadata("design:type", String)
@@ -152,19 +156,31 @@ __decorate([
     __metadata("design:type", String)
 ], SipuniExportDto.prototype, "firstTime", void 0);
 __decorate([
-    ApiProperty({ description: 'DTMF user answer', example: '0', required: false }),
+    ApiProperty({
+        description: 'DTMF user answer',
+        example: '0',
+        required: false,
+    }),
     IsOptional(),
     IsString(),
     __metadata("design:type", String)
 ], SipuniExportDto.prototype, "dtmfUserAnswer", void 0);
 __decorate([
-    ApiProperty({ description: 'Hangup initiator', example: '1', required: false }),
+    ApiProperty({
+        description: 'Hangup initiator',
+        example: '1',
+        required: false,
+    }),
     IsOptional(),
     IsString(),
     __metadata("design:type", String)
 ], SipuniExportDto.prototype, "hangupinitor", void 0);
 __decorate([
-    ApiProperty({ description: 'Ignore special characters', example: '1', required: false }),
+    ApiProperty({
+        description: 'Ignore special characters',
+        example: '1',
+        required: false,
+    }),
     IsOptional(),
     IsString(),
     __metadata("design:type", String)

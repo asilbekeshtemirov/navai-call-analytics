@@ -37,7 +37,8 @@ let SipuniService = SipuniService_1 = class SipuniService {
         this.prisma = prisma;
         this.http = http;
         this.aiService = aiService;
-        this.sipuniApiUrl = this.config.get('SIPUNI_API_URL') || 'https://sipuni.com/api';
+        this.sipuniApiUrl =
+            this.config.get('SIPUNI_API_URL') || 'https://sipuni.com/api';
         this.sipuniApiKey = this.config.get('SIPUNI_API_KEY') || '';
         this.sipuniUserId = this.config.get('SIPUNI_USER_ID') || '';
         this.logger.log(`[INIT] Sipuni Service initialized (will use Settings for actual credentials)`);
@@ -48,7 +49,10 @@ let SipuniService = SipuniService_1 = class SipuniService {
     async loadSipuniCredentials() {
         const settings = await this.prisma.setting.findFirst();
         this.logger.log(`[CONFIG] Loaded settings: ${JSON.stringify(settings)}`);
-        if (settings && settings.sipuniApiUrl && settings.sipuniApiKey && settings.sipuniUserId) {
+        if (settings &&
+            settings.sipuniApiUrl &&
+            settings.sipuniApiKey &&
+            settings.sipuniUserId) {
             this.logger.log(`[CONFIG] Using Sipuni credentials from Settings`);
             return {
                 apiUrl: settings.sipuniApiUrl,
@@ -65,14 +69,30 @@ let SipuniService = SipuniService_1 = class SipuniService {
     }
     createHashString(exportDto, apiKey, userId) {
         const params = [
-            exportDto.anonymous || '1', exportDto.crmLinks || '0', exportDto.dtmfUserAnswer || '0',
-            exportDto.firstTime || '0', exportDto.from, exportDto.fromNumber || '',
-            exportDto.hangupinitor || '1', exportDto.ignoreSpecChar || '1', exportDto.names || '0',
-            exportDto.numbersInvolved || '0', exportDto.numbersRinged || '0', exportDto.outgoingLine || '1',
-            exportDto.rating || '5', exportDto.showTreeId || '1', exportDto.state || '0',
-            exportDto.timeFrom || '10:00', exportDto.timeTo || '20:00', exportDto.to,
-            exportDto.toAnswer || '', exportDto.toNumber || '', exportDto.tree || '',
-            exportDto.type || '0', exportDto.user || userId, apiKey
+            exportDto.anonymous || '1',
+            exportDto.crmLinks || '0',
+            exportDto.dtmfUserAnswer || '0',
+            exportDto.firstTime || '0',
+            exportDto.from,
+            exportDto.fromNumber || '',
+            exportDto.hangupinitor || '1',
+            exportDto.ignoreSpecChar || '1',
+            exportDto.names || '0',
+            exportDto.numbersInvolved || '0',
+            exportDto.numbersRinged || '0',
+            exportDto.outgoingLine || '1',
+            exportDto.rating || '5',
+            exportDto.showTreeId || '1',
+            exportDto.state || '0',
+            exportDto.timeFrom || '10:00',
+            exportDto.timeTo || '20:00',
+            exportDto.to,
+            exportDto.toAnswer || '',
+            exportDto.toNumber || '',
+            exportDto.tree || '',
+            exportDto.type || '0',
+            exportDto.user || userId,
+            apiKey,
         ];
         return params.join('+');
     }
@@ -88,19 +108,33 @@ let SipuniService = SipuniService_1 = class SipuniService {
             const hash = crypto.createHash('md5').update(hashString).digest('hex');
             const params = {
                 ...exportDto,
-                anonymous: exportDto.anonymous || '1', crmLinks: exportDto.crmLinks || '0',
-                dtmfUserAnswer: exportDto.dtmfUserAnswer || '0', firstTime: exportDto.firstTime || '0',
-                fromNumber: exportDto.fromNumber || '', hangupinitor: exportDto.hangupinitor || '1',
-                ignoreSpecChar: exportDto.ignoreSpecChar || '1', names: exportDto.names || '0',
-                numbersInvolved: exportDto.numbersInvolved || '0', numbersRinged: exportDto.numbersRinged || '0',
-                outgoingLine: exportDto.outgoingLine || '1', rating: exportDto.rating || '5',
-                showTreeId: exportDto.showTreeId || '1', state: exportDto.state || '0',
-                timeFrom: exportDto.timeFrom || '10:00', timeTo: exportDto.timeTo || '20:00',
-                toAnswer: exportDto.toAnswer || '', toNumber: exportDto.toNumber || '',
-                tree: exportDto.tree || '', type: exportDto.type || '0',
-                user: exportDto.user || credentials.userId, hash
+                anonymous: exportDto.anonymous || '1',
+                crmLinks: exportDto.crmLinks || '0',
+                dtmfUserAnswer: exportDto.dtmfUserAnswer || '0',
+                firstTime: exportDto.firstTime || '0',
+                fromNumber: exportDto.fromNumber || '',
+                hangupinitor: exportDto.hangupinitor || '1',
+                ignoreSpecChar: exportDto.ignoreSpecChar || '1',
+                names: exportDto.names || '0',
+                numbersInvolved: exportDto.numbersInvolved || '0',
+                numbersRinged: exportDto.numbersRinged || '0',
+                outgoingLine: exportDto.outgoingLine || '1',
+                rating: exportDto.rating || '5',
+                showTreeId: exportDto.showTreeId || '1',
+                state: exportDto.state || '0',
+                timeFrom: exportDto.timeFrom || '10:00',
+                timeTo: exportDto.timeTo || '20:00',
+                toAnswer: exportDto.toAnswer || '',
+                toNumber: exportDto.toNumber || '',
+                tree: exportDto.tree || '',
+                type: exportDto.type || '0',
+                user: exportDto.user || credentials.userId,
+                hash,
             };
-            const response = await this.http.axiosRef.post(`${credentials.apiUrl}/statistic/export`, new URLSearchParams(params).toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 30000 });
+            const response = await this.http.axiosRef.post(`${credentials.apiUrl}/statistic/export`, new URLSearchParams(params).toString(), {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                timeout: 30000,
+            });
             const responseData = response.data;
             if (typeof responseData === 'string' && responseData.includes('<html>')) {
                 throw new Error('Sipuni API returned HTML error page instead of CSV data');
@@ -115,7 +149,13 @@ let SipuniService = SipuniService_1 = class SipuniService {
     }
     async fetchCallRecords(from, to) {
         this.logger.log(`[FETCH] Fetching call records from ${from} to ${to}`);
-        const csvData = await this.exportStatistics({ user: this.sipuniUserId, from, to, type: '0', state: '0' });
+        const csvData = await this.exportStatistics({
+            user: this.sipuniUserId,
+            from,
+            to,
+            type: '0',
+            state: '0',
+        });
         const records = this.parseCsvToCallRecords(csvData);
         this.logger.log(`[FETCH] Found ${records.length} call records`);
         return records;
@@ -124,20 +164,26 @@ let SipuniService = SipuniService_1 = class SipuniService {
         if (csvData.includes('<html>')) {
             throw new Error('Sipuni API returned HTML error page instead of CSV data');
         }
-        return csvData.split('\n')
+        return csvData
+            .split('\n')
             .slice(1)
-            .filter(line => line.trim())
+            .filter((line) => line.trim())
             .map((line, i) => {
             const cols = line.split(',');
             return {
                 uid: cols[0] || `sipuni_${Date.now()}_${i}`,
-                client: cols[1] || '', caller: cols[2] || '', start: cols[3] || '',
-                duration: parseInt(cols[4]) || 0, record: cols[5] || '',
-                type: cols[6] || '', status: cols[7] || '',
-                user: cols[8] || '', user_name: cols[9] || ''
+                client: cols[1] || '',
+                caller: cols[2] || '',
+                start: cols[3] || '',
+                duration: parseInt(cols[4]) || 0,
+                record: cols[5] || '',
+                type: cols[6] || '',
+                status: cols[7] || '',
+                user: cols[8] || '',
+                user_name: cols[9] || '',
             };
         })
-            .filter(record => record.record?.trim());
+            .filter((record) => record.record?.trim());
     }
     async testConnection() {
         const credentials = await this.loadSipuniCredentials();
@@ -153,15 +199,19 @@ let SipuniService = SipuniService_1 = class SipuniService {
         try {
             this.logger.log(`[MANUAL] Manual sync requested from ${from} to ${to}`);
             const callRecords = await this.fetchCallRecords(from, to);
-            const results = await Promise.allSettled(callRecords.map(record => this.processCallRecord(record)));
-            const processedCount = results.filter(r => r.status === 'fulfilled').length;
+            const results = await Promise.allSettled(callRecords.map((record) => this.processCallRecord(record)));
+            const processedCount = results.filter((r) => r.status === 'fulfilled').length;
             const message = `Successfully processed ${processedCount} out of ${callRecords.length} call records`;
             this.logger.log(`[MANUAL] ${message}`);
             return { success: true, message, recordsProcessed: processedCount };
         }
         catch (error) {
             this.logger.error(`[MANUAL] Manual sync failed: ${error.message}`);
-            return { success: false, message: `Manual sync failed: ${error.message}`, recordsProcessed: 0 };
+            return {
+                success: false,
+                message: `Manual sync failed: ${error.message}`,
+                recordsProcessed: 0,
+            };
         }
     }
     async processCallRecord(record) {
@@ -186,7 +236,8 @@ let SipuniService = SipuniService_1 = class SipuniService {
         }
         return new Promise((resolve, reject) => {
             const file = fs.createWriteStream(filepath);
-            https.get(url, (response) => {
+            https
+                .get(url, (response) => {
                 response.pipe(file);
                 file.on('finish', () => {
                     file.close();
@@ -197,7 +248,8 @@ let SipuniService = SipuniService_1 = class SipuniService {
                     fs.unlink(filepath, () => { });
                     reject(error);
                 });
-            }).on('error', reject);
+            })
+                .on('error', reject);
         });
     }
     async transcribeAudio(audioFile) {
@@ -207,12 +259,24 @@ let SipuniService = SipuniService_1 = class SipuniService {
         this.logger.log(`[FETCH_ALL] Fetching records (limit: ${limit}, order: ${order}, page: ${page})`);
         try {
             const credentials = await this.loadSipuniCredentials();
-            const hashString = [limit, order, page, credentials.userId, credentials.apiKey].join('+');
+            const hashString = [
+                limit,
+                order,
+                page,
+                credentials.userId,
+                credentials.apiKey,
+            ].join('+');
             const hash = crypto.createHash('md5').update(hashString).digest('hex');
             this.logger.log(`[HASH] Hash calculated (using ${credentials.apiKey === this.sipuniApiKey ? '.env' : 'Settings'} credentials)`);
-            const response = await axios.post(`${credentials.apiUrl}/statistic/export/all`, new URLSearchParams({ limit: limit.toString(), order, page: page.toString(), user: credentials.userId, hash }).toString(), {
+            const response = await axios.post(`${credentials.apiUrl}/statistic/export/all`, new URLSearchParams({
+                limit: limit.toString(),
+                order,
+                page: page.toString(),
+                user: credentials.userId,
+                hash,
+            }).toString(), {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                timeout: 30000
+                timeout: 30000,
             });
             const csvData = response.data;
             const lines = csvData.split('\n').filter((l) => l.trim());
@@ -236,11 +300,11 @@ let SipuniService = SipuniService_1 = class SipuniService {
                     tags: cols[13],
                     orderId: cols[14],
                     recordExists: cols[15],
-                    newClient: cols[16]
+                    newClient: cols[16],
                 };
             });
             this.logger.log(`[FETCH_ALL] Found ${records.length} calls total`);
-            const withRecording = records.filter(r => r.recordId && r.recordId.trim() !== '');
+            const withRecording = records.filter((r) => r.recordId && r.recordId.trim() !== '');
             const withoutRecording = records.length - withRecording.length;
             this.logger.log(`[FETCH_ALL] ${withRecording.length} with recording, ${withoutRecording} without recording`);
             return records;
@@ -258,12 +322,20 @@ let SipuniService = SipuniService_1 = class SipuniService {
         }
         try {
             const credentials = await this.loadSipuniCredentials();
-            const hashString = [recordId, credentials.userId, credentials.apiKey].join('+');
+            const hashString = [
+                recordId,
+                credentials.userId,
+                credentials.apiKey,
+            ].join('+');
             const hash = crypto.createHash('md5').update(hashString).digest('hex');
-            const response = await axios.post(`${credentials.apiUrl}/statistic/record`, new URLSearchParams({ id: recordId, user: credentials.userId, hash }).toString(), {
+            const response = await axios.post(`${credentials.apiUrl}/statistic/record`, new URLSearchParams({
+                id: recordId,
+                user: credentials.userId,
+                hash,
+            }).toString(), {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 responseType: 'arraybuffer',
-                timeout: 60000
+                timeout: 60000,
             });
             fs.writeFileSync(filepath, response.data);
             const sizeKB = Math.round(response.data.length / 1024);
@@ -281,7 +353,11 @@ let SipuniService = SipuniService_1 = class SipuniService {
             const records = await this.fetchAllRecords(limit);
             if (records.length === 0) {
                 this.logger.log('[SYNC] No new records found');
-                return { success: true, message: 'No new records found', recordsProcessed: 0 };
+                return {
+                    success: true,
+                    message: 'No new records found',
+                    recordsProcessed: 0,
+                };
             }
             let processed = 0;
             let skipped = 0;
@@ -290,11 +366,11 @@ let SipuniService = SipuniService_1 = class SipuniService {
                 try {
                     const externalId = record.recordId && record.recordId.trim() !== ''
                         ? record.recordId
-                        : (record.orderId && record.orderId.trim() !== ''
+                        : record.orderId && record.orderId.trim() !== ''
                             ? record.orderId
-                            : `sipuni_${record.time}_${record.from}_${record.to}`.replace(/[:\s]/g, '_'));
+                            : `sipuni_${record.time}_${record.from}_${record.to}`.replace(/[:\s]/g, '_');
                     const existingCall = await this.prisma.call.findUnique({
-                        where: { externalId }
+                        where: { externalId },
                     });
                     if (existingCall) {
                         this.logger.log(`[SYNC] Call ${externalId} already exists (status: ${existingCall.status}), skipping`);
@@ -309,11 +385,13 @@ let SipuniService = SipuniService_1 = class SipuniService {
                     }
                     const callDate = this.parseSipuniDate(record.time);
                     let extCode = record.from;
-                    if (record.type === 'Входящий' && record.answered && !record.answered.startsWith('+')) {
+                    if (record.type === 'Входящий' &&
+                        record.answered &&
+                        !record.answered.startsWith('+')) {
                         extCode = record.answered;
                     }
                     const employee = await this.prisma.user.findFirst({
-                        where: { extCode: extCode }
+                        where: { extCode: extCode },
                     });
                     if (!employee) {
                         this.logger.warn(`[SYNC] Employee not found for extCode: ${extCode} (from: ${record.from}, answered: ${record.answered}, type: ${record.type}), skipping call ${record.recordId}`);
@@ -335,7 +413,7 @@ let SipuniService = SipuniService_1 = class SipuniService {
                             calleeNumber: record.to,
                             callDate: callDate,
                             durationSec: parseInt(record.talkDuration) || 0,
-                        }
+                        },
                     });
                     this.logger.log(`[SYNC] Created call record ${call.id} for ${externalId} (hasRecording: ${hasRecording})`);
                     if (hasRecording) {
@@ -346,7 +424,7 @@ let SipuniService = SipuniService_1 = class SipuniService {
                     }
                     processed++;
                     this.logger.log(`[SYNC] Processed ${processed}/${records.length} records`);
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    await new Promise((resolve) => setTimeout(resolve, 2000));
                 }
                 catch (error) {
                     this.logger.error(`[SYNC] Failed to process record ${record.recordId}: ${error.message}`);
@@ -359,7 +437,11 @@ let SipuniService = SipuniService_1 = class SipuniService {
         }
         catch (error) {
             this.logger.error(`[SYNC] Sync failed: ${error.message}`);
-            return { success: false, message: `Sync failed: ${error.message}`, recordsProcessed: 0 };
+            return {
+                success: false,
+                message: `Sync failed: ${error.message}`,
+                recordsProcessed: 0,
+            };
         }
     }
     parseSipuniDate(dateStr) {

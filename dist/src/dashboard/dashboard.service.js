@@ -9,6 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { Prisma } from '@prisma/client';
 let DashboardService = class DashboardService {
     prisma;
     constructor(prisma) {
@@ -166,7 +167,7 @@ let DashboardService = class DashboardService {
     async getAnalysisStats(filters) {
         const { branchId, departmentId, employeeId, dateFrom, dateTo } = filters;
         const where = {
-            analysis: { not: null },
+            analysis: { not: Prisma.JsonNull },
         };
         if (branchId)
             where.branchId = branchId;

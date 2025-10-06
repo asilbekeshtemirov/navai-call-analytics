@@ -1,8 +1,14 @@
 import { PrismaService } from '../prisma/prisma.service.js';
+import { ConfigService } from '@nestjs/config';
 export declare class CallService {
     private readonly prisma;
+    private readonly configService;
     private readonly logger;
-    constructor(prisma: PrismaService);
+    constructor(prisma: PrismaService, configService: ConfigService);
+    private sshUploadFile;
+    private sshRunCommand;
+    uploadFile(file: Express.Multer.File): Promise<any>;
+    startProcess(): Promise<any>;
     findAll(filters?: {
         branchId?: string;
         departmentId?: string;
@@ -162,4 +168,49 @@ export declare class CallService {
         speaker: string;
         text: string;
     }[]>;
+    getSessionStatus(sessionId: string): Promise<{
+        durationSeconds: number;
+        progressPercentage: number;
+        statusDescription: string;
+        isRunning: boolean;
+        isCompleted: boolean;
+        hasError: boolean;
+        id: string;
+        updatedAt: Date;
+        createdAt: Date;
+        status: import("@prisma/client").$Enums.SessionStatus;
+        sessionId: string;
+        totalNumbers: number;
+        processedNumbers: number;
+        connectedCalls: number;
+        failedCalls: number;
+        remoteResponse: string | null;
+        errorMessage: string | null;
+        startedAt: Date;
+        completedAt: Date | null;
+    }>;
+    getAllSessions(limit?: number): Promise<{
+        durationSeconds: number | null;
+        progressPercentage: number;
+        statusDescription: string;
+        isRunning: boolean;
+        isCompleted: boolean;
+        hasError: boolean;
+        id: string;
+        updatedAt: Date;
+        createdAt: Date;
+        status: import("@prisma/client").$Enums.SessionStatus;
+        sessionId: string;
+        totalNumbers: number;
+        processedNumbers: number;
+        connectedCalls: number;
+        failedCalls: number;
+        remoteResponse: string | null;
+        errorMessage: string | null;
+        startedAt: Date;
+        completedAt: Date | null;
+    }[]>;
+    start(): {
+        message: string;
+    };
 }

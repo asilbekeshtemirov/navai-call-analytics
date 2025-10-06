@@ -14,7 +14,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, } 
 import { UserService } from './user.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/roles.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
@@ -68,7 +68,7 @@ __decorate([
     Roles(UserRole.ADMIN, UserRole.MANAGER),
     ApiOperation({
         summary: 'Birlashtirilgan user statistika - barcha statistika turlarini bir joyda olish',
-        description: 'Bu endpoint orqali daily, monthly, summary ma\'lumotlarini sana oralig\'i bilan filter qilish mumkin'
+        description: "Bu endpoint orqali daily, monthly, summary ma'lumotlarini sana oralig'i bilan filter qilish mumkin",
     }),
     __param(0, Param('id')),
     __param(1, Query()),

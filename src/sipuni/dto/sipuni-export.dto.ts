@@ -64,7 +64,11 @@ export class SipuniExportDto {
   @IsString()
   numbersRinged?: string = '0';
 
-  @ApiProperty({ description: 'Numbers involved', example: '0', required: false })
+  @ApiProperty({
+    description: 'Numbers involved',
+    example: '0',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   numbersInvolved?: string = '0';
@@ -99,17 +103,29 @@ export class SipuniExportDto {
   @IsString()
   firstTime?: string = '0';
 
-  @ApiProperty({ description: 'DTMF user answer', example: '0', required: false })
+  @ApiProperty({
+    description: 'DTMF user answer',
+    example: '0',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   dtmfUserAnswer?: string = '0';
 
-  @ApiProperty({ description: 'Hangup initiator', example: '1', required: false })
+  @ApiProperty({
+    description: 'Hangup initiator',
+    example: '1',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   hangupinitor?: string = '1';
 
-  @ApiProperty({ description: 'Ignore special characters', example: '1', required: false })
+  @ApiProperty({
+    description: 'Ignore special characters',
+    example: '1',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   ignoreSpecChar?: string = '1';

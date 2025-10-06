@@ -67,7 +67,9 @@ __decorate([
 ], SipuniController.prototype, "testConnection", null);
 __decorate([
     Post('sync-and-process'),
-    ApiOperation({ summary: 'Sipuni ma\'lumotlarini yuklab olib tahlil qilish (STT + AI)' }),
+    ApiOperation({
+        summary: "Sipuni ma'lumotlarini yuklab olib tahlil qilish (STT + AI)",
+    }),
     ApiResponse({ status: 200, description: 'Sync and process completed' }),
     __param(0, Query('limit')),
     __metadata("design:type", Function),

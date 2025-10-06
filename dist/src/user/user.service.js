@@ -11,7 +11,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import * as bcrypt from 'bcrypt';
 import { StatisticsService } from '../statistics/statistics.service.js';
-import { UserStatisticsType } from './dto/unified-user-statistics.dto.js';
+import { UserStatisticsType, } from './dto/unified-user-statistics.dto.js';
 let UserService = class UserService {
     prisma;
     statisticsService;
@@ -83,16 +83,19 @@ let UserService = class UserService {
                 dateFrom: dateFrom ? new Date(dateFrom).toISOString() : null,
                 dateTo: dateTo ? new Date(dateTo).toISOString() : null,
             },
-            data: {}
+            data: {},
         };
         try {
-            if (type === UserStatisticsType.ALL || type === UserStatisticsType.DAILY) {
+            if (type === UserStatisticsType.ALL ||
+                type === UserStatisticsType.DAILY) {
                 result.data.daily = await this.getFilteredUserDailyStats(user.extCode, filters);
             }
-            if (type === UserStatisticsType.ALL || type === UserStatisticsType.MONTHLY) {
+            if (type === UserStatisticsType.ALL ||
+                type === UserStatisticsType.MONTHLY) {
                 result.data.monthly = await this.getFilteredUserMonthlyStats(user.extCode, filters);
             }
-            if (type === UserStatisticsType.ALL || type === UserStatisticsType.SUMMARY) {
+            if (type === UserStatisticsType.ALL ||
+                type === UserStatisticsType.SUMMARY) {
                 result.data.summary = await this.getFilteredUserSummary(user.extCode, filters);
             }
             return result;
@@ -111,7 +114,7 @@ let UserService = class UserService {
                 const dailyStat = await this.statisticsService.getDailyStats(new Date(currentDate), extCode || undefined);
                 stats.push({
                     date: currentDate.toISOString().split('T')[0],
-                    stats: dailyStat
+                    stats: dailyStat,
                 });
                 currentDate.setDate(currentDate.getDate() + 1);
             }
@@ -133,12 +136,13 @@ let UserService = class UserService {
             let currentYear = startDate.getFullYear();
             let currentMonth = startDate.getMonth() + 1;
             while (currentYear < endDate.getFullYear() ||
-                (currentYear === endDate.getFullYear() && currentMonth <= endDate.getMonth() + 1)) {
+                (currentYear === endDate.getFullYear() &&
+                    currentMonth <= endDate.getMonth() + 1)) {
                 const monthlyStat = await this.statisticsService.getMonthlyStats(currentYear, currentMonth, extCode || undefined);
                 stats.push({
                     year: currentYear,
                     month: currentMonth,
-                    stats: monthlyStat
+                    stats: monthlyStat,
                 });
                 currentMonth++;
                 if (currentMonth > 12) {
@@ -170,7 +174,7 @@ let UserService = class UserService {
             period: {
                 from: startDate.toISOString().split('T')[0],
                 to: endDate.toISOString().split('T')[0],
-                daysCount: Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+                daysCount: Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1,
             },
             totalCallsInPeriod: dailyStats.reduce((sum, stat) => sum + stat.callsCount, 0),
             totalDurationInPeriod: dailyStats.reduce((sum, stat) => sum + stat.totalDuration, 0),

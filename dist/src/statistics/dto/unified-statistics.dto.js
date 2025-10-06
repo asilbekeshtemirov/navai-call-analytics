@@ -26,7 +26,7 @@ __decorate([
     ApiPropertyOptional({
         description: 'Type of statistics to retrieve',
         enum: StatisticsType,
-        default: StatisticsType.ALL
+        default: StatisticsType.ALL,
     }),
     IsOptional(),
     IsEnum(StatisticsType),
@@ -34,7 +34,7 @@ __decorate([
 ], UnifiedStatisticsDto.prototype, "type", void 0);
 __decorate([
     ApiPropertyOptional({
-        description: 'Ixtiyoriy: Boshlanish sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)'
+        description: 'Ixtiyoriy: Boshlanish sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)',
     }),
     IsOptional(),
     IsDateString(),
@@ -42,7 +42,7 @@ __decorate([
 ], UnifiedStatisticsDto.prototype, "dateFrom", void 0);
 __decorate([
     ApiPropertyOptional({
-        description: 'Ixtiyoriy: Tugash sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)'
+        description: 'Ixtiyoriy: Tugash sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)',
     }),
     IsOptional(),
     IsDateString(),
@@ -50,7 +50,7 @@ __decorate([
 ], UnifiedStatisticsDto.prototype, "dateTo", void 0);
 __decorate([
     ApiPropertyOptional({
-        description: 'Ixtiyoriy: Extension code bo\'yicha filter'
+        description: "Ixtiyoriy: Extension code bo'yicha filter",
     }),
     IsOptional(),
     IsString(),

@@ -11,7 +11,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 import { Controller, Get, Query, Post, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, } from '@nestjs/swagger';
 import { StatisticsService } from './statistics.service.js';
 import { UnifiedStatisticsDto } from './dto/unified-statistics.dto.js';
 let StatisticsController = class StatisticsController {
@@ -32,7 +32,7 @@ __decorate([
     Get(),
     ApiOperation({
         summary: 'Birlashtirilgan statistika - barcha statistika turlarini bir joyda olish',
-        description: 'Bu endpoint orqali daily, monthly, summary ma\'lumotlarini sana oralig\'i bilan filter qilish mumkin'
+        description: "Bu endpoint orqali daily, monthly, summary ma'lumotlarini sana oralig'i bilan filter qilish mumkin",
     }),
     __param(0, Query()),
     __metadata("design:type", Function),
@@ -41,7 +41,9 @@ __decorate([
 ], StatisticsController.prototype, "getUnifiedStatistics", null);
 __decorate([
     Post('calculate'),
-    ApiOperation({ summary: 'Manually calculate statistics for a specific date' }),
+    ApiOperation({
+        summary: 'Manually calculate statistics for a specific date',
+    }),
     __param(0, Body()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),

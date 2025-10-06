@@ -32,7 +32,8 @@ let AiService = AiService_1 = class AiService {
     }
     async transcribeAudio(audioFileUrl) {
         this.logger.log(`Transcribing audio from file: ${audioFileUrl}`);
-        const sttApiUrl = this.config.get('STT_API_URL') || 'https://ai.navai.pro/v1/asr/transcribe';
+        const sttApiUrl = this.config.get('STT_API_URL') ||
+            'https://ai.navai.pro/v1/asr/transcribe';
         if (!fs.existsSync(audioFileUrl)) {
             this.logger.error(`Audio file not found: ${audioFileUrl}`);
             return [];
@@ -55,7 +56,7 @@ let AiService = AiService_1 = class AiService {
             });
             this.logger.log(`[STT] Response status: ${response.status}`);
             this.logger.log(`[STT] Response data: ${JSON.stringify(response.data).substring(0, 500)}`);
-            if (response.data && response.data.segments) {
+            if (response.data && Array.isArray(response.data.segments)) {
                 const segments = response.data.segments.map((seg) => ({
                     speaker: seg.speaker || 'agent',
                     text: seg.text || '',
@@ -104,8 +105,12 @@ let AiService = AiService_1 = class AiService {
             .join('\n');
         const prompt = this.buildAnalysisPrompt(fullTranscript, criteria, maxScore);
         try {
-            const model = this.geminiAi.getGenerativeModel({ model: 'gemini-2.5-flash' });
-            const geminiResponse = await model.generateContent({ contents: [{ role: 'user', parts: [{ text: prompt }] }] });
+            const model = this.geminiAi.getGenerativeModel({
+                model: 'gemini-2.5-flash',
+            });
+            const geminiResponse = await model.generateContent({
+                contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            });
             const analysisText = geminiResponse.response.text();
             if (!analysisText) {
                 throw new Error('Gemini API did not return any text for analysis.');
@@ -117,17 +122,17 @@ let AiService = AiService_1 = class AiService {
                 const analysis = {
                     overallScore: rawAnalysis.overall_score,
                     criteriaScores: Object.entries(rawAnalysis.criterion_scores).map(([name, score]) => {
-                        const criterion = criteria.find(c => c.name === name);
+                        const criterion = criteria.find((c) => c.name === name);
                         return {
                             criteriaId: criterion ? criterion.id : name,
                             score: score,
-                            notes: `Criterion: ${name}`
+                            notes: `Criterion: ${name}`,
                         };
                     }),
                     violations: rawAnalysis.violations_mistakes.map((v) => ({
                         type: (v.description || 'Unknown violation').substring(0, 250),
                         timestampMs: 0,
-                        details: `Timestamp: ${v.timestamp}`.substring(0, 250)
+                        details: `Timestamp: ${v.timestamp}`.substring(0, 250),
                     })),
                     summary: rawAnalysis.summary_of_performance,
                 };
@@ -151,9 +156,8 @@ let AiService = AiService_1 = class AiService {
         }
     }
     buildAnalysisPrompt(transcript, criteria, maxScore) {
-        const criteriaNames = criteria.map(c => `"${c.name}"`).join(', ');
         const criteriaList = criteria
-            .map((c) => `- ${c.name} (og'irligi: ${c.weight}): ${c.description || 'Tavsif yo\'q'}`)
+            .map((c) => `- ${c.name} (og'irligi: ${c.weight}): ${c.description || "Tavsif yo'q"}`)
             .join('\n');
         return `
 Siz qo'ng'iroq sifatini tahlil qiluvchi mutaxassassiz. Quyidagi qo'ng'iroq transkripsiyasini tahlil qiling va ushbu mezonlar asosida ball bering:
@@ -167,7 +171,7 @@ Javobni AYNAN quyidagi JSON formatida bering:
 {
   "overall_score": <umumiy ball 0-${maxScore} orasida>,
   "criterion_scores": {
-    ${criteria.map(c => `"${c.name}": <ball 0-${maxScore} orasida>`).join(',\n    ')}
+    ${criteria.map((c) => `"${c.name}": <ball 0-${maxScore} orasida>`).join(',\n    ')}
   },
   "violations_mistakes": [
     {"description": "Xato tavsifi", "timestamp": "00:00"}
@@ -194,24 +198,28 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
                 this.logger.log(`Using existing transcription for call ${callId}`);
                 const existingSegments = await this.prisma.transcriptSegment.findMany({
                     where: { callId },
-                    orderBy: { startMs: 'asc' }
+                    orderBy: { startMs: 'asc' },
                 });
                 if (existingSegments.length > 0) {
-                    segments = existingSegments.map(seg => ({
+                    segments = existingSegments.map((seg) => ({
                         speaker: seg.speaker,
                         text: seg.text,
                         startMs: seg.startMs,
-                        endMs: seg.endMs
+                        endMs: seg.endMs,
                     }));
                 }
                 else {
                     const lines = call.transcription.split('\n');
-                    segments = lines.map((line, index) => ({
-                        speaker: line.startsWith('[agent]') ? 'agent' : 'customer',
+                    segments = lines
+                        .map((line, index) => ({
+                        speaker: line.startsWith('[agent]')
+                            ? 'agent'
+                            : 'customer',
                         text: line.replace(/^\[(agent|customer)\]:\s*/, ''),
                         startMs: index * 1000,
-                        endMs: (index + 1) * 1000
-                    })).filter(seg => seg.text.trim() !== '');
+                        endMs: (index + 1) * 1000,
+                    }))
+                        .filter((seg) => seg.text.trim() !== '');
                 }
             }
             else {
@@ -262,7 +270,7 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
                 data: { analysis: analysis },
             });
             await this.prisma.callScore.deleteMany({
-                where: { callId }
+                where: { callId },
             });
             await this.prisma.callScore.createMany({
                 data: analysis.criteriaScores.map((cs) => ({
@@ -273,7 +281,7 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
                 })),
             });
             await this.prisma.violation.deleteMany({
-                where: { callId }
+                where: { callId },
             });
             if (analysis.violations.length > 0) {
                 await this.prisma.violation.createMany({
@@ -300,7 +308,9 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
                 this.logger.error(`An unknown error occurred while processing call ${callId}.`);
             }
             try {
-                const call = await this.prisma.call.findUnique({ where: { id: callId } });
+                const call = await this.prisma.call.findUnique({
+                    where: { id: callId },
+                });
                 if (call && call.fileUrl && fs.existsSync(call.fileUrl)) {
                     fs.unlinkSync(call.fileUrl);
                     this.logger.log(`Deleted audio file after error: ${call.fileUrl}`);
@@ -318,8 +328,12 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
     }
     async generateContent(contents, model = 'gemini-2.5-flash') {
         try {
-            const generativeModel = this.geminiAi.getGenerativeModel({ model: model });
-            const response = await generativeModel.generateContent({ contents: [{ role: 'user', parts: [{ text: contents }] }] });
+            const generativeModel = this.geminiAi.getGenerativeModel({
+                model: model,
+            });
+            const response = await generativeModel.generateContent({
+                contents: [{ role: 'user', parts: [{ text: contents }] }],
+            });
             if (!response.response.text()) {
                 throw new Error('Gemini API did not return any text.');
             }
@@ -352,7 +366,7 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
                     this.logger.log(`Processing call: ${call.id} (${call.externalId})`);
                     await this.processCall(call.id);
                     this.logger.log(`Successfully processed call: ${call.id}`);
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    await new Promise((resolve) => setTimeout(resolve, 2000));
                 }
                 catch (error) {
                     this.logger.error(`Failed to process call ${call.id}: ${error.message}`);

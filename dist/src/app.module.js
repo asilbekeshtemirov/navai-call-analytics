@@ -52,9 +52,7 @@ AppModule = __decorate([
             SipuniModule,
         ],
         controllers: [AppController],
-        providers: [
-            AppService,
-        ],
+        providers: [AppService],
     })
 ], AppModule);
 export { AppModule };

@@ -44,8 +44,6 @@ import { SettingsModule } from './settings/settings.module.js';
     SipuniModule,
   ],
   controllers: [AppController],
-  providers: [
-    AppService,
-  ],
+  providers: [AppService],
 })
 export class AppModule {}

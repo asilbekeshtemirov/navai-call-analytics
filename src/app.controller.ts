@@ -35,18 +35,20 @@ export class AppController {
   async reprocessErrorCalls(): Promise<{ message: string }> {
     // Reset ERROR calls to UPLOADED status and reprocess them
     const errorCalls = await this.aiService['prisma'].call.findMany({
-      where: { status: 'ERROR' }
+      where: { status: 'ERROR' },
     });
-    
+
     for (const call of errorCalls) {
       await this.aiService['prisma'].call.update({
         where: { id: call.id },
-        data: { status: 'UPLOADED' }
+        data: { status: 'UPLOADED' },
       });
     }
-    
+
     await this.aiService.processAllUploadedCalls();
-    return { message: `Reset ${errorCalls.length} error calls and started reprocessing` };
+    return {
+      message: `Reset ${errorCalls.length} error calls and started reprocessing`,
+    };
   }
 
   @Public()
@@ -54,21 +56,23 @@ export class AppController {
   async resetStuckCalls(): Promise<{ message: string }> {
     // Reset PROCESSING calls that are stuck (older than 10 minutes)
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    
+
     const stuckCalls = await this.aiService['prisma'].call.findMany({
-      where: { 
+      where: {
         status: 'PROCESSING',
-        createdAt: { lt: tenMinutesAgo }
-      }
+        createdAt: { lt: tenMinutesAgo },
+      },
     });
-    
+
     for (const call of stuckCalls) {
       await this.aiService['prisma'].call.update({
         where: { id: call.id },
-        data: { status: 'UPLOADED' }
+        data: { status: 'UPLOADED' },
       });
     }
-    
-    return { message: `Reset ${stuckCalls.length} stuck calls to UPLOADED status` };
+
+    return {
+      message: `Reset ${stuckCalls.length} stuck calls to UPLOADED status`,
+    };
   }
 }

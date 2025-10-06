@@ -25,10 +25,7 @@ let PbxService = PbxService_1 = class PbxService {
             const { callid, type, status, phone, user, start, duration, link, diversion, ext, } = data;
             const employee = await this.prisma.user.findFirst({
                 where: {
-                    OR: [
-                        { extCode: user },
-                        { extCode: ext },
-                    ],
+                    OR: [{ extCode: user }, { extCode: ext }],
                 },
             });
             if (!employee) {

@@ -7,56 +7,58 @@ export enum StatisticsType {
   MONTHLY = 'monthly',
   DASHBOARD = 'dashboard',
   SIPUNI = 'sipuni',
-  ALL = 'all'
+  ALL = 'all',
 }
 
 export class UnifiedStatisticsDto {
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Type of statistics to retrieve',
     enum: StatisticsType,
-    default: StatisticsType.ALL
+    default: StatisticsType.ALL,
   })
   @IsOptional()
   @IsEnum(StatisticsType)
   type?: StatisticsType = StatisticsType.ALL;
 
-  @ApiPropertyOptional({ 
-    description: 'Start date for filtering (ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ)' 
+  @ApiPropertyOptional({
+    description:
+      'Start date for filtering (ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ)',
   })
   @IsOptional()
   @IsDateString()
   dateFrom?: string;
 
-  @ApiPropertyOptional({ 
-    description: 'End date for filtering (ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ)' 
+  @ApiPropertyOptional({
+    description:
+      'End date for filtering (ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ)',
   })
   @IsOptional()
   @IsDateString()
   dateTo?: string;
 
-  @ApiPropertyOptional({ 
-    description: 'Filter by employee extension code' 
+  @ApiPropertyOptional({
+    description: 'Filter by employee extension code',
   })
   @IsOptional()
   @IsString()
   extCode?: string;
 
-  @ApiPropertyOptional({ 
-    description: 'Filter by employee ID' 
+  @ApiPropertyOptional({
+    description: 'Filter by employee ID',
   })
   @IsOptional()
   @IsString()
   employeeId?: string;
 
-  @ApiPropertyOptional({ 
-    description: 'Filter by department ID' 
+  @ApiPropertyOptional({
+    description: 'Filter by department ID',
   })
   @IsOptional()
   @IsString()
   departmentId?: string;
 
-  @ApiPropertyOptional({ 
-    description: 'Filter by branch ID' 
+  @ApiPropertyOptional({
+    description: 'Filter by branch ID',
   })
   @IsOptional()
   @IsString()

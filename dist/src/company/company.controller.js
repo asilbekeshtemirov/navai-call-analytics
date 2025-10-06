@@ -12,7 +12,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { CompanyService } from './company.service.js';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/roles.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
@@ -37,7 +37,11 @@ __decorate([
     Get('employees/performance'),
     Roles(UserRole.ADMIN, UserRole.MANAGER),
     ApiOperation({ summary: 'Barcha xodimlar performance' }),
-    ApiQuery({ name: 'period', required: false, enum: ['today', 'week', 'month'] }),
+    ApiQuery({
+        name: 'period',
+        required: false,
+        enum: ['today', 'week', 'month'],
+    }),
     __param(0, Query('period')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -46,7 +50,7 @@ __decorate([
 __decorate([
     Get('calls/recent'),
     Roles(UserRole.ADMIN, UserRole.MANAGER),
-    ApiOperation({ summary: 'So\'nggi qo\'ng\'iroqlar' }),
+    ApiOperation({ summary: "So'nggi qo'ng'iroqlar" }),
     ApiQuery({ name: 'limit', required: false, type: Number }),
     __param(0, Query('limit')),
     __metadata("design:type", Function),
@@ -58,7 +62,7 @@ __decorate([
     Roles(UserRole.ADMIN, UserRole.MANAGER),
     ApiOperation({
         summary: 'Birlashtirilgan statistika - barcha statistika turlarini bir joyda olish',
-        description: 'Bu endpoint orqali overview, daily, monthly, dashboard ma\'lumotlarini sana oralig\'i bilan filter qilish mumkin'
+        description: "Bu endpoint orqali overview, daily, monthly, dashboard ma'lumotlarini sana oralig'i bilan filter qilish mumkin",
     }),
     __param(0, Query()),
     __metadata("design:type", Function),

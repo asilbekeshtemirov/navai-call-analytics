@@ -12,7 +12,12 @@ import {
 import { UserService } from './user.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/roles.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
@@ -27,7 +32,7 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN) 
+  @Roles(UserRole.ADMIN)
   create(@Body() createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto);
   }
@@ -40,13 +45,15 @@ export class UserController {
 
   @Get(':id/statistics')
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  @ApiOperation({ 
-    summary: 'Birlashtirilgan user statistika - barcha statistika turlarini bir joyda olish',
-    description: 'Bu endpoint orqali daily, monthly, summary ma\'lumotlarini sana oralig\'i bilan filter qilish mumkin'
+  @ApiOperation({
+    summary:
+      'Birlashtirilgan user statistika - barcha statistika turlarini bir joyda olish',
+    description:
+      "Bu endpoint orqali daily, monthly, summary ma'lumotlarini sana oralig'i bilan filter qilish mumkin",
   })
   async getUnifiedUserStatistics(
     @Param('id') id: string,
-    @Query() filters: UnifiedUserStatisticsDto
+    @Query() filters: UnifiedUserStatisticsDto,
   ) {
     return this.userService.getUnifiedUserStatistics(id, filters);
   }
@@ -78,5 +85,4 @@ export class UserController {
   ) {
     return this.userService.updateUserRole(id, updateUserRoleDto.role);
   }
-
 }

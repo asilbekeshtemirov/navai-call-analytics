@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { Cron } from '@nestjs/schedule';
-import { UnifiedStatisticsDto, StatisticsType } from './dto/unified-statistics.dto.js';
+import {
+  UnifiedStatisticsDto,
+  StatisticsType,
+} from './dto/unified-statistics.dto.js';
 
 @Injectable()
 export class StatisticsService {
@@ -37,16 +40,19 @@ export class StatisticsService {
       });
 
       // ExtCode bo'yicha guruhlash
-      const statsByExtCode = new Map<string, {
-        callsCount: number;
-        totalDuration: number;
-        totalScore: number;
-        scoreCount: number;
-      }>();
+      const statsByExtCode = new Map<
+        string,
+        {
+          callsCount: number;
+          totalDuration: number;
+          totalScore: number;
+          scoreCount: number;
+        }
+      >();
 
       for (const call of calls) {
         const extCode = (call as any).extCode || 'unknown';
-        
+
         if (!statsByExtCode.has(extCode)) {
           statsByExtCode.set(extCode, {
             callsCount: 0,
@@ -66,7 +72,8 @@ export class StatisticsService {
 
       // Har bir extCode uchun daily stats saqlash
       for (const [extCode, stats] of statsByExtCode) {
-        const averageScore = stats.scoreCount > 0 ? stats.totalScore / stats.scoreCount : null;
+        const averageScore =
+          stats.scoreCount > 0 ? stats.totalScore / stats.scoreCount : null;
 
         await (this.prisma as any).dailyStats.upsert({
           where: {
@@ -92,13 +99,12 @@ export class StatisticsService {
         });
 
         this.logger.log(
-          `Daily stats for ${extCode}: ${stats.callsCount} calls, ${Math.round(stats.totalDuration / 60)} minutes, avg score: ${averageScore?.toFixed(2) || 'N/A'}`
+          `Daily stats for ${extCode}: ${stats.callsCount} calls, ${Math.round(stats.totalDuration / 60)} minutes, avg score: ${averageScore?.toFixed(2) || 'N/A'}`,
         );
       }
 
       // Oylik statistikani yangilash
       await this.updateMonthlyStats(yesterday);
-
     } catch (error) {
       this.logger.error('Failed to calculate daily stats:', error);
     }
@@ -122,16 +128,19 @@ export class StatisticsService {
     });
 
     // ExtCode bo'yicha guruhlash
-    const monthlyStatsByExtCode = new Map<string, {
-      callsCount: number;
-      totalDuration: number;
-      totalScore: number;
-      scoreCount: number;
-    }>();
+    const monthlyStatsByExtCode = new Map<
+      string,
+      {
+        callsCount: number;
+        totalDuration: number;
+        totalScore: number;
+        scoreCount: number;
+      }
+    >();
 
     for (const daily of dailyStats) {
       const extCode = daily.extCode;
-      
+
       if (!monthlyStatsByExtCode.has(extCode)) {
         monthlyStatsByExtCode.set(extCode, {
           callsCount: 0,
@@ -152,7 +161,8 @@ export class StatisticsService {
 
     // Har bir extCode uchun monthly stats saqlash
     for (const [extCode, stats] of monthlyStatsByExtCode) {
-      const averageScore = stats.scoreCount > 0 ? stats.totalScore / stats.scoreCount : null;
+      const averageScore =
+        stats.scoreCount > 0 ? stats.totalScore / stats.scoreCount : null;
 
       await (this.prisma as any).monthlyStats.upsert({
         where: {
@@ -186,7 +196,7 @@ export class StatisticsService {
   // Manual statistika hisoblash
   async calculateStatsForDate(date: Date) {
     this.logger.log(`Manually calculating stats for ${date.toDateString()}`);
-    
+
     const nextDay = new Date(date);
     nextDay.setDate(nextDay.getDate() + 1);
 
@@ -223,7 +233,7 @@ export class StatisticsService {
   // Birlashtirilgan statistika - barcha endpoint larni bir joyga birlashtiradi
   async getUnifiedStatistics(filters: UnifiedStatisticsDto) {
     const { type, dateFrom, dateTo, extCode } = filters;
-    
+
     const result: any = {
       filters: {
         type: type || StatisticsType.ALL,
@@ -231,7 +241,7 @@ export class StatisticsService {
         dateTo: dateTo ? new Date(dateTo).toISOString() : null,
         extCode: extCode || null,
       },
-      data: {}
+      data: {},
     };
 
     try {
@@ -259,22 +269,25 @@ export class StatisticsService {
   // Filterlangan kunlik statistika
   private async getFilteredDailyStats(filters: UnifiedStatisticsDto) {
     const { dateFrom, dateTo, extCode } = filters;
-    
+
     if (dateFrom && dateTo) {
       // Sana oralig'idagi har bir kun uchun statistika
       const stats = [];
       const currentDate = new Date(dateFrom);
       const endDate = new Date(dateTo);
-      
+
       while (currentDate <= endDate) {
-        const dailyStat = await this.getDailyStats(new Date(currentDate), extCode);
+        const dailyStat = await this.getDailyStats(
+          new Date(currentDate),
+          extCode,
+        );
         stats.push({
           date: currentDate.toISOString().split('T')[0],
-          stats: dailyStat
+          stats: dailyStat,
         });
         currentDate.setDate(currentDate.getDate() + 1);
       }
-      
+
       return stats;
     } else if (dateFrom) {
       // Faqat bitta kun
@@ -288,44 +301,55 @@ export class StatisticsService {
   // Filterlangan oylik statistika
   private async getFilteredMonthlyStats(filters: UnifiedStatisticsDto) {
     const { dateFrom, dateTo, extCode } = filters;
-    
+
     if (dateFrom && dateTo) {
       // Sana oralig'idagi oylar uchun statistika
       const stats = [];
       const startDate = new Date(dateFrom);
       const endDate = new Date(dateTo);
-      
+
       let currentYear = startDate.getFullYear();
       let currentMonth = startDate.getMonth() + 1;
-      
-      while (currentYear < endDate.getFullYear() || 
-             (currentYear === endDate.getFullYear() && currentMonth <= endDate.getMonth() + 1)) {
-        const monthlyStat = await this.getMonthlyStats(currentYear, currentMonth, extCode);
+
+      while (
+        currentYear < endDate.getFullYear() ||
+        (currentYear === endDate.getFullYear() &&
+          currentMonth <= endDate.getMonth() + 1)
+      ) {
+        const monthlyStat = await this.getMonthlyStats(
+          currentYear,
+          currentMonth,
+          extCode,
+        );
         stats.push({
           year: currentYear,
           month: currentMonth,
-          stats: monthlyStat
+          stats: monthlyStat,
         });
-        
+
         currentMonth++;
         if (currentMonth > 12) {
           currentMonth = 1;
           currentYear++;
         }
       }
-      
+
       return stats;
     } else {
       // Joriy oy
       const now = new Date();
-      return await this.getMonthlyStats(now.getFullYear(), now.getMonth() + 1, extCode);
+      return await this.getMonthlyStats(
+        now.getFullYear(),
+        now.getMonth() + 1,
+        extCode,
+      );
     }
   }
 
   // Filterlangan umumiy xulosalar
   private async getFilteredSummary(filters: UnifiedStatisticsDto) {
     const { dateFrom, dateTo, extCode } = filters;
-    
+
     // Agar sana berilmagan bo'lsa, default summary qaytaramiz
     const today = new Date();
     const yesterday = new Date(today);
@@ -346,18 +370,41 @@ export class StatisticsService {
       period: {
         from: startDate.toISOString().split('T')[0],
         to: endDate.toISOString().split('T')[0],
-        daysCount: Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+        daysCount:
+          Math.ceil(
+            (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+          ) + 1,
       },
-      totalCallsInPeriod: dailyStats.reduce((sum: number, stat: any) => sum + stat.callsCount, 0),
-      totalDurationInPeriod: dailyStats.reduce((sum: number, stat: any) => sum + stat.totalDuration, 0),
-      averageScoreInPeriod: dailyStats.length > 0 
-        ? dailyStats.reduce((sum: number, stat: any) => sum + (stat.averageScore || 0), 0) / dailyStats.length 
-        : 0,
-      totalCallsThisMonth: monthlyStats.reduce((sum: number, stat: any) => sum + stat.callsCount, 0),
-      totalDurationThisMonth: monthlyStats.reduce((sum: number, stat: any) => sum + stat.totalDuration, 0),
-      averageScoreThisMonth: monthlyStats.length > 0 
-        ? monthlyStats.reduce((sum: number, stat: any) => sum + (stat.averageScore || 0), 0) / monthlyStats.length 
-        : 0,
+      totalCallsInPeriod: dailyStats.reduce(
+        (sum: number, stat: any) => sum + stat.callsCount,
+        0,
+      ),
+      totalDurationInPeriod: dailyStats.reduce(
+        (sum: number, stat: any) => sum + stat.totalDuration,
+        0,
+      ),
+      averageScoreInPeriod:
+        dailyStats.length > 0
+          ? dailyStats.reduce(
+              (sum: number, stat: any) => sum + (stat.averageScore || 0),
+              0,
+            ) / dailyStats.length
+          : 0,
+      totalCallsThisMonth: monthlyStats.reduce(
+        (sum: number, stat: any) => sum + stat.callsCount,
+        0,
+      ),
+      totalDurationThisMonth: monthlyStats.reduce(
+        (sum: number, stat: any) => sum + stat.totalDuration,
+        0,
+      ),
+      averageScoreThisMonth:
+        monthlyStats.length > 0
+          ? monthlyStats.reduce(
+              (sum: number, stat: any) => sum + (stat.averageScore || 0),
+              0,
+            ) / monthlyStats.length
+          : 0,
     };
   }
 }

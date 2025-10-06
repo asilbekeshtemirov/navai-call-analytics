@@ -25,7 +25,9 @@ export class SipuniController {
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      this.logger.error(`[CONTROLLER] Connection test failed: ${error.message}`);
+      this.logger.error(
+        `[CONTROLLER] Connection test failed: ${error.message}`,
+      );
       return {
         success: false,
         message: `Connection test failed: ${error.message}`,
@@ -35,20 +37,23 @@ export class SipuniController {
   }
 
   @Post('sync-and-process')
-  @ApiOperation({ summary: 'Sipuni ma\'lumotlarini yuklab olib tahlil qilish (STT + AI)' })
+  @ApiOperation({
+    summary: "Sipuni ma'lumotlarini yuklab olib tahlil qilish (STT + AI)",
+  })
   @ApiResponse({ status: 200, description: 'Sync and process completed' })
-  async syncAndProcess(
-    @Query('limit') limit?: string,
-  ) {
+  async syncAndProcess(@Query('limit') limit?: string) {
     try {
       this.logger.log(`[CONTROLLER] Sync and process request: limit=${limit}`);
 
       const recordLimit = limit ? parseInt(limit) : 500;
-      const result = await this.sipuniService.syncAndProcessRecordings(recordLimit);
+      const result =
+        await this.sipuniService.syncAndProcessRecordings(recordLimit);
 
       return result;
     } catch (error) {
-      this.logger.error(`[CONTROLLER] Sync and process failed: ${error.message}`);
+      this.logger.error(
+        `[CONTROLLER] Sync and process failed: ${error.message}`,
+      );
       return {
         success: false,
         message: `Sync and process failed: ${error.message}`,

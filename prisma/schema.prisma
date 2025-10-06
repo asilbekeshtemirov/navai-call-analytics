@@ -165,6 +165,47 @@ model Setting {
   @@map("settings")
 }
 
+model CallSession {
+  id              String            @id @default(uuid())
+  sessionId       String            @unique
+  status          SessionStatus     @default(PENDING)
+  totalNumbers    Int               @default(0)
+  processedNumbers Int              @default(0)
+  connectedCalls  Int               @default(0)
+  failedCalls     Int               @default(0)
+  remoteResponse  String?
+  errorMessage    String?
+  startedAt       DateTime          @default(now())
+  completedAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  callResults     CallResult[]
+
+  @@map("call_sessions")
+}
+
+model CallResult {
+  id              String            @id @default(uuid())
+  sessionId       String
+  phoneNumber     String            @db.VarChar(32)
+  callStatus      CallResultStatus
+  callDuration    Int?              // seconds
+  operatorName    String?           @db.VarChar(255)
+  operatorId      String?
+  callStartTime   DateTime?
+  callEndTime     DateTime?
+  recordingUrl    String?
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  session         CallSession       @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([phoneNumber])
+  @@index([callStatus])
+  @@map("call_results")
+}
+
 model DailyStats {
   id          String   @id @default(cuid())
   date        DateTime @db.Date
@@ -217,4 +258,22 @@ enum ScoringMode {
 enum DataSource {
   PBX
   SIPUNI
+}
+
+enum SessionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum CallResultStatus {
+  ANSWERED              // Telefon ko'tarildi
+  NO_ANSWER             // Javob berilmadi
+  BUSY                  // Band
+  FAILED                // O'chirilgan/mavjud emas
+  CONNECTED_TO_OPERATOR // Operator bilan bog'landi
+  REJECTED              // Rad etildi
+  INVALID_NUMBER        // Noto'g'ri raqam
+  NETWORK_ERROR         // Tarmoq xatosi
 }

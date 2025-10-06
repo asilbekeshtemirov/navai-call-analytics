@@ -14,11 +14,7 @@ let SipuniModule = class SipuniModule {
 };
 SipuniModule = __decorate([
     Module({
-        imports: [
-            HttpModule,
-            PrismaModule,
-            forwardRef(() => AiModule),
-        ],
+        imports: [HttpModule, PrismaModule, forwardRef(() => AiModule)],
         controllers: [SipuniController],
         providers: [SipuniService],
         exports: [SipuniService],

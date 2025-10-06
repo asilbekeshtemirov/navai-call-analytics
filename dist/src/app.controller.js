@@ -31,32 +31,36 @@ let AppController = class AppController {
     }
     async reprocessErrorCalls() {
         const errorCalls = await this.aiService['prisma'].call.findMany({
-            where: { status: 'ERROR' }
+            where: { status: 'ERROR' },
         });
         for (const call of errorCalls) {
             await this.aiService['prisma'].call.update({
                 where: { id: call.id },
-                data: { status: 'UPLOADED' }
+                data: { status: 'UPLOADED' },
             });
         }
         await this.aiService.processAllUploadedCalls();
-        return { message: `Reset ${errorCalls.length} error calls and started reprocessing` };
+        return {
+            message: `Reset ${errorCalls.length} error calls and started reprocessing`,
+        };
     }
     async resetStuckCalls() {
         const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
         const stuckCalls = await this.aiService['prisma'].call.findMany({
             where: {
                 status: 'PROCESSING',
-                createdAt: { lt: tenMinutesAgo }
-            }
+                createdAt: { lt: tenMinutesAgo },
+            },
         });
         for (const call of stuckCalls) {
             await this.aiService['prisma'].call.update({
                 where: { id: call.id },
-                data: { status: 'UPLOADED' }
+                data: { status: 'UPLOADED' },
             });
         }
-        return { message: `Reset ${stuckCalls.length} stuck calls to UPLOADED status` };
+        return {
+            message: `Reset ${stuckCalls.length} stuck calls to UPLOADED status`,
+        };
     }
 };
 __decorate([

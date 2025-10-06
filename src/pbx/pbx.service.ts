@@ -31,10 +31,7 @@ export class PbxService {
       // User ni topish
       const employee = await this.prisma.user.findFirst({
         where: {
-          OR: [
-            { extCode: user },
-            { extCode: ext },
-          ],
+          OR: [{ extCode: user }, { extCode: ext }],
         },
       });
 
@@ -112,7 +109,7 @@ export class PbxService {
 
       // Bu yerda mijoz ma'lumotlarini database dan qidirish mumkin
       // Hozircha oddiy response qaytaramiz
-      
+
       return {
         contact_name: `Client ${phone}`,
         responsible: 'admin', // yoki tegishli manager

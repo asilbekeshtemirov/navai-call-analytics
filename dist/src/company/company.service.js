@@ -11,7 +11,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { StatisticsService } from '../statistics/statistics.service.js';
 import { SipuniService } from '../sipuni/sipuni.service.js';
-import { StatisticsType } from './dto/unified-statistics.dto.js';
+import { StatisticsType, } from './dto/unified-statistics.dto.js';
 let CompanyService = class CompanyService {
     prisma;
     statisticsService;
@@ -97,7 +97,7 @@ let CompanyService = class CompanyService {
         });
     }
     async getUnifiedStatistics(filters) {
-        const { type, dateFrom, dateTo, extCode, employeeId, departmentId, branchId } = filters;
+        const { type, dateFrom, dateTo, extCode, employeeId, departmentId, branchId, } = filters;
         const startDate = dateFrom ? new Date(dateFrom) : null;
         const endDate = dateTo ? new Date(dateTo) : null;
         const result = {
@@ -108,9 +108,9 @@ let CompanyService = class CompanyService {
                 extCode,
                 employeeId,
                 departmentId,
-                branchId
+                branchId,
             },
-            data: {}
+            data: {},
         };
         try {
             if (type === StatisticsType.ALL || type === StatisticsType.OVERVIEW) {
@@ -148,14 +148,11 @@ let CompanyService = class CompanyService {
         if (employeeId) {
             whereCondition.employeeId = employeeId;
         }
-        else if (extCode) {
-            whereCondition.employee = { extCode };
-        }
-        if (departmentId || branchId) {
+        else if (extCode || departmentId || branchId) {
             whereCondition.employee = {
-                ...whereCondition.employee,
+                ...(extCode && { extCode }),
                 ...(departmentId && { departmentId }),
-                ...(branchId && { department: { branchId } })
+                ...(branchId && { department: { branchId } }),
             };
         }
         const [totalCalls, totalEmployees] = await Promise.all([
@@ -166,16 +163,16 @@ let CompanyService = class CompanyService {
                     ...(employeeId && { id: employeeId }),
                     ...(extCode && { extCode }),
                     ...(departmentId && { departmentId }),
-                    ...(branchId && { department: { branchId } })
-                }
-            })
+                    ...(branchId && { department: { branchId } }),
+                },
+            }),
         ]);
         const calls = await this.prisma.call.findMany({
             where: whereCondition,
             select: {
                 durationSec: true,
-                analysis: true
-            }
+                analysis: true,
+            },
         });
         const totalDuration = calls.reduce((sum, call) => sum + (call.durationSec || 0), 0);
         const avgScore = calls.length > 0
@@ -191,8 +188,8 @@ let CompanyService = class CompanyService {
             avgScore: Math.round(avgScore * 100) / 100,
             period: {
                 from: dateFrom,
-                to: dateTo
-            }
+                to: dateTo,
+            },
         };
     }
     async getFilteredDailyStats(filters) {
@@ -205,7 +202,7 @@ let CompanyService = class CompanyService {
                 const dailyStat = await this.statisticsService.getDailyStats(new Date(currentDate), extCode);
                 stats.push({
                     date: currentDate.toISOString().split('T')[0],
-                    stats: dailyStat
+                    stats: dailyStat,
                 });
                 currentDate.setDate(currentDate.getDate() + 1);
             }
@@ -227,12 +224,13 @@ let CompanyService = class CompanyService {
             let currentYear = startDate.getFullYear();
             let currentMonth = startDate.getMonth() + 1;
             while (currentYear < endDate.getFullYear() ||
-                (currentYear === endDate.getFullYear() && currentMonth <= endDate.getMonth() + 1)) {
+                (currentYear === endDate.getFullYear() &&
+                    currentMonth <= endDate.getMonth() + 1)) {
                 const monthlyStat = await this.statisticsService.getMonthlyStats(currentYear, currentMonth, extCode);
                 stats.push({
                     year: currentYear,
                     month: currentMonth,
-                    stats: monthlyStat
+                    stats: monthlyStat,
                 });
                 currentMonth++;
                 if (currentMonth > 12) {
@@ -265,33 +263,35 @@ let CompanyService = class CompanyService {
             const processedCalls = await this.prisma.call.count({
                 where: {
                     externalId: {
-                        in: sipuniRecords.map(r => r.uid)
+                        in: sipuniRecords.map((r) => r.uid),
                     },
-                    status: 'DONE'
-                }
+                    status: 'DONE',
+                },
             });
             return {
                 sipuniData: {
                     totalRecords: totalSipuniCalls,
                     totalDuration: totalSipuniDuration,
-                    recordsWithAudio: sipuniRecords.filter(r => r.record).length,
+                    recordsWithAudio: sipuniRecords.filter((r) => r.record).length,
                     processedInSystem: processedCalls,
-                    processingRate: totalSipuniCalls > 0 ? Math.round((processedCalls / totalSipuniCalls) * 100) : 0
+                    processingRate: totalSipuniCalls > 0
+                        ? Math.round((processedCalls / totalSipuniCalls) * 100)
+                        : 0,
                 },
-                recentRecords: sipuniRecords.slice(0, 10).map(record => ({
+                recentRecords: sipuniRecords.slice(0, 10).map((record) => ({
                     uid: record.uid,
                     caller: record.caller,
                     client: record.client,
                     start: record.start,
                     duration: record.duration,
                     hasRecording: !!record.record,
-                    status: record.status
+                    status: record.status,
                 })),
                 period: {
                     from: fromDate,
-                    to: toDate
+                    to: toDate,
                 },
-                lastSync: new Date().toISOString()
+                lastSync: new Date().toISOString(),
             };
         }
         catch (error) {
@@ -302,14 +302,14 @@ let CompanyService = class CompanyService {
                     totalDuration: 0,
                     recordsWithAudio: 0,
                     processedInSystem: 0,
-                    processingRate: 0
+                    processingRate: 0,
                 },
                 recentRecords: [],
                 period: {
                     from: filters.dateFrom,
-                    to: filters.dateTo
+                    to: filters.dateTo,
                 },
-                lastSync: new Date().toISOString()
+                lastSync: new Date().toISOString(),
             };
         }
     }
@@ -320,21 +320,23 @@ let CompanyService = class CompanyService {
                 calls: overview.totalCalls,
                 employees: overview.totalEmployees,
                 duration: overview.totalDuration,
-                averageScore: overview.avgScore
+                averageScore: overview.avgScore,
             },
             period: {
                 from: filters.dateFrom,
                 to: filters.dateTo,
                 daysCount: filters.dateFrom && filters.dateTo
-                    ? Math.ceil((new Date(filters.dateTo).getTime() - new Date(filters.dateFrom).getTime()) / (1000 * 60 * 60 * 24)) + 1
-                    : 1
+                    ? Math.ceil((new Date(filters.dateTo).getTime() -
+                        new Date(filters.dateFrom).getTime()) /
+                        (1000 * 60 * 60 * 24)) + 1
+                    : 1,
             },
             appliedFilters: {
                 extCode: filters.extCode,
                 employeeId: filters.employeeId,
                 departmentId: filters.departmentId,
-                branchId: filters.branchId
-            }
+                branchId: filters.branchId,
+            },
         };
     }
 };

@@ -85,7 +85,7 @@ export class UpdateSettingsDto {
 
   @ApiPropertyOptional({
     enum: DataSource,
-    description: 'Data source selection: PBX or SIPUNI'
+    description: 'Data source selection: PBX or SIPUNI',
   })
   @IsOptional()
   @IsEnum(DataSource)

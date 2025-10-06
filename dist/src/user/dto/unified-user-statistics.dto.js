@@ -25,7 +25,7 @@ __decorate([
     ApiPropertyOptional({
         description: 'Type of statistics to retrieve',
         enum: UserStatisticsType,
-        default: UserStatisticsType.ALL
+        default: UserStatisticsType.ALL,
     }),
     IsOptional(),
     IsEnum(UserStatisticsType),
@@ -33,7 +33,7 @@ __decorate([
 ], UnifiedUserStatisticsDto.prototype, "type", void 0);
 __decorate([
     ApiPropertyOptional({
-        description: 'Ixtiyoriy: Boshlanish sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)'
+        description: 'Ixtiyoriy: Boshlanish sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)',
     }),
     IsOptional(),
     IsDateString(),
@@ -41,7 +41,7 @@ __decorate([
 ], UnifiedUserStatisticsDto.prototype, "dateFrom", void 0);
 __decorate([
     ApiPropertyOptional({
-        description: 'Ixtiyoriy: Tugash sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)'
+        description: 'Ixtiyoriy: Tugash sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)',
     }),
     IsOptional(),
     IsDateString(),

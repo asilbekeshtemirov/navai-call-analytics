@@ -5,12 +5,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import FormData from 'form-data';
 import axios from 'axios';
 import * as fs from 'fs';
-import * as path from 'path';
 import { Prisma } from '@prisma/client';
 
-interface SttApiResponse {
-  segments: TranscriptSegment[];
-}
 export interface TranscriptSegment {
   speaker: 'agent' | 'customer';
   text: string;
@@ -52,7 +48,9 @@ export class AiService {
   async transcribeAudio(audioFileUrl: string): Promise<TranscriptSegment[]> {
     this.logger.log(`Transcribing audio from file: ${audioFileUrl}`);
 
-    const sttApiUrl = this.config.get<string>('STT_API_URL') || 'https://ai.navai.pro/v1/asr/transcribe';
+    const sttApiUrl =
+      this.config.get<string>('STT_API_URL') ||
+      'https://ai.navai.pro/v1/asr/transcribe';
 
     // Check if file exists
     if (!fs.existsSync(audioFileUrl)) {
@@ -69,38 +67,44 @@ export class AiService {
 
       this.logger.log(`[STT] Uploading audio file to: ${sttApiUrl}`);
       this.logger.log(`[STT] File path: ${audioFileUrl}`);
-      this.logger.log(`[STT] File size: ${fs.statSync(audioFileUrl).size} bytes`);
-
-      const response = await axios.post(
-        sttApiUrl,
-        formData,
-        {
-          headers: {
-            ...formData.getHeaders(),
-          },
-          timeout: 300000, // 5 minutes timeout for large files
-          maxContentLength: Infinity,
-          maxBodyLength: Infinity,
-        },
+      this.logger.log(
+        `[STT] File size: ${fs.statSync(audioFileUrl).size} bytes`,
       );
 
+      const response = await axios.post(sttApiUrl, formData, {
+        headers: {
+          ...formData.getHeaders(),
+        },
+        timeout: 300000, // 5 minutes timeout for large files
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+      });
+
       this.logger.log(`[STT] Response status: ${response.status}`);
-      this.logger.log(`[STT] Response data: ${JSON.stringify(response.data).substring(0, 500)}`);
+      this.logger.log(
+        `[STT] Response data: ${JSON.stringify(response.data).substring(0, 500)}`,
+      );
 
       // Parse the response based on Navai API format
-      if (response.data && response.data.segments) {
-        const segments: TranscriptSegment[] = response.data.segments.map((seg: any) => ({
-          speaker: seg.speaker || 'agent',
-          text: seg.text || '',
-          startMs: seg.start_ms || seg.startMs || 0,
-          endMs: seg.end_ms || seg.endMs || 0,
-        }));
-        
-        this.logger.log(`[STT] Successfully transcribed ${segments.length} segments`);
+      if (response.data && Array.isArray(response.data.segments)) {
+        const segments: TranscriptSegment[] = response.data.segments.map(
+          (seg: any) => ({
+            speaker: seg.speaker || 'agent',
+            text: seg.text || '',
+            startMs: seg.start_ms || seg.startMs || 0,
+            endMs: seg.end_ms || seg.endMs || 0,
+          }),
+        );
+
+        this.logger.log(
+          `[STT] Successfully transcribed ${segments.length} segments`,
+        );
         return segments;
       }
 
-      this.logger.warn('[STT] API returned unexpected format - no segments found');
+      this.logger.warn(
+        '[STT] API returned unexpected format - no segments found',
+      );
       this.logger.warn(`[STT] Full response: ${JSON.stringify(response.data)}`);
       return [];
     } catch (error) {
@@ -109,8 +113,12 @@ export class AiService {
         this.logger.error(`[STT] Error code: ${error.code}`);
         if (error.response) {
           this.logger.error(`[STT] Response status: ${error.response.status}`);
-          this.logger.error(`[STT] Response data: ${JSON.stringify(error.response.data)}`);
-          this.logger.error(`[STT] Response headers: ${JSON.stringify(error.response.headers)}`);
+          this.logger.error(
+            `[STT] Response data: ${JSON.stringify(error.response.data)}`,
+          );
+          this.logger.error(
+            `[STT] Response headers: ${JSON.stringify(error.response.headers)}`,
+          );
         } else if (error.request) {
           this.logger.error('[STT] No response received from server');
           this.logger.error(`[STT] Request details: ${error.request}`);
@@ -144,8 +152,12 @@ export class AiService {
 
     // Using Gemini API for LLM/Analysis
     try {
-      const model = this.geminiAi.getGenerativeModel({ model: 'gemini-2.5-flash' });
-      const geminiResponse = await model.generateContent({ contents: [{ role: 'user', parts: [{ text: prompt }] }] });
+      const model = this.geminiAi.getGenerativeModel({
+        model: 'gemini-2.5-flash',
+      });
+      const geminiResponse = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      });
 
       // Assuming Gemini returns a text response that needs to be parsed into AnalysisResult
       const analysisText = geminiResponse.response.text();
@@ -164,29 +176,36 @@ export class AiService {
         // Map LLM response to our interface
         const analysis: AnalysisResult = {
           overallScore: rawAnalysis.overall_score,
-          criteriaScores: Object.entries(rawAnalysis.criterion_scores).map(([name, score]) => {
-            const criterion = criteria.find(c => c.name === name);
-            return {
-              criteriaId: criterion ? criterion.id : name, // Use name as fallback
-              score: score as number,
-              notes: `Criterion: ${name}`
-            };
-          }),
+          criteriaScores: Object.entries(rawAnalysis.criterion_scores).map(
+            ([name, score]) => {
+              const criterion = criteria.find((c) => c.name === name);
+              return {
+                criteriaId: criterion ? criterion.id : name, // Use name as fallback
+                score: score as number,
+                notes: `Criterion: ${name}`,
+              };
+            },
+          ),
           violations: rawAnalysis.violations_mistakes.map((v: any) => ({
             type: (v.description || 'Unknown violation').substring(0, 250), // Limit to 250 chars
             timestampMs: 0, // LLM not providing this reliably yet
-            details: `Timestamp: ${v.timestamp}`.substring(0, 250) // Limit to 250 chars
+            details: `Timestamp: ${v.timestamp}`.substring(0, 250), // Limit to 250 chars
           })),
           summary: rawAnalysis.summary_of_performance,
         };
 
-        this.logger.log(`[LLM] Mapped analysis JSON for call ${callId}: ${JSON.stringify(analysis, null, 2)}`);
+        this.logger.log(
+          `[LLM] Mapped analysis JSON for call ${callId}: ${JSON.stringify(analysis, null, 2)}`,
+        );
         this.logger.log(
           `Analysis complete for call ${callId}: score ${analysis.overallScore}`,
         );
         return analysis;
       } catch (error) {
-        this.logger.error('Error parsing or mapping Gemini API response:', error);
+        this.logger.error(
+          'Error parsing or mapping Gemini API response:',
+          error,
+        );
         throw new Error('Failed to parse or map analysis from Gemini API.');
       }
     } catch (error) {
@@ -209,10 +228,10 @@ export class AiService {
     criteria: Criteria[],
     maxScore: number,
   ): string {
-    const criteriaNames = criteria.map(c => `"${c.name}"`).join(', ');
     const criteriaList = criteria
       .map(
-        (c) => `- ${c.name} (og'irligi: ${c.weight}): ${c.description || 'Tavsif yo\'q'}`,
+        (c) =>
+          `- ${c.name} (og'irligi: ${c.weight}): ${c.description || "Tavsif yo'q"}`,
       )
       .join('\n');
 
@@ -228,7 +247,7 @@ Javobni AYNAN quyidagi JSON formatida bering:
 {
   "overall_score": <umumiy ball 0-${maxScore} orasida>,
   "criterion_scores": {
-    ${criteria.map(c => `"${c.name}": <ball 0-${maxScore} orasida>`).join(',\n    ')}
+    ${criteria.map((c) => `"${c.name}": <ball 0-${maxScore} orasida>`).join(',\n    ')}
   },
   "violations_mistakes": [
     {"description": "Xato tavsifi", "timestamp": "00:00"}
@@ -261,45 +280,52 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
 
       // Step 1: Transcribe audio (or use existing transcription)
       let segments: TranscriptSegment[] = [];
-      
+
       if (call.transcription && call.transcription.trim() !== '') {
         // Use existing transcription if available
         this.logger.log(`Using existing transcription for call ${callId}`);
         const existingSegments = await this.prisma.transcriptSegment.findMany({
           where: { callId },
-          orderBy: { startMs: 'asc' }
+          orderBy: { startMs: 'asc' },
         });
-        
+
         if (existingSegments.length > 0) {
-          segments = existingSegments.map(seg => ({
+          segments = existingSegments.map((seg) => ({
             speaker: seg.speaker as 'agent' | 'customer',
             text: seg.text,
             startMs: seg.startMs,
-            endMs: seg.endMs
+            endMs: seg.endMs,
           }));
         } else {
           // Parse transcription text into segments
           const lines = call.transcription.split('\n');
-          segments = lines.map((line, index) => ({
-            speaker: line.startsWith('[agent]') ? 'agent' as const : 'customer' as const,
-            text: line.replace(/^\[(agent|customer)\]:\s*/, ''),
-            startMs: index * 1000,
-            endMs: (index + 1) * 1000
-          })).filter(seg => seg.text.trim() !== '');
+          segments = lines
+            .map((line, index) => ({
+              speaker: line.startsWith('[agent]')
+                ? ('agent' as const)
+                : ('customer' as const),
+              text: line.replace(/^\[(agent|customer)\]:\s*/, ''),
+              startMs: index * 1000,
+              endMs: (index + 1) * 1000,
+            }))
+            .filter((seg) => seg.text.trim() !== '');
         }
       } else {
         // Try to transcribe from audio file
         segments = await this.transcribeAudio(call.fileUrl);
       }
-      
+
       if (segments.length === 0) {
-        this.logger.warn(`No transcription available for call ${callId}. Marking as UPLOADED.`);
+        this.logger.warn(
+          `No transcription available for call ${callId}. Marking as UPLOADED.`,
+        );
         // Update status back to UPLOADED if no transcription
         await this.prisma.call.update({
           where: { id: callId },
-          data: { 
+          data: {
             status: 'UPLOADED',
-            transcription: 'Transcription not available - STT service not configured',
+            transcription:
+              'Transcription not available - STT service not configured',
           },
         });
         return;
@@ -337,7 +363,9 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
           this.logger.log(`Deleted audio file: ${call.fileUrl}`);
         }
       } catch (deleteError) {
-        this.logger.warn(`Failed to delete audio file ${call.fileUrl}: ${deleteError.message}`);
+        this.logger.warn(
+          `Failed to delete audio file ${call.fileUrl}: ${deleteError.message}`,
+        );
         // Don't throw error, continue processing
       }
 
@@ -352,7 +380,7 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
 
       // Delete existing scores first (to avoid unique constraint error)
       await this.prisma.callScore.deleteMany({
-        where: { callId }
+        where: { callId },
       });
 
       // Save new scores
@@ -367,7 +395,7 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
 
       // Delete existing violations first
       await this.prisma.violation.deleteMany({
-        where: { callId }
+        where: { callId },
       });
 
       // Save new violations
@@ -403,13 +431,17 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
 
       // Try to get call details to delete audio file
       try {
-        const call = await this.prisma.call.findUnique({ where: { id: callId } });
+        const call = await this.prisma.call.findUnique({
+          where: { id: callId },
+        });
         if (call && call.fileUrl && fs.existsSync(call.fileUrl)) {
           fs.unlinkSync(call.fileUrl);
           this.logger.log(`Deleted audio file after error: ${call.fileUrl}`);
         }
       } catch (deleteError) {
-        this.logger.warn(`Failed to delete audio file after error: ${deleteError.message}`);
+        this.logger.warn(
+          `Failed to delete audio file after error: ${deleteError.message}`,
+        );
       }
 
       // Update status to ERROR
@@ -427,8 +459,12 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
     model: string = 'gemini-2.5-flash',
   ): Promise<string> {
     try {
-      const generativeModel = this.geminiAi.getGenerativeModel({ model: model });
-      const response = await generativeModel.generateContent({ contents: [{ role: 'user', parts: [{ text: contents }] }] });
+      const generativeModel = this.geminiAi.getGenerativeModel({
+        model: model,
+      });
+      const response = await generativeModel.generateContent({
+        contents: [{ role: 'user', parts: [{ text: contents }] }],
+      });
       if (!response.response.text()) {
         throw new Error('Gemini API did not return any text.');
       }
@@ -461,7 +497,9 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
         orderBy: { createdAt: 'asc' },
       });
 
-      this.logger.log(`Found ${uploadedCalls.length} uploaded calls to process`);
+      this.logger.log(
+        `Found ${uploadedCalls.length} uploaded calls to process`,
+      );
 
       if (uploadedCalls.length === 0) {
         this.logger.log('No uploaded calls found to process');
@@ -474,11 +512,13 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
           this.logger.log(`Processing call: ${call.id} (${call.externalId})`);
           await this.processCall(call.id);
           this.logger.log(`Successfully processed call: ${call.id}`);
-          
+
           // Add small delay between calls to avoid overwhelming APIs
-          await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+          await new Promise((resolve) => setTimeout(resolve, 2000)); // 2 second delay
         } catch (error) {
-          this.logger.error(`Failed to process call ${call.id}: ${error.message}`);
+          this.logger.error(
+            `Failed to process call ${call.id}: ${error.message}`,
+          );
           // Continue with next call even if one fails
         }
       }
@@ -500,7 +540,9 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
         this.logger.warn(`Audio file not found for deletion: ${filePath}`);
       }
     } catch (error) {
-      this.logger.error(`Failed to delete audio file ${filePath}: ${error.message}`);
+      this.logger.error(
+        `Failed to delete audio file ${filePath}: ${error.message}`,
+      );
       // Don't throw error - file deletion failure shouldn't stop the process
     }
   }

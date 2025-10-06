@@ -10,10 +10,12 @@ export class PbxController {
   constructor(private readonly pbxService: PbxService) {}
 
   @Post('history')
-  @ApiOperation({ summary: 'PBX history webhook - qo\'ng\'iroq tugagandan keyin' })
+  @ApiOperation({
+    summary: "PBX history webhook - qo'ng'iroq tugagandan keyin",
+  })
   async handleHistory(@Body() data: any, @Headers() headers: any) {
     this.logger.log('History webhook received:', JSON.stringify(data));
-    
+
     // CRM token tekshirish
     if (data.crm_token !== process.env.PBX_CRM_TOKEN) {
       this.logger.warn('Invalid CRM token');
@@ -24,10 +26,10 @@ export class PbxController {
   }
 
   @Post('event')
-  @ApiOperation({ summary: 'PBX event webhook - qo\'ng\'iroq jarayoni' })
+  @ApiOperation({ summary: "PBX event webhook - qo'ng'iroq jarayoni" })
   async handleEvent(@Body() data: any, @Headers() headers: any) {
     this.logger.log('Event webhook received:', JSON.stringify(data));
-    
+
     if (data.crm_token !== process.env.PBX_CRM_TOKEN) {
       this.logger.warn('Invalid CRM token');
       return { status: 'error', message: 'Invalid token' };
@@ -37,10 +39,12 @@ export class PbxController {
   }
 
   @Post('contact')
-  @ApiOperation({ summary: 'PBX contact webhook - mijoz ma\'lumotlarini so\'rash' })
+  @ApiOperation({
+    summary: "PBX contact webhook - mijoz ma'lumotlarini so'rash",
+  })
   async handleContact(@Body() data: any, @Headers() headers: any) {
     this.logger.log('Contact webhook received:', JSON.stringify(data));
-    
+
     if (data.crm_token !== process.env.PBX_CRM_TOKEN) {
       this.logger.warn('Invalid CRM token');
       return { status: 'error', message: 'Invalid token' };
@@ -53,7 +57,7 @@ export class PbxController {
   @ApiOperation({ summary: 'PBX rating webhook - mijoz bahosi' })
   async handleRating(@Body() data: any, @Headers() headers: any) {
     this.logger.log('Rating webhook received:', JSON.stringify(data));
-    
+
     if (data.crm_token !== process.env.PBX_CRM_TOKEN) {
       this.logger.warn('Invalid CRM token');
       return { status: 'error', message: 'Invalid token' };

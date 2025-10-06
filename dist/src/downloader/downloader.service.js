@@ -147,6 +147,10 @@ let DownloaderService = DownloaderService_1 = class DownloaderService {
     async fetchTodayCalls() {
         const maxRetries = 3;
         const retryDelay = 5000;
+        if (!this.sipApiUrl || !this.sipApiKey) {
+            this.logger.error('SIP API configuration is missing. Skipping call fetch.');
+            throw new Error('SIP_API_URL or SIP_API_KEY is not configured');
+        }
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 this.logger.log(`Fetching calls from: ${this.sipApiUrl}/history/json (Attempt ${attempt}/${maxRetries})`);
@@ -170,9 +174,22 @@ let DownloaderService = DownloaderService_1 = class DownloaderService {
             }
             catch (error) {
                 const isLastAttempt = attempt === maxRetries;
-                const errorMsg = error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED'
-                    ? `Connection timeout after 60 seconds`
-                    : error.message;
+                let errorMsg = error.message;
+                if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+                    errorMsg = 'Connection timeout after 60 seconds';
+                }
+                else if (error.code === 'ECONNREFUSED') {
+                    errorMsg = 'Connection refused. Check if API server is running';
+                }
+                else if (error.response?.status === 401) {
+                    errorMsg = 'Authentication failed. Check SIP_API_KEY';
+                }
+                else if (error.response?.status === 403) {
+                    errorMsg = 'Access forbidden. Check API permissions';
+                }
+                else if (error.response?.status === 404) {
+                    errorMsg = 'API endpoint not found. Check SIP_API_URL';
+                }
                 this.logger.error(`API Error (Attempt ${attempt}/${maxRetries}): ${error.response?.status || 'N/A'} - ${errorMsg}`);
                 if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
                     this.logger.warn(`Network timeout. This could be due to: slow network, firewall, or server issues.`);
@@ -180,7 +197,7 @@ let DownloaderService = DownloaderService_1 = class DownloaderService {
                 if (!isLastAttempt) {
                     const waitTime = retryDelay * attempt;
                     this.logger.log(`Retrying in ${waitTime / 1000} seconds...`);
-                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    await new Promise((resolve) => setTimeout(resolve, waitTime));
                 }
                 else {
                     this.logger.error('All retry attempts failed. Returning empty array.');
@@ -190,20 +207,41 @@ let DownloaderService = DownloaderService_1 = class DownloaderService {
         return [];
     }
     async downloadRecord(recordUrl, filePath) {
-        const response = await axios.get(recordUrl, {
-            responseType: 'stream',
-            timeout: 120000,
-            httpsAgent: new https.Agent({
-                keepAlive: true,
+        try {
+            const response = await axios.get(recordUrl, {
+                responseType: 'stream',
                 timeout: 120000,
-            }),
-        });
-        const writer = fs.createWriteStream(filePath);
-        response.data.pipe(writer);
-        return new Promise((resolve, reject) => {
-            writer.on('finish', resolve);
-            writer.on('error', reject);
-        });
+                httpsAgent: new https.Agent({
+                    keepAlive: true,
+                    timeout: 120000,
+                }),
+            });
+            const writer = fs.createWriteStream(filePath);
+            response.data.pipe(writer);
+            return new Promise((resolve, reject) => {
+                writer.on('finish', resolve);
+                writer.on('error', (err) => {
+                    reject(new Error(`File write error: ${err.message}`));
+                });
+                response.data.on('error', (err) => {
+                    reject(new Error(`Download stream error: ${err.message}`));
+                });
+            });
+        }
+        catch (error) {
+            if (error.code === 'ETIMEDOUT') {
+                throw new Error(`Download timeout for ${recordUrl}`);
+            }
+            else if (error.code === 'ECONNREFUSED') {
+                throw new Error(`Connection refused when downloading ${recordUrl}`);
+            }
+            else if (error.response?.status === 404) {
+                throw new Error(`Recording not found: ${recordUrl}`);
+            }
+            else {
+                throw new Error(`Failed to download recording: ${error.message}`);
+            }
+        }
     }
 };
 __decorate([

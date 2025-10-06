@@ -44,12 +44,13 @@ export class DownloaderService {
     this.sipApiKey = this.config.get<string>('SIP_API_KEY');
 
     this.logger.log(`[INIT] SIP_API_URL: ${this.sipApiUrl}`);
-    this.logger.log(`[INIT] SIP_API_KEY length: ${this.sipApiKey?.length || 0}`);
+    this.logger.log(
+      `[INIT] SIP_API_KEY length: ${this.sipApiKey?.length || 0}`,
+    );
     this.logger.log(`[INIT] SIP_API_KEY value: "${this.sipApiKey}"`);
   }
 
   private async getApiSettings() {
-
     return {
       sipApiUrl: this.config.get<string>('SIP_API_URL'),
       sipApiKey: this.config.get<string>('SIP_API_KEY'),
@@ -109,7 +110,9 @@ export class DownloaderService {
             });
             if (employee) {
               employeePhone = call.client;
-              this.logger.log(`Employee found by client number: ${call.client}`);
+              this.logger.log(
+                `Employee found by client number: ${call.client}`,
+              );
             }
           }
 
@@ -120,7 +123,9 @@ export class DownloaderService {
             });
             if (employee) {
               employeePhone = call.caller;
-              this.logger.log(`Employee found by caller number: ${call.caller}`);
+              this.logger.log(
+                `Employee found by caller number: ${call.caller}`,
+              );
             }
           }
 
@@ -138,7 +143,9 @@ export class DownloaderService {
           });
 
           if (existingCall) {
-            this.logger.log(`Call ${call.uid} already exists in database. Skipping.`);
+            this.logger.log(
+              `Call ${call.uid} already exists in database. Skipping.`,
+            );
             continue;
           }
 
@@ -160,7 +167,9 @@ export class DownloaderService {
 
           // Validate the date
           if (isNaN(callDate.getTime())) {
-            this.logger.warn(`Invalid date for call ${call.uid}, using current date`);
+            this.logger.warn(
+              `Invalid date for call ${call.uid}, using current date`,
+            );
             callDate = new Date();
           }
 
@@ -196,35 +205,56 @@ export class DownloaderService {
     const maxRetries = 3;
     const retryDelay = 5000; // 5 seconds
 
+    if (!this.sipApiUrl || !this.sipApiKey) {
+      this.logger.error('SIP API configuration is missing. Skipping call fetch.');
+      throw new Error('SIP_API_URL or SIP_API_KEY is not configured');
+    }
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        this.logger.log(`Fetching calls from: ${this.sipApiUrl!}/history/json (Attempt ${attempt}/${maxRetries})`);
-        this.logger.log(`Using API Key: ${this.sipApiKey ? '***' + this.sipApiKey.slice(-4) : 'MISSING'}`);
+        this.logger.log(
+          `Fetching calls from: ${this.sipApiUrl}/history/json (Attempt ${attempt}/${maxRetries})`,
+        );
+        this.logger.log(
+          `Using API Key: ${this.sipApiKey ? '***' + this.sipApiKey.slice(-4) : 'MISSING'}`,
+        );
 
-        const { data } = await axios.get(`${this.sipApiUrl!}/history/json`, {
+        const { data } = await axios.get(`${this.sipApiUrl}/history/json`, {
           headers: {
-            'X-API-KEY': this.sipApiKey!,
+            'X-API-KEY': this.sipApiKey,
             'Content-Type': 'application/json',
           },
           params: { period: 'today', type: 'all', limit: 1000 },
-          timeout: 60000, 
+          timeout: 60000,
           httpsAgent: new https.Agent({
             keepAlive: true,
             timeout: 60000,
           }),
         });
 
-        this.logger!.log(
+        this.logger.log(
           `API Response: ${JSON.stringify(data).substring(0, 200)}`,
         );
         const filteredCalls = data.filter((c: CallData) => c.record);
-        this.logger.log(`Successfully fetched ${filteredCalls.length} calls with recordings`);
+        this.logger.log(
+          `Successfully fetched ${filteredCalls.length} calls with recordings`,
+        );
         return filteredCalls;
       } catch (error) {
         const isLastAttempt = attempt === maxRetries;
-        const errorMsg = error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED'
-          ? `Connection timeout after 60 seconds`
-          : error.message;
+
+        let errorMsg = error.message;
+        if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+          errorMsg = 'Connection timeout after 60 seconds';
+        } else if (error.code === 'ECONNREFUSED') {
+          errorMsg = 'Connection refused. Check if API server is running';
+        } else if (error.response?.status === 401) {
+          errorMsg = 'Authentication failed. Check SIP_API_KEY';
+        } else if (error.response?.status === 403) {
+          errorMsg = 'Access forbidden. Check API permissions';
+        } else if (error.response?.status === 404) {
+          errorMsg = 'API endpoint not found. Check SIP_API_URL';
+        }
 
         this.logger.error(
           `API Error (Attempt ${attempt}/${maxRetries}): ${error.response?.status || 'N/A'} - ${errorMsg}`,
@@ -239,9 +269,11 @@ export class DownloaderService {
         if (!isLastAttempt) {
           const waitTime = retryDelay * attempt;
           this.logger.log(`Retrying in ${waitTime / 1000} seconds...`);
-          await new Promise(resolve => setTimeout(resolve, waitTime));
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
         } else {
-          this.logger.error('All retry attempts failed. Returning empty array.');
+          this.logger.error(
+            'All retry attempts failed. Returning empty array.',
+          );
         }
       }
     }
@@ -253,20 +285,37 @@ export class DownloaderService {
     recordUrl: string,
     filePath: string,
   ): Promise<void> {
-    const response = await axios.get(recordUrl, {
-      responseType: 'stream',
-      timeout: 120000, // 2 minutes for large files
-      httpsAgent: new https.Agent({
-        keepAlive: true,
-        timeout: 120000,
-      }),
-    });
-    const writer = fs.createWriteStream(filePath);
-    response.data.pipe(writer);
+    try {
+      const response = await axios.get(recordUrl, {
+        responseType: 'stream',
+        timeout: 120000, // 2 minutes for large files
+        httpsAgent: new https.Agent({
+          keepAlive: true,
+          timeout: 120000,
+        }),
+      });
+      const writer = fs.createWriteStream(filePath);
+      response.data.pipe(writer);
 
-    return new Promise((resolve, reject) => {
-      writer.on('finish', resolve);
-      writer.on('error', reject);
-    });
+      return new Promise((resolve, reject) => {
+        writer.on('finish', resolve);
+        writer.on('error', (err) => {
+          reject(new Error(`File write error: ${err.message}`));
+        });
+        response.data.on('error', (err: Error) => {
+          reject(new Error(`Download stream error: ${err.message}`));
+        });
+      });
+    } catch (error) {
+      if (error.code === 'ETIMEDOUT') {
+        throw new Error(`Download timeout for ${recordUrl}`);
+      } else if (error.code === 'ECONNREFUSED') {
+        throw new Error(`Connection refused when downloading ${recordUrl}`);
+      } else if (error.response?.status === 404) {
+        throw new Error(`Recording not found: ${recordUrl}`);
+      } else {
+        throw new Error(`Failed to download recording: ${error.message}`);
+      }
+    }
   }
 }

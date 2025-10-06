@@ -1,15 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { DashboardFilterDto } from './dto/dashboard-filter.dto.js';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getStats(filters: DashboardFilterDto) {
+  async getStats(filters: DashboardFilterDto): Promise<any> {
     const { branchId, departmentId, employeeId, dateFrom, dateTo } = filters;
 
-    const where: any = {};
+    const where: Prisma.CallWhereInput = {};
 
     if (branchId) where.branchId = branchId;
     if (departmentId) where.departmentId = departmentId;
@@ -60,10 +61,10 @@ export class DashboardService {
     };
   }
 
-  async getCallsOverTime(filters: DashboardFilterDto) {
+  async getCallsOverTime(filters: DashboardFilterDto): Promise<any> {
     const { branchId, departmentId, employeeId, dateFrom, dateTo } = filters;
 
-    const where: any = {};
+    const where: Prisma.CallWhereInput = {};
     if (branchId) where.branchId = branchId;
     if (departmentId) where.departmentId = departmentId;
     if (employeeId) where.employeeId = employeeId;
@@ -92,10 +93,13 @@ export class DashboardService {
     return Object.entries(grouped).map(([date, count]) => ({ date, count }));
   }
 
-  async getTopPerformers(filters: DashboardFilterDto, limit = 10) {
+  async getTopPerformers(
+    filters: DashboardFilterDto,
+    limit = 10,
+  ): Promise<any> {
     const { branchId, departmentId, dateFrom, dateTo } = filters;
 
-    const where: any = {};
+    const where: Prisma.CallWhereInput = {};
     if (branchId) where.branchId = branchId;
     if (departmentId) where.departmentId = departmentId;
     if (dateFrom || dateTo) {
@@ -113,7 +117,7 @@ export class DashboardService {
     });
 
     // Calculate average score per employee
-    const employeeScores = calls.reduce(
+    const employeeScores: Record<string, any> = calls.reduce(
       (
         acc: Record<string, any>,
         call: { employeeId: string; employee: any; scores: any[] },
@@ -153,10 +157,10 @@ export class DashboardService {
     return performers;
   }
 
-  async getViolationStats(filters: DashboardFilterDto) {
+  async getViolationStats(filters: DashboardFilterDto): Promise<any> {
     const { branchId, departmentId, employeeId, dateFrom, dateTo } = filters;
 
-    const callWhere: any = {};
+    const callWhere: Prisma.CallWhereInput = {};
     if (branchId) callWhere.branchId = branchId;
     if (departmentId) callWhere.departmentId = departmentId;
     if (employeeId) callWhere.employeeId = employeeId;
@@ -191,11 +195,11 @@ export class DashboardService {
       .sort((a: { count: number }, b: { count: number }) => b.count - a.count);
   }
 
-  async getAnalysisStats(filters: DashboardFilterDto) {
+  async getAnalysisStats(filters: DashboardFilterDto): Promise<any> {
     const { branchId, departmentId, employeeId, dateFrom, dateTo } = filters;
 
-    const where: any = {
-      analysis: { not: null },
+    const where: Prisma.CallWhereInput = {
+      analysis: { not: Prisma.JsonNull },
     };
 
     if (branchId) where.branchId = branchId;
@@ -226,7 +230,7 @@ export class DashboardService {
     > = {};
 
     for (const call of calls) {
-      const analysis = call.analysis as any;
+      const analysis: any = call.analysis;
       if (!analysis) continue;
 
       totalOverallScore += analysis.overallScore || 0;

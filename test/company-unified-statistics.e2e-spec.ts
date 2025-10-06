@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CompanyService } from '../src/company/company.service.js';
-import { UnifiedStatisticsDto, StatisticsType } from '../src/company/dto/unified-statistics.dto.js';
+import {
+  UnifiedStatisticsDto,
+  StatisticsType,
+} from '../src/company/dto/unified-statistics.dto.js';
 
 describe('Company Unified Statistics', () => {
   let service: CompanyService;

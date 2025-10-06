@@ -55,7 +55,9 @@ let PbxController = PbxController_1 = class PbxController {
 };
 __decorate([
     Post('history'),
-    ApiOperation({ summary: 'PBX history webhook - qo\'ng\'iroq tugagandan keyin' }),
+    ApiOperation({
+        summary: "PBX history webhook - qo'ng'iroq tugagandan keyin",
+    }),
     __param(0, Body()),
     __param(1, Headers()),
     __metadata("design:type", Function),
@@ -64,7 +66,7 @@ __decorate([
 ], PbxController.prototype, "handleHistory", null);
 __decorate([
     Post('event'),
-    ApiOperation({ summary: 'PBX event webhook - qo\'ng\'iroq jarayoni' }),
+    ApiOperation({ summary: "PBX event webhook - qo'ng'iroq jarayoni" }),
     __param(0, Body()),
     __param(1, Headers()),
     __metadata("design:type", Function),
@@ -73,7 +75,9 @@ __decorate([
 ], PbxController.prototype, "handleEvent", null);
 __decorate([
     Post('contact'),
-    ApiOperation({ summary: 'PBX contact webhook - mijoz ma\'lumotlarini so\'rash' }),
+    ApiOperation({
+        summary: "PBX contact webhook - mijoz ma'lumotlarini so'rash",
+    }),
     __param(0, Body()),
     __param(1, Headers()),
     __metadata("design:type", Function),
