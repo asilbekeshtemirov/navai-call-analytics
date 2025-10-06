@@ -4,6 +4,7 @@ export declare class SettingsService {
     private readonly prisma;
     constructor(prisma: PrismaService);
     get(): Promise<{
+        id: number;
         analyticsStatus: boolean;
         scoringMode: import("@prisma/client").$Enums.ScoringMode;
         excludeSeconds: number;
@@ -13,10 +14,10 @@ export declare class SettingsService {
         sipuniApiKey: string | null;
         sipuniUserId: string | null;
         dataSource: import("@prisma/client").$Enums.DataSource;
-        id: number;
         updatedAt: Date;
     }>;
     update(updateSettingsDto: UpdateSettingsDto): Promise<{
+        id: number;
         analyticsStatus: boolean;
         scoringMode: import("@prisma/client").$Enums.ScoringMode;
         excludeSeconds: number;
@@ -26,7 +27,6 @@ export declare class SettingsService {
         sipuniApiKey: string | null;
         sipuniUserId: string | null;
         dataSource: import("@prisma/client").$Enums.DataSource;
-        id: number;
         updatedAt: Date;
     }>;
 }

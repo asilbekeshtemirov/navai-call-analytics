@@ -47,6 +47,7 @@ let SipuniService = SipuniService_1 = class SipuniService {
     }
     async loadSipuniCredentials() {
         const settings = await this.prisma.setting.findFirst();
+        this.logger.log(`[CONFIG] Loaded settings: ${JSON.stringify(settings)}`);
         if (settings && settings.sipuniApiUrl && settings.sipuniApiKey && settings.sipuniUserId) {
             this.logger.log(`[CONFIG] Using Sipuni credentials from Settings`);
             return {
@@ -62,7 +63,7 @@ let SipuniService = SipuniService_1 = class SipuniService {
             userId: this.sipuniUserId,
         };
     }
-    createHashString(exportDto) {
+    createHashString(exportDto, apiKey, userId) {
         const params = [
             exportDto.anonymous || '1', exportDto.crmLinks || '0', exportDto.dtmfUserAnswer || '0',
             exportDto.firstTime || '0', exportDto.from, exportDto.fromNumber || '',
@@ -71,17 +72,18 @@ let SipuniService = SipuniService_1 = class SipuniService {
             exportDto.rating || '5', exportDto.showTreeId || '1', exportDto.state || '0',
             exportDto.timeFrom || '10:00', exportDto.timeTo || '20:00', exportDto.to,
             exportDto.toAnswer || '', exportDto.toNumber || '', exportDto.tree || '',
-            exportDto.type || '0', exportDto.user || this.sipuniUserId, this.sipuniApiKey
+            exportDto.type || '0', exportDto.user || userId, apiKey
         ];
         return params.join('+');
     }
     async exportStatistics(exportDto) {
         try {
             this.logger.log(`[EXPORT] Exporting statistics from ${exportDto.from} to ${exportDto.to}`);
-            if (!this.sipuniApiKey || this.sipuniApiKey.length === 0) {
+            const credentials = await this.loadSipuniCredentials();
+            if (!credentials.apiKey || credentials.apiKey.length === 0) {
                 throw new Error('SIPUNI_API_KEY is not configured');
             }
-            const hashString = this.createHashString(exportDto);
+            const hashString = this.createHashString(exportDto, credentials.apiKey, credentials.userId);
             this.logger.log(`[HASH] Hash string: ${hashString}`);
             const hash = crypto.createHash('md5').update(hashString).digest('hex');
             const params = {
@@ -96,9 +98,9 @@ let SipuniService = SipuniService_1 = class SipuniService {
                 timeFrom: exportDto.timeFrom || '10:00', timeTo: exportDto.timeTo || '20:00',
                 toAnswer: exportDto.toAnswer || '', toNumber: exportDto.toNumber || '',
                 tree: exportDto.tree || '', type: exportDto.type || '0',
-                user: exportDto.user || this.sipuniUserId, hash
+                user: exportDto.user || credentials.userId, hash
             };
-            const response = await this.http.axiosRef.post(`${this.sipuniApiUrl}/statistic/export`, new URLSearchParams(params).toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 30000 });
+            const response = await this.http.axiosRef.post(`${credentials.apiUrl}/statistic/export`, new URLSearchParams(params).toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 30000 });
             const responseData = response.data;
             if (typeof responseData === 'string' && responseData.includes('<html>')) {
                 throw new Error('Sipuni API returned HTML error page instead of CSV data');

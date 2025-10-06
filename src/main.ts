@@ -12,7 +12,7 @@ async function bootstrap() {
 
   // Enable CORS
   app.enableCors({
-    origin: 'https://analytic.navai.pro',
+    origin: ['https://analytic.navai.pro', 'http://localhost:5173'],
     credentials: true,
   });
 

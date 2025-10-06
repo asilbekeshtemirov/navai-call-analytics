@@ -66,6 +66,8 @@ export class SipuniService {
     private async loadSipuniCredentials(): Promise<{ apiUrl: string; apiKey: string; userId: string }> {
         const settings = await this.prisma.setting.findFirst();
 
+        this.logger.log(`[CONFIG] Loaded settings: ${JSON.stringify(settings)}`);
+
         if (settings && settings.sipuniApiUrl && settings.sipuniApiKey && settings.sipuniUserId) {
             this.logger.log(`[CONFIG] Using Sipuni credentials from Settings`);
             return {
@@ -87,7 +89,7 @@ export class SipuniService {
     /**
      * Create hash string for Sipuni API authentication
      */
-    private createHashString(exportDto: SipuniExportDto): string {
+    private createHashString(exportDto: SipuniExportDto, apiKey: string, userId: string): string {
         const params = [
             exportDto.anonymous || '1', exportDto.crmLinks || '0', exportDto.dtmfUserAnswer || '0',
             exportDto.firstTime || '0', exportDto.from, exportDto.fromNumber || '',
@@ -96,7 +98,7 @@ export class SipuniService {
             exportDto.rating || '5', exportDto.showTreeId || '1', exportDto.state || '0',
             exportDto.timeFrom || '10:00', exportDto.timeTo || '20:00', exportDto.to,
             exportDto.toAnswer || '', exportDto.toNumber || '', exportDto.tree || '',
-            exportDto.type || '0', exportDto.user || this.sipuniUserId, this.sipuniApiKey
+            exportDto.type || '0', exportDto.user || userId, apiKey
         ];
         return params.join('+');
     }
@@ -108,13 +110,16 @@ export class SipuniService {
         try {
             this.logger.log(`[EXPORT] Exporting statistics from ${exportDto.from} to ${exportDto.to}`);
 
+            // Load credentials from Settings or .env
+            const credentials = await this.loadSipuniCredentials();
+
             // Validate API key
-            if (!this.sipuniApiKey || this.sipuniApiKey.length === 0) {
+            if (!credentials.apiKey || credentials.apiKey.length === 0) {
                 throw new Error('SIPUNI_API_KEY is not configured');
             }
 
             // Create hash for authentication
-            const hashString = this.createHashString(exportDto);
+            const hashString = this.createHashString(exportDto, credentials.apiKey, credentials.userId);
             this.logger.log(`[HASH] Hash string: ${hashString}`);
 
             const hash = crypto.createHash('md5').update(hashString).digest('hex');
@@ -132,12 +137,12 @@ export class SipuniService {
                 timeFrom: exportDto.timeFrom || '10:00', timeTo: exportDto.timeTo || '20:00',
                 toAnswer: exportDto.toAnswer || '', toNumber: exportDto.toNumber || '',
                 tree: exportDto.tree || '', type: exportDto.type || '0',
-                user: exportDto.user || this.sipuniUserId, hash
+                user: exportDto.user || credentials.userId, hash
             };
 
             // Make POST request to Sipuni API
             const response = await this.http.axiosRef.post(
-                `${this.sipuniApiUrl}/statistic/export`,
+                `${credentials.apiUrl}/statistic/export`,
                 new URLSearchParams(params).toString(),
                 { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 30000 }
             );
@@ -474,7 +479,7 @@ export class SipuniService {
                             branchId: employee.branchId,
                             departmentId: employee.departmentId,
                             fileUrl: audioFile,
-                            status: hasRecording ? 'UPLOADED' : 'DONE', // No processing needed for unanswered calls
+                            status: hasRecording ? 'UPLOADED' : 'DONE', 
                             callerNumber: record.from,
                             calleeNumber: record.to,
                             callDate: callDate,
@@ -523,7 +528,7 @@ export class SipuniService {
 
         return new Date(
             parseInt(year),
-            parseInt(month) - 1, // Month is 0-indexed
+            parseInt(month) - 1,
             parseInt(day),
             parseInt(hours),
             parseInt(minutes),
