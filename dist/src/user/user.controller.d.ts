@@ -8,28 +8,28 @@ export declare class UserController {
     constructor(userService: UserService);
     create(organizationId: number, createUserDto: CreateUserDto): Promise<{
         id: string;
+        organizationId: number;
         createdAt: Date;
         updatedAt: Date;
-        organizationId: number;
         branchId: string | null;
+        extCode: string | null;
         firstName: string;
         lastName: string;
         phone: string;
-        extCode: string | null;
         role: import("@prisma/client").$Enums.UserRole;
         passwordHash: string;
         departmentId: string | null;
     }>;
-    findAll(): import("@prisma/client").Prisma.PrismaPromise<{
+    findAll(organizationId: number): import("@prisma/client").Prisma.PrismaPromise<{
         id: string;
+        organizationId: number;
         createdAt: Date;
         updatedAt: Date;
-        organizationId: number;
         branchId: string | null;
+        extCode: string | null;
         firstName: string;
         lastName: string;
         phone: string;
-        extCode: string | null;
         role: import("@prisma/client").$Enums.UserRole;
         passwordHash: string;
         departmentId: string | null;
@@ -37,56 +37,56 @@ export declare class UserController {
     getUnifiedUserStatistics(id: string, filters: UnifiedUserStatisticsDto): Promise<any>;
     findOne(id: string): import("@prisma/client").Prisma.Prisma__UserClient<{
         id: string;
+        organizationId: number;
         createdAt: Date;
         updatedAt: Date;
-        organizationId: number;
         branchId: string | null;
+        extCode: string | null;
         firstName: string;
         lastName: string;
         phone: string;
-        extCode: string | null;
         role: import("@prisma/client").$Enums.UserRole;
         passwordHash: string;
         departmentId: string | null;
     } | null, null, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     update(id: string, updateUserDto: UpdateUserDto): Promise<{
         id: string;
+        organizationId: number;
         createdAt: Date;
         updatedAt: Date;
-        organizationId: number;
         branchId: string | null;
+        extCode: string | null;
         firstName: string;
         lastName: string;
         phone: string;
-        extCode: string | null;
         role: import("@prisma/client").$Enums.UserRole;
         passwordHash: string;
         departmentId: string | null;
     }>;
     remove(id: string): import("@prisma/client").Prisma.Prisma__UserClient<{
         id: string;
+        organizationId: number;
         createdAt: Date;
         updatedAt: Date;
-        organizationId: number;
         branchId: string | null;
+        extCode: string | null;
         firstName: string;
         lastName: string;
         phone: string;
-        extCode: string | null;
         role: import("@prisma/client").$Enums.UserRole;
         passwordHash: string;
         departmentId: string | null;
     }, never, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     updateUserRole(id: string, updateUserRoleDto: UpdateUserRoleDto): Promise<{
         id: string;
+        organizationId: number;
         createdAt: Date;
         updatedAt: Date;
-        organizationId: number;
         branchId: string | null;
+        extCode: string | null;
         firstName: string;
         lastName: string;
         phone: string;
-        extCode: string | null;
         role: import("@prisma/client").$Enums.UserRole;
         passwordHash: string;
         departmentId: string | null;

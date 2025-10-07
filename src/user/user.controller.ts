@@ -44,8 +44,9 @@ export class UserController {
 
   @Get()
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  findAll() {
-    return this.userService.findAll();
+  @ApiOperation({ summary: 'O\'z organizatsiyasidagi barcha userlarni ko\'rish' })
+  findAll(@OrganizationId() organizationId: number) {
+    return this.userService.findAll(organizationId);
   }
 
   @Get(':id/statistics')

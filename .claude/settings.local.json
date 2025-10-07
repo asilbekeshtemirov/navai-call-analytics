@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(node:*)",
-      "Bash(npm run start:dev:*)"
+      "Bash(npm run start:dev:*)",
+      "Bash(timeout:*)",
+      "Bash(curl -s -X POST http://localhost:3000/sipuni-integration -H \"Content-Type: application/json\" -H \"X-API-Key: navai-secure-webhook-key-2025\" -d \"{\"\"organizationId\"\": 1, \"\"limit\"\": 10}\")"
     ],
     "deny": [],
     "ask": []

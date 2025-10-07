@@ -94,6 +94,14 @@ export class SipuniService implements OnModuleInit {
           // Auto-sync from month start if enabled
           if (settings?.autoSyncOnStartup) {
             this.logger.log(`[STARTUP] Auto-sync enabled for ${org.name}, syncing from month start...`);
+
+            // First: Update CSV with fresh data from Sipuni
+            await this.updateCSVFromSipuni(org.id);
+
+            // Second: Update employees from CSV
+            await this.updateEmployeesFromCSV(org.id);
+
+            // Third: Sync and process recordings
             await this.syncFromMonthStart(org.id);
           } else {
             this.logger.log(`[STARTUP] Auto-sync disabled for ${org.name}, skipping...`);
@@ -648,16 +656,25 @@ export class SipuniService implements OnModuleInit {
 
   /**
    * Sync and process Sipuni recordings
+   * Now with date filtering support
    */
   async syncAndProcessRecordings(
     organizationId: number,
     limit: number = 500,
+    fromDate?: string, // Format: DD.MM.YYYY
+    toDate?: string,   // Format: DD.MM.YYYY
   ): Promise<{ success: boolean; message: string; recordsProcessed: number }> {
     try {
       this.logger.log(`[SYNC] Starting Sipuni sync for org ${organizationId} with limit ${limit}...`);
+      if (fromDate && toDate) {
+        this.logger.log(`[SYNC] Date filter: ${fromDate} to ${toDate}`);
+      }
 
-      // Step 1: Fetch all records
+      // Step 1: Fetch all records and save to CSV
       const records = await this.fetchAllRecords(organizationId, limit);
+
+      // Save to CSV file
+      await this.saveRecordsToCSV(records, organizationId);
 
       if (records.length === 0) {
         this.logger.log('[SYNC] No new records found');
@@ -672,8 +689,27 @@ export class SipuniService implements OnModuleInit {
       let skipped = 0;
       let failed = 0;
 
-      // Step 2: Process each record
-      for (const record of records) {
+      // Step 2: Filter records by date if date range is provided
+      let filteredRecords = records;
+      if (fromDate && toDate) {
+        const fromDateTime = this.parseSipuniDate(`${fromDate} 00:00:00`);
+        const toDateTime = this.parseSipuniDate(`${toDate} 23:59:59`);
+
+        filteredRecords = records.filter(record => {
+          try {
+            const recordDate = this.parseSipuniDate(record.time);
+            return recordDate >= fromDateTime && recordDate <= toDateTime;
+          } catch (error) {
+            this.logger.warn(`Failed to parse date for record: ${record.time}`);
+            return false;
+          }
+        });
+
+        this.logger.log(`[SYNC] Filtered ${filteredRecords.length} records from ${records.length} total (date range: ${fromDate} - ${toDate})`);
+      }
+
+      // Step 3: Process each record
+      for (const record of filteredRecords) {
         try {
           // Find employee by ext code FIRST (before creating externalId)
           // For outgoing calls: use FROM field (extension)
@@ -767,8 +803,11 @@ export class SipuniService implements OnModuleInit {
           );
 
           // Process call through AI pipeline only if it has recording
+          // Run in background for faster processing
           if (hasRecording) {
-            await this.aiService.processCall(call.id);
+            this.aiService.processCall(call.id).catch(error => {
+              this.logger.error(`[SYNC] Background AI processing failed for ${call.id}: ${error.message}`);
+            });
           } else {
             this.logger.log(
               `[SYNC] Skipping AI processing for unanswered call ${externalId}`,
@@ -777,16 +816,24 @@ export class SipuniService implements OnModuleInit {
 
           processed++;
           this.logger.log(
-            `[SYNC] Processed ${processed}/${records.length} records`,
+            `[SYNC] Processed ${processed}/${filteredRecords.length} records`,
           );
 
-          // Small delay to avoid overwhelming APIs
-          await new Promise((resolve) => setTimeout(resolve, 2000));
+          // Minimal delay for maximum speed
+          await new Promise((resolve) => setTimeout(resolve, 10));
         } catch (error: any) {
-          this.logger.error(
-            `[SYNC] Failed to process record ${record.recordId}: ${error.message}`,
-          );
-          failed++;
+          // Check if it's a duplicate record error
+          if (error.message && error.message.includes('Unique constraint failed')) {
+            this.logger.warn(
+              `[SYNC] Skipping duplicate record ${record.recordId} - already exists in database`,
+            );
+            skipped++;
+          } else {
+            this.logger.error(
+              `[SYNC] Failed to process record ${record.recordId}: ${error.message}`,
+            );
+            failed++;
+          }
         }
       }
 
@@ -820,6 +867,186 @@ export class SipuniService implements OnModuleInit {
       parseInt(minutes),
       parseInt(seconds),
     );
+  }
+
+  /**
+   * Save records to CSV file
+   */
+  private async saveRecordsToCSV(records: SipuniRecord[], organizationId: number): Promise<void> {
+    try {
+      const csvPath = path.join(process.cwd(), 'sipuni-all-records.csv');
+
+      // CSV header
+      const header = 'Тип;Статус;Время;Схема;Откуда;Куда;Кто ответил;Длительность звонка, сек;Длительность разговора, сек;Время ответа, сек;Оценка;ID записи;Метка;Теги;ID заказа звонка;Запись существует;Новый клиент\n';
+
+      // Convert records to CSV rows
+      const rows = records.map(r =>
+        [
+          r.type,
+          r.status,
+          r.time,
+          r.tree,
+          r.from,
+          r.to,
+          r.answered,
+          r.duration,
+          r.talkDuration,
+          r.answerTime,
+          r.rating,
+          r.recordId,
+          r.label,
+          r.tags,
+          r.orderId,
+          r.recordExists,
+          r.newClient
+        ].join(';')
+      ).join('\n');
+
+      // Write to file
+      fs.writeFileSync(csvPath, header + rows, 'utf-8');
+
+      this.logger.log(`[CSV] Saved ${records.length} records to ${csvPath}`);
+    } catch (error: any) {
+      this.logger.error(`[CSV] Failed to save records: ${error.message}`);
+    }
+  }
+
+  /**
+   * Update CSV from Sipuni API
+   */
+  private async updateCSVFromSipuni(organizationId: number): Promise<void> {
+    this.logger.log(`[CSV-UPDATE] Fetching fresh data from Sipuni for org ${organizationId}...`);
+    try {
+      const records = await this.fetchAllRecords(organizationId, 1000);
+      await this.saveRecordsToCSV(records, organizationId);
+      this.logger.log(`[CSV-UPDATE] CSV updated with ${records.length} records`);
+    } catch (error: any) {
+      this.logger.error(`[CSV-UPDATE] Failed to update CSV: ${error.message}`);
+    }
+  }
+
+  /**
+   * Update employees from CSV file
+   */
+  private async updateEmployeesFromCSV(organizationId: number): Promise<void> {
+    this.logger.log(`[EMPLOYEES-UPDATE] Updating employees from CSV for org ${organizationId}...`);
+
+    try {
+      const csvPath = path.join(process.cwd(), 'sipuni-all-records.csv');
+
+      if (!fs.existsSync(csvPath)) {
+        this.logger.warn(`[EMPLOYEES-UPDATE] CSV file not found: ${csvPath}`);
+        return;
+      }
+
+      const csvContent = fs.readFileSync(csvPath, 'utf-8');
+      const lines = csvContent.split('\n').filter(l => l.trim());
+
+      // Parse CSV (semicolon delimiter)
+      const records = lines.slice(1).map(line => {
+        const cols = line.split(';');
+        return {
+          from: cols[4],
+          answered: cols[6],
+        };
+      });
+
+      // Extract unique extension codes (3-digit numbers)
+      const extCodes = new Set<string>();
+      for (const record of records) {
+        if (/^\d{3}$/.test(record.from)) {
+          extCodes.add(record.from);
+        }
+        if (/^\d{3}$/.test(record.answered)) {
+          extCodes.add(record.answered);
+        }
+      }
+
+      const uniqueExtCodes = Array.from(extCodes).sort();
+      this.logger.log(`[EMPLOYEES-UPDATE] Found ${uniqueExtCodes.length} unique extension codes`);
+
+      // Get branch and department
+      let branch = await this.prisma.branch.findFirst({
+        where: { organizationId, name: 'Main Branch' },
+      });
+
+      if (!branch) {
+        branch = await this.prisma.branch.create({
+          data: {
+            organizationId,
+            name: 'Main Branch',
+            address: 'Navoi, Uzbekistan',
+          },
+        });
+      }
+
+      let department = await this.prisma.department.findFirst({
+        where: { branchId: branch.id, name: 'Call Center' },
+      });
+
+      if (!department) {
+        department = await this.prisma.department.create({
+          data: {
+            branchId: branch.id,
+            name: 'Call Center',
+          },
+        });
+      }
+
+      // Hash password
+      const bcrypt = await import('bcrypt');
+      const passwordHash = await bcrypt.hash('password123', 10);
+
+      // Employee name templates
+      const firstNames = ['Alisher', 'Bobur', 'Dilshod', 'Eldor', 'Farrux', 'Gulnora', 'Hasan', 'Iroda', 'Jasur', 'Kamila'];
+      const lastNames = ['Navoiy', 'Mirzo', 'Qodirov', 'Tursunov', 'Usmonov', 'Karimova', 'Rashidov', 'Sadikova', 'Yusupov', 'Azizova'];
+
+      let createdCount = 0;
+      let updatedCount = 0;
+
+      for (const [index, extCode] of uniqueExtCodes.entries()) {
+        const firstName = firstNames[index % firstNames.length];
+        const lastName = lastNames[index % lastNames.length];
+        const phone = `+99890123${extCode}`;
+
+        try {
+          const user = await this.prisma.user.upsert({
+            where: {
+              organizationId_phone: {
+                organizationId,
+                phone: phone,
+              },
+            },
+            update: {
+              extCode: extCode,
+            },
+            create: {
+              organizationId,
+              firstName: firstName,
+              lastName: lastName,
+              phone: phone,
+              extCode: extCode,
+              role: 'EMPLOYEE',
+              passwordHash: passwordHash,
+              branchId: branch.id,
+              departmentId: department.id,
+            },
+          });
+
+          if (user.createdAt.getTime() === user.updatedAt.getTime()) {
+            createdCount++;
+          } else {
+            updatedCount++;
+          }
+        } catch (error: any) {
+          this.logger.warn(`[EMPLOYEES-UPDATE] Failed to upsert ext ${extCode}: ${error.message}`);
+        }
+      }
+
+      this.logger.log(`[EMPLOYEES-UPDATE] Complete: ${createdCount} created, ${updatedCount} updated`);
+    } catch (error: any) {
+      this.logger.error(`[EMPLOYEES-UPDATE] Failed to update employees: ${error.message}`);
+    }
   }
 
   /**

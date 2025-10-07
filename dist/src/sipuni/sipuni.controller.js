@@ -10,20 +10,23 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var SipuniController_1;
-import { Controller, Post, Get, Query, Logger, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+var SipuniController_1, SipuniWebhookController_1;
+import { Controller, Post, Get, Query, Logger, UseGuards, Headers, UnauthorizedException, Body } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
 import { SipuniService } from './sipuni.service.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/roles.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
 import { UserRole } from '@prisma/client';
 import { OrganizationId } from '../auth/organization-id.decorator.js';
+import { ConfigService } from '@nestjs/config';
 let SipuniController = SipuniController_1 = class SipuniController {
     sipuniService;
+    config;
     logger = new Logger(SipuniController_1.name);
-    constructor(sipuniService) {
+    constructor(sipuniService, config) {
         this.sipuniService = sipuniService;
+        this.config = config;
     }
     async testConnection(organizationId) {
         try {
@@ -45,11 +48,11 @@ let SipuniController = SipuniController_1 = class SipuniController {
             };
         }
     }
-    async syncAndProcess(organizationId, limit) {
+    async syncAndProcess(organizationId, limit, from, to) {
         try {
-            this.logger.log(`[CONTROLLER] Sync and process request for org ${organizationId}: limit=${limit}`);
+            this.logger.log(`[CONTROLLER] Sync and process request for org ${organizationId}: limit=${limit}, from=${from}, to=${to}`);
             const recordLimit = limit ? parseInt(limit) : 500;
-            const result = await this.sipuniService.syncAndProcessRecordings(organizationId, recordLimit);
+            const result = await this.sipuniService.syncAndProcessRecordings(organizationId, recordLimit, from, to);
             return result;
         }
         catch (error) {
@@ -77,12 +80,15 @@ __decorate([
     Roles(UserRole.ADMIN),
     ApiOperation({
         summary: "Sipuni ma'lumotlarini yuklab olib tahlil qilish (STT + AI) - ADMIN only",
+        description: "from va to parametrlari: DD.MM.YYYY formatida (masalan: 01.10.2025)",
     }),
     ApiResponse({ status: 200, description: 'Sync and process completed' }),
     __param(0, OrganizationId()),
     __param(1, Query('limit')),
+    __param(2, Query('from')),
+    __param(3, Query('to')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, String]),
+    __metadata("design:paramtypes", [Number, String, String, String]),
     __metadata("design:returntype", Promise)
 ], SipuniController.prototype, "syncAndProcess", null);
 SipuniController = SipuniController_1 = __decorate([
@@ -90,7 +96,72 @@ SipuniController = SipuniController_1 = __decorate([
     Controller('sipuni'),
     UseGuards(JwtAuthGuard, RolesGuard),
     ApiBearerAuth(),
-    __metadata("design:paramtypes", [SipuniService])
+    __metadata("design:paramtypes", [SipuniService,
+        ConfigService])
 ], SipuniController);
 export { SipuniController };
+let SipuniWebhookController = SipuniWebhookController_1 = class SipuniWebhookController {
+    sipuniService;
+    config;
+    logger = new Logger(SipuniWebhookController_1.name);
+    constructor(sipuniService, config) {
+        this.sipuniService = sipuniService;
+        this.config = config;
+    }
+    async handleWebhook(apiKey, body) {
+        const validApiKey = this.config.get('SIPUNI_WEBHOOK_API_KEY') || 'default-secret-key';
+        if (!apiKey || apiKey !== validApiKey) {
+            this.logger.warn('[WEBHOOK] Invalid API key attempt');
+            throw new UnauthorizedException('Invalid API Key');
+        }
+        const organizationId = body.organizationId || 1;
+        const limit = body.limit || 500;
+        const from = body.from;
+        const to = body.to;
+        try {
+            this.logger.log(`[WEBHOOK] Sync request received for org ${organizationId}: limit=${limit}, from=${from}, to=${to}`);
+            const result = await this.sipuniService.syncAndProcessRecordings(organizationId, limit, from, to);
+            return {
+                success: true,
+                message: 'Sync started successfully',
+                data: result,
+                timestamp: new Date().toISOString(),
+            };
+        }
+        catch (error) {
+            this.logger.error(`[WEBHOOK] Sync failed: ${error.message}`);
+            return {
+                success: false,
+                message: `Sync failed: ${error.message}`,
+                timestamp: new Date().toISOString(),
+            };
+        }
+    }
+};
+__decorate([
+    Post(),
+    ApiOperation({
+        summary: 'Webhook endpoint for Sipuni integration',
+        description: 'Public endpoint protected by API key. Requires X-API-Key header.'
+    }),
+    ApiHeader({
+        name: 'X-API-Key',
+        description: 'API Key for authentication',
+        required: true,
+    }),
+    ApiResponse({ status: 200, description: 'Sync started successfully' }),
+    ApiResponse({ status: 401, description: 'Invalid API Key' }),
+    __param(0, Headers('x-api-key')),
+    __param(1, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], SipuniWebhookController.prototype, "handleWebhook", null);
+SipuniWebhookController = SipuniWebhookController_1 = __decorate([
+    ApiTags('sipuni-webhook'),
+    Controller('sipuni-integration'),
+    __metadata("design:paramtypes", [SipuniService,
+        ConfigService])
+], SipuniWebhookController);
+export { SipuniWebhookController };
 //# sourceMappingURL=sipuni.controller.js.map

@@ -5,9 +5,9 @@ export declare class SettingsService {
     constructor(prisma: PrismaService);
     get(organizationId: number): Promise<{
         id: string;
+        organizationId: number;
         createdAt: Date;
         updatedAt: Date;
-        organizationId: number;
         analyticsStatus: boolean;
         scoringMode: import("@prisma/client").$Enums.ScoringMode;
         excludeSeconds: number;
@@ -22,9 +22,9 @@ export declare class SettingsService {
     }>;
     update(organizationId: number, updateSettingsDto: UpdateSettingsDto): Promise<{
         id: string;
+        organizationId: number;
         createdAt: Date;
         updatedAt: Date;
-        organizationId: number;
         analyticsStatus: boolean;
         scoringMode: import("@prisma/client").$Enums.ScoringMode;
         excludeSeconds: number;

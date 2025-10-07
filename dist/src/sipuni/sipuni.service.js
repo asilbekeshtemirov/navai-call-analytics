@@ -65,6 +65,8 @@ let SipuniService = SipuniService_1 = class SipuniService {
                     }
                     if (settings?.autoSyncOnStartup) {
                         this.logger.log(`[STARTUP] Auto-sync enabled for ${org.name}, syncing from month start...`);
+                        await this.updateCSVFromSipuni(org.id);
+                        await this.updateEmployeesFromCSV(org.id);
                         await this.syncFromMonthStart(org.id);
                     }
                     else {
@@ -425,10 +427,14 @@ let SipuniService = SipuniService_1 = class SipuniService {
             throw error;
         }
     }
-    async syncAndProcessRecordings(organizationId, limit = 500) {
+    async syncAndProcessRecordings(organizationId, limit = 500, fromDate, toDate) {
         try {
             this.logger.log(`[SYNC] Starting Sipuni sync for org ${organizationId} with limit ${limit}...`);
+            if (fromDate && toDate) {
+                this.logger.log(`[SYNC] Date filter: ${fromDate} to ${toDate}`);
+            }
             const records = await this.fetchAllRecords(organizationId, limit);
+            await this.saveRecordsToCSV(records, organizationId);
             if (records.length === 0) {
                 this.logger.log('[SYNC] No new records found');
                 return {
@@ -440,7 +446,23 @@ let SipuniService = SipuniService_1 = class SipuniService {
             let processed = 0;
             let skipped = 0;
             let failed = 0;
-            for (const record of records) {
+            let filteredRecords = records;
+            if (fromDate && toDate) {
+                const fromDateTime = this.parseSipuniDate(`${fromDate} 00:00:00`);
+                const toDateTime = this.parseSipuniDate(`${toDate} 23:59:59`);
+                filteredRecords = records.filter(record => {
+                    try {
+                        const recordDate = this.parseSipuniDate(record.time);
+                        return recordDate >= fromDateTime && recordDate <= toDateTime;
+                    }
+                    catch (error) {
+                        this.logger.warn(`Failed to parse date for record: ${record.time}`);
+                        return false;
+                    }
+                });
+                this.logger.log(`[SYNC] Filtered ${filteredRecords.length} records from ${records.length} total (date range: ${fromDate} - ${toDate})`);
+            }
+            for (const record of filteredRecords) {
                 try {
                     let extCode = record.from;
                     if (record.type === 'Входящий' &&
@@ -496,18 +518,26 @@ let SipuniService = SipuniService_1 = class SipuniService {
                     });
                     this.logger.log(`[SYNC] Created call record ${call.id} for ${externalId} (hasRecording: ${hasRecording})`);
                     if (hasRecording) {
-                        await this.aiService.processCall(call.id);
+                        this.aiService.processCall(call.id).catch(error => {
+                            this.logger.error(`[SYNC] Background AI processing failed for ${call.id}: ${error.message}`);
+                        });
                     }
                     else {
                         this.logger.log(`[SYNC] Skipping AI processing for unanswered call ${externalId}`);
                     }
                     processed++;
-                    this.logger.log(`[SYNC] Processed ${processed}/${records.length} records`);
-                    await new Promise((resolve) => setTimeout(resolve, 2000));
+                    this.logger.log(`[SYNC] Processed ${processed}/${filteredRecords.length} records`);
+                    await new Promise((resolve) => setTimeout(resolve, 10));
                 }
                 catch (error) {
-                    this.logger.error(`[SYNC] Failed to process record ${record.recordId}: ${error.message}`);
-                    failed++;
+                    if (error.message && error.message.includes('Unique constraint failed')) {
+                        this.logger.warn(`[SYNC] Skipping duplicate record ${record.recordId} - already exists in database`);
+                        skipped++;
+                    }
+                    else {
+                        this.logger.error(`[SYNC] Failed to process record ${record.recordId}: ${error.message}`);
+                        failed++;
+                    }
                 }
             }
             const message = `Processed: ${processed}, Skipped: ${skipped}, Failed: ${failed}`;
@@ -528,6 +558,148 @@ let SipuniService = SipuniService_1 = class SipuniService {
         const [day, month, year] = datePart.split('.');
         const [hours, minutes, seconds] = timePart.split(':');
         return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes), parseInt(seconds));
+    }
+    async saveRecordsToCSV(records, organizationId) {
+        try {
+            const csvPath = path.join(process.cwd(), 'sipuni-all-records.csv');
+            const header = 'Тип;Статус;Время;Схема;Откуда;Куда;Кто ответил;Длительность звонка, сек;Длительность разговора, сек;Время ответа, сек;Оценка;ID записи;Метка;Теги;ID заказа звонка;Запись существует;Новый клиент\n';
+            const rows = records.map(r => [
+                r.type,
+                r.status,
+                r.time,
+                r.tree,
+                r.from,
+                r.to,
+                r.answered,
+                r.duration,
+                r.talkDuration,
+                r.answerTime,
+                r.rating,
+                r.recordId,
+                r.label,
+                r.tags,
+                r.orderId,
+                r.recordExists,
+                r.newClient
+            ].join(';')).join('\n');
+            fs.writeFileSync(csvPath, header + rows, 'utf-8');
+            this.logger.log(`[CSV] Saved ${records.length} records to ${csvPath}`);
+        }
+        catch (error) {
+            this.logger.error(`[CSV] Failed to save records: ${error.message}`);
+        }
+    }
+    async updateCSVFromSipuni(organizationId) {
+        this.logger.log(`[CSV-UPDATE] Fetching fresh data from Sipuni for org ${organizationId}...`);
+        try {
+            const records = await this.fetchAllRecords(organizationId, 1000);
+            await this.saveRecordsToCSV(records, organizationId);
+            this.logger.log(`[CSV-UPDATE] CSV updated with ${records.length} records`);
+        }
+        catch (error) {
+            this.logger.error(`[CSV-UPDATE] Failed to update CSV: ${error.message}`);
+        }
+    }
+    async updateEmployeesFromCSV(organizationId) {
+        this.logger.log(`[EMPLOYEES-UPDATE] Updating employees from CSV for org ${organizationId}...`);
+        try {
+            const csvPath = path.join(process.cwd(), 'sipuni-all-records.csv');
+            if (!fs.existsSync(csvPath)) {
+                this.logger.warn(`[EMPLOYEES-UPDATE] CSV file not found: ${csvPath}`);
+                return;
+            }
+            const csvContent = fs.readFileSync(csvPath, 'utf-8');
+            const lines = csvContent.split('\n').filter(l => l.trim());
+            const records = lines.slice(1).map(line => {
+                const cols = line.split(';');
+                return {
+                    from: cols[4],
+                    answered: cols[6],
+                };
+            });
+            const extCodes = new Set();
+            for (const record of records) {
+                if (/^\d{3}$/.test(record.from)) {
+                    extCodes.add(record.from);
+                }
+                if (/^\d{3}$/.test(record.answered)) {
+                    extCodes.add(record.answered);
+                }
+            }
+            const uniqueExtCodes = Array.from(extCodes).sort();
+            this.logger.log(`[EMPLOYEES-UPDATE] Found ${uniqueExtCodes.length} unique extension codes`);
+            let branch = await this.prisma.branch.findFirst({
+                where: { organizationId, name: 'Main Branch' },
+            });
+            if (!branch) {
+                branch = await this.prisma.branch.create({
+                    data: {
+                        organizationId,
+                        name: 'Main Branch',
+                        address: 'Navoi, Uzbekistan',
+                    },
+                });
+            }
+            let department = await this.prisma.department.findFirst({
+                where: { branchId: branch.id, name: 'Call Center' },
+            });
+            if (!department) {
+                department = await this.prisma.department.create({
+                    data: {
+                        branchId: branch.id,
+                        name: 'Call Center',
+                    },
+                });
+            }
+            const bcrypt = await import('bcrypt');
+            const passwordHash = await bcrypt.hash('password123', 10);
+            const firstNames = ['Alisher', 'Bobur', 'Dilshod', 'Eldor', 'Farrux', 'Gulnora', 'Hasan', 'Iroda', 'Jasur', 'Kamila'];
+            const lastNames = ['Navoiy', 'Mirzo', 'Qodirov', 'Tursunov', 'Usmonov', 'Karimova', 'Rashidov', 'Sadikova', 'Yusupov', 'Azizova'];
+            let createdCount = 0;
+            let updatedCount = 0;
+            for (const [index, extCode] of uniqueExtCodes.entries()) {
+                const firstName = firstNames[index % firstNames.length];
+                const lastName = lastNames[index % lastNames.length];
+                const phone = `+99890123${extCode}`;
+                try {
+                    const user = await this.prisma.user.upsert({
+                        where: {
+                            organizationId_phone: {
+                                organizationId,
+                                phone: phone,
+                            },
+                        },
+                        update: {
+                            extCode: extCode,
+                        },
+                        create: {
+                            organizationId,
+                            firstName: firstName,
+                            lastName: lastName,
+                            phone: phone,
+                            extCode: extCode,
+                            role: 'EMPLOYEE',
+                            passwordHash: passwordHash,
+                            branchId: branch.id,
+                            departmentId: department.id,
+                        },
+                    });
+                    if (user.createdAt.getTime() === user.updatedAt.getTime()) {
+                        createdCount++;
+                    }
+                    else {
+                        updatedCount++;
+                    }
+                }
+                catch (error) {
+                    this.logger.warn(`[EMPLOYEES-UPDATE] Failed to upsert ext ${extCode}: ${error.message}`);
+                }
+            }
+            this.logger.log(`[EMPLOYEES-UPDATE] Complete: ${createdCount} created, ${updatedCount} updated`);
+        }
+        catch (error) {
+            this.logger.error(`[EMPLOYEES-UPDATE] Failed to update employees: ${error.message}`);
+        }
     }
 };
 SipuniService = SipuniService_1 = __decorate([

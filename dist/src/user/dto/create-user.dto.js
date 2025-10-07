@@ -14,6 +14,7 @@ export class CreateUserDto {
     firstName;
     lastName;
     phone;
+    extCode;
     password;
     role;
     branchId;
@@ -37,6 +38,12 @@ __decorate([
     IsNotEmpty(),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "phone", void 0);
+__decorate([
+    ApiProperty({ required: false, description: 'Extension code (e.g., 201, 202)' }),
+    IsString(),
+    IsOptional(),
+    __metadata("design:type", String)
+], CreateUserDto.prototype, "extCode", void 0);
 __decorate([
     ApiProperty(),
     IsString(),

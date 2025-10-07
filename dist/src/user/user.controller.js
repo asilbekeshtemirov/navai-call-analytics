@@ -30,8 +30,8 @@ let UserController = class UserController {
     create(organizationId, createUserDto) {
         return this.userService.create(organizationId, createUserDto);
     }
-    findAll() {
-        return this.userService.findAll();
+    findAll(organizationId) {
+        return this.userService.findAll(organizationId);
     }
     async getUnifiedUserStatistics(id, filters) {
         return this.userService.getUnifiedUserStatistics(id, filters);
@@ -61,8 +61,10 @@ __decorate([
 __decorate([
     Get(),
     Roles(UserRole.ADMIN, UserRole.MANAGER),
+    ApiOperation({ summary: 'O\'z organizatsiyasidagi barcha userlarni ko\'rish' }),
+    __param(0, OrganizationId()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", void 0)
 ], UserController.prototype, "findAll", null);
 __decorate([

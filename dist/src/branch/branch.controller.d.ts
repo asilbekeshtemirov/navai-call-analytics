@@ -6,18 +6,13 @@ export declare class BranchController {
     constructor(branchService: BranchService);
     create(organizationId: number, createBranchDto: CreateBranchDto): import("@prisma/client").Prisma.Prisma__BranchClient<{
         id: string;
+        organizationId: number;
         name: string;
+        address: string | null;
         createdAt: Date;
         updatedAt: Date;
-        organizationId: number;
-        address: string | null;
     }, never, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     findAll(organizationId: number): import("@prisma/client").Prisma.PrismaPromise<({
-        users: {
-            id: string;
-            firstName: string;
-            lastName: string;
-        }[];
         departments: {
             id: string;
             name: string;
@@ -25,13 +20,18 @@ export declare class BranchController {
             updatedAt: Date;
             branchId: string;
         }[];
+        users: {
+            id: string;
+            firstName: string;
+            lastName: string;
+        }[];
     } & {
         id: string;
+        organizationId: number;
         name: string;
+        address: string | null;
         createdAt: Date;
         updatedAt: Date;
-        organizationId: number;
-        address: string | null;
     })[]>;
     getManagers(organizationId: number): Promise<{
         id: string;
@@ -39,20 +39,6 @@ export declare class BranchController {
         phone: string;
     }[]>;
     findOne(organizationId: number, id: string): import("@prisma/client").Prisma.Prisma__BranchClient<({
-        users: {
-            id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            organizationId: number;
-            branchId: string | null;
-            firstName: string;
-            lastName: string;
-            phone: string;
-            extCode: string | null;
-            role: import("@prisma/client").$Enums.UserRole;
-            passwordHash: string;
-            departmentId: string | null;
-        }[];
         departments: {
             id: string;
             name: string;
@@ -60,28 +46,42 @@ export declare class BranchController {
             updatedAt: Date;
             branchId: string;
         }[];
+        users: {
+            id: string;
+            organizationId: number;
+            createdAt: Date;
+            updatedAt: Date;
+            branchId: string | null;
+            extCode: string | null;
+            firstName: string;
+            lastName: string;
+            phone: string;
+            role: import("@prisma/client").$Enums.UserRole;
+            passwordHash: string;
+            departmentId: string | null;
+        }[];
     } & {
         id: string;
+        organizationId: number;
         name: string;
+        address: string | null;
         createdAt: Date;
         updatedAt: Date;
-        organizationId: number;
-        address: string | null;
     }) | null, null, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     update(id: string, updateBranchDto: UpdateBranchDto): import("@prisma/client").Prisma.Prisma__BranchClient<{
         id: string;
+        organizationId: number;
         name: string;
+        address: string | null;
         createdAt: Date;
         updatedAt: Date;
-        organizationId: number;
-        address: string | null;
     }, never, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     remove(id: string): import("@prisma/client").Prisma.Prisma__BranchClient<{
         id: string;
+        organizationId: number;
         name: string;
+        address: string | null;
         createdAt: Date;
         updatedAt: Date;
-        organizationId: number;
-        address: string | null;
     }, never, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
 }

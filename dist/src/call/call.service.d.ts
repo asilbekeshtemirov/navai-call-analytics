@@ -25,14 +25,20 @@ export declare class CallService {
             id: string;
             name: string;
         } | null;
+        employee: {
+            id: string;
+            extCode: string | null;
+            firstName: string;
+            lastName: string;
+        };
         scores: ({
             criteria: {
                 id: string;
+                organizationId: number;
                 name: string;
-                description: string | null;
                 createdAt: Date;
                 updatedAt: Date;
-                organizationId: number;
+                description: string | null;
                 weight: number;
             };
         } & {
@@ -42,12 +48,6 @@ export declare class CallService {
             criteriaId: string;
             notes: string | null;
         })[];
-        employee: {
-            id: string;
-            firstName: string;
-            lastName: string;
-            extCode: string | null;
-        };
         violations: {
             id: string;
             callId: string;
@@ -57,8 +57,8 @@ export declare class CallService {
         }[];
     } & {
         id: string;
-        createdAt: Date;
         organizationId: number;
+        createdAt: Date;
         branchId: string | null;
         departmentId: string | null;
         externalId: string;
@@ -76,11 +76,11 @@ export declare class CallService {
     findOne(organizationId: number, id: string): Promise<({
         branch: {
             id: string;
+            organizationId: number;
             name: string;
+            address: string | null;
             createdAt: Date;
             updatedAt: Date;
-            organizationId: number;
-            address: string | null;
         } | null;
         department: {
             id: string;
@@ -89,14 +89,42 @@ export declare class CallService {
             updatedAt: Date;
             branchId: string;
         } | null;
+        employee: {
+            id: string;
+            organizationId: number;
+            createdAt: Date;
+            updatedAt: Date;
+            branchId: string | null;
+            extCode: string | null;
+            firstName: string;
+            lastName: string;
+            phone: string;
+            role: import("@prisma/client").$Enums.UserRole;
+            passwordHash: string;
+            departmentId: string | null;
+        };
+        manager: {
+            id: string;
+            organizationId: number;
+            createdAt: Date;
+            updatedAt: Date;
+            branchId: string | null;
+            extCode: string | null;
+            firstName: string;
+            lastName: string;
+            phone: string;
+            role: import("@prisma/client").$Enums.UserRole;
+            passwordHash: string;
+            departmentId: string | null;
+        } | null;
         scores: ({
             criteria: {
                 id: string;
+                organizationId: number;
                 name: string;
-                description: string | null;
                 createdAt: Date;
                 updatedAt: Date;
-                organizationId: number;
+                description: string | null;
                 weight: number;
             };
         } & {
@@ -106,34 +134,6 @@ export declare class CallService {
             criteriaId: string;
             notes: string | null;
         })[];
-        employee: {
-            id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            organizationId: number;
-            branchId: string | null;
-            firstName: string;
-            lastName: string;
-            phone: string;
-            extCode: string | null;
-            role: import("@prisma/client").$Enums.UserRole;
-            passwordHash: string;
-            departmentId: string | null;
-        };
-        manager: {
-            id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            organizationId: number;
-            branchId: string | null;
-            firstName: string;
-            lastName: string;
-            phone: string;
-            extCode: string | null;
-            role: import("@prisma/client").$Enums.UserRole;
-            passwordHash: string;
-            departmentId: string | null;
-        } | null;
         segments: {
             id: string;
             callId: string;
@@ -151,8 +151,8 @@ export declare class CallService {
         }[];
     } & {
         id: string;
-        createdAt: Date;
         organizationId: number;
+        createdAt: Date;
         branchId: string | null;
         departmentId: string | null;
         externalId: string;
@@ -183,9 +183,9 @@ export declare class CallService {
         isCompleted: boolean;
         hasError: boolean;
         id: string;
+        organizationId: number;
         createdAt: Date;
         updatedAt: Date;
-        organizationId: number;
         status: import("@prisma/client").$Enums.SessionStatus;
         sessionId: string;
         totalNumbers: number;
@@ -205,9 +205,9 @@ export declare class CallService {
         isCompleted: boolean;
         hasError: boolean;
         id: string;
+        organizationId: number;
         createdAt: Date;
         updatedAt: Date;
-        organizationId: number;
         status: import("@prisma/client").$Enums.SessionStatus;
         sessionId: string;
         totalNumbers: number;

@@ -9,20 +9,20 @@ export declare class OrganizationService {
         data: {
             organization: {
                 id: number;
-                slug: string;
                 name: string;
-                description: string | null;
-                isActive: boolean;
                 createdAt: Date;
                 updatedAt: Date;
+                slug: string;
+                description: string | null;
+                isActive: boolean;
             };
             branch: {
                 id: string;
+                organizationId: number;
                 name: string;
+                address: string | null;
                 createdAt: Date;
                 updatedAt: Date;
-                organizationId: number;
-                address: string | null;
             };
             department: {
                 id: string;
@@ -43,50 +43,50 @@ export declare class OrganizationService {
     }>;
     findAll(): Promise<({
         _count: {
-            branches: number;
-            users: number;
             calls: number;
+            users: number;
+            branches: number;
             criteria: number;
         };
     } & {
         id: number;
-        slug: string;
         name: string;
-        description: string | null;
-        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
+        slug: string;
+        description: string | null;
+        isActive: boolean;
     })[]>;
     findOne(id: number): Promise<({
-        branches: {
-            id: string;
-            name: string;
-            createdAt: Date;
-            updatedAt: Date;
-            organizationId: number;
-            address: string | null;
-        }[];
         _count: {
-            users: number;
             calls: number;
+            users: number;
             criteria: number;
         };
+        branches: {
+            id: string;
+            organizationId: number;
+            name: string;
+            address: string | null;
+            createdAt: Date;
+            updatedAt: Date;
+        }[];
     } & {
         id: number;
-        slug: string;
         name: string;
-        description: string | null;
-        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
+        slug: string;
+        description: string | null;
+        isActive: boolean;
     }) | null>;
     updateStatus(id: number, isActive: boolean): Promise<{
         id: number;
-        slug: string;
         name: string;
-        description: string | null;
-        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
+        slug: string;
+        description: string | null;
+        isActive: boolean;
     }>;
 }

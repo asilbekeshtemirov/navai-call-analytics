@@ -113,6 +113,14 @@ export class AiService {
         this.logger.error(`[STT] Error code: ${error.code}`);
         if (error.response) {
           this.logger.error(`[STT] Response status: ${error.response.status}`);
+
+          // 413 - File too large
+          if (error.response.status === 413) {
+            const fileSize = fs.statSync(audioFileUrl).size;
+            const fileSizeMB = (fileSize / (1024 * 1024)).toFixed(2);
+            this.logger.warn(`[STT] File too large (${fileSizeMB}MB) - will be marked as ERROR for manual processing`);
+          }
+
           this.logger.error(
             `[STT] Response data: ${JSON.stringify(error.response.data)}`,
           );
@@ -130,7 +138,9 @@ export class AiService {
         this.logger.error('[STT] Unknown error occurred');
       }
       this.logger.warn('[STT] Returning empty transcript due to error');
-      return [];
+
+      // Throw error so it can be caught by processCall and status set to ERROR
+      throw error;
     }
   }
 
