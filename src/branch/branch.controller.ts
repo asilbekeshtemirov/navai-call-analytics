@@ -11,6 +11,7 @@ import { BranchService } from './branch.service.js';
 import { CreateBranchDto } from './dto/create-branch.dto.js';
 import { UpdateBranchDto } from './dto/update-branch.dto.js';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { OrganizationId } from '../auth/organization-id.decorator.js';
 
 @ApiTags('branches')
 @ApiBearerAuth('access-token')
@@ -20,26 +21,32 @@ export class BranchController {
 
   @Post()
   @ApiOperation({ summary: 'Yangi filial yaratish' })
-  create(@Body() createBranchDto: CreateBranchDto) {
-    return this.branchService.create(createBranchDto);
+  create(
+    @OrganizationId() organizationId: number,
+    @Body() createBranchDto: CreateBranchDto
+  ) {
+    return this.branchService.create(organizationId, createBranchDto);
   }
 
   @Get()
   @ApiOperation({ summary: 'Barcha filiallarni olish' })
-  findAll() {
-    return this.branchService.findAll();
+  findAll(@OrganizationId() organizationId: number) {
+    return this.branchService.findAll(organizationId);
   }
 
   @Get('managers')
   @ApiOperation({ summary: 'Barcha menejerlarni olish (dropdown uchun)' })
-  getManagers() {
-    return this.branchService.getManagers();
+  getManagers(@OrganizationId() organizationId: number) {
+    return this.branchService.getManagers(organizationId);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Bitta filialni olish' })
-  findOne(@Param('id') id: string) {
-    return this.branchService.findOne(id);
+  findOne(
+    @OrganizationId() organizationId: number,
+    @Param('id') id: string
+  ) {
+    return this.branchService.findOne(organizationId, id);
   }
 
   @Patch(':id')

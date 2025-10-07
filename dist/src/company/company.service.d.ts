@@ -7,9 +7,9 @@ export declare class CompanyService {
     private statisticsService;
     private sipuniService;
     constructor(prisma: PrismaService, statisticsService: StatisticsService, sipuniService: SipuniService);
-    getEmployeesPerformance(period?: string): Promise<any>;
-    getRecentCalls(limit?: number): Promise<any>;
-    getUnifiedStatistics(filters: UnifiedStatisticsDto): Promise<any>;
+    getEmployeesPerformance(organizationId: number, period?: string): Promise<any>;
+    getRecentCalls(organizationId: number, limit?: number): Promise<any>;
+    getUnifiedStatistics(organizationId: number, filters: UnifiedStatisticsDto): Promise<any>;
     private getFilteredOverview;
     private getFilteredDailyStats;
     private getFilteredMonthlyStats;

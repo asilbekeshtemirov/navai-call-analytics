@@ -14,23 +14,37 @@ let CriteriaService = class CriteriaService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    create(createCriteriaDto) {
-        return this.prisma.criteria.create({ data: createCriteriaDto });
+    create(organizationId, createCriteriaDto) {
+        return this.prisma.criteria.create({
+            data: {
+                ...createCriteriaDto,
+                organizationId,
+            },
+        });
     }
-    findAll() {
-        return this.prisma.criteria.findMany();
+    findAll(organizationId) {
+        return this.prisma.criteria.findMany({
+            where: { organizationId },
+        });
     }
-    findOne(id) {
-        return this.prisma.criteria.findUnique({ where: { id } });
+    findOne(organizationId, id) {
+        return this.prisma.criteria.findFirst({
+            where: {
+                id,
+                organizationId,
+            },
+        });
     }
-    update(id, updateCriteriaDto) {
+    update(organizationId, id, updateCriteriaDto) {
         return this.prisma.criteria.update({
             where: { id },
             data: updateCriteriaDto,
         });
     }
-    remove(id) {
-        return this.prisma.criteria.delete({ where: { id } });
+    remove(organizationId, id) {
+        return this.prisma.criteria.delete({
+            where: { id },
+        });
     }
 };
 CriteriaService = __decorate([

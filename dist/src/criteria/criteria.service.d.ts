@@ -4,44 +4,49 @@ import { PrismaService } from '../prisma/prisma.service.js';
 export declare class CriteriaService {
     private prisma;
     constructor(prisma: PrismaService);
-    create(createCriteriaDto: CreateCriteriaDto): import("@prisma/client").Prisma.Prisma__CriteriaClient<{
+    create(organizationId: number, createCriteriaDto: CreateCriteriaDto): import("@prisma/client").Prisma.Prisma__CriteriaClient<{
         id: string;
-        updatedAt: Date;
         name: string;
-        createdAt: Date;
-        weight: number;
         description: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        organizationId: number;
+        weight: number;
     }, never, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
-    findAll(): import("@prisma/client").Prisma.PrismaPromise<{
+    findAll(organizationId: number): import("@prisma/client").Prisma.PrismaPromise<{
         id: string;
-        updatedAt: Date;
         name: string;
-        createdAt: Date;
-        weight: number;
         description: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        organizationId: number;
+        weight: number;
     }[]>;
-    findOne(id: string): import("@prisma/client").Prisma.Prisma__CriteriaClient<{
+    findOne(organizationId: number, id: string): import("@prisma/client").Prisma.Prisma__CriteriaClient<{
         id: string;
-        updatedAt: Date;
         name: string;
-        createdAt: Date;
-        weight: number;
         description: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        organizationId: number;
+        weight: number;
     } | null, null, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
-    update(id: string, updateCriteriaDto: UpdateCriteriaDto): import("@prisma/client").Prisma.Prisma__CriteriaClient<{
+    update(organizationId: number, id: string, updateCriteriaDto: UpdateCriteriaDto): import("@prisma/client").Prisma.Prisma__CriteriaClient<{
         id: string;
-        updatedAt: Date;
         name: string;
-        createdAt: Date;
-        weight: number;
         description: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        organizationId: number;
+        weight: number;
     }, never, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
-    remove(id: string): import("@prisma/client").Prisma.Prisma__CriteriaClient<{
+    remove(organizationId: number, id: string): import("@prisma/client").Prisma.Prisma__CriteriaClient<{
         id: string;
-        updatedAt: Date;
         name: string;
-        createdAt: Date;
-        weight: number;
         description: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        organizationId: number;
+        weight: number;
     }, never, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
 }

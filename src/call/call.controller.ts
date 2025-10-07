@@ -26,6 +26,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as fs from 'fs';
 import { Public } from '../auth/public.decorator.js';
+import { OrganizationId } from '../auth/organization-id.decorator.js';
 
 
 export const numbersStorage = diskStorage({
@@ -87,6 +88,7 @@ export class CallController {
   @ApiQuery({ name: 'dateFrom', required: false, description: 'Ixtiyoriy: Boshlanish sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)' })
   @ApiQuery({ name: 'dateTo', required: false, description: 'Ixtiyoriy: Tugash sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)' })
   findAll(
+    @OrganizationId() organizationId: number,
     @Query('branchId') branchId?: string,
     @Query('departmentId') departmentId?: string,
     @Query('employeeId') employeeId?: string,
@@ -94,14 +96,17 @@ export class CallController {
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
   ) {
-    return this.callService.findAll({ branchId, departmentId, employeeId, status, dateFrom, dateTo });
+    return this.callService.findAll(organizationId, { branchId, departmentId, employeeId, status, dateFrom, dateTo });
   }
 
   @Get(':id')
   @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE)
   @ApiOperation({ summary: 'Get call by ID with full details' })
-  findOne(@Param('id') id: string) {
-    return this.callService.findOne(id);
+  findOne(
+    @OrganizationId() organizationId: number,
+    @Param('id') id: string
+  ) {
+    return this.callService.findOne(organizationId, id);
   }
 
   @Get(':id/transcript')

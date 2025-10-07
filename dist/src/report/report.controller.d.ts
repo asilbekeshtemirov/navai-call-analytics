@@ -6,9 +6,9 @@ export declare class ReportController {
     create(generateReportDto: GenerateReportDto): Promise<{
         id: string;
         createdAt: Date;
-        summary: string | null;
         dateFrom: Date;
         dateTo: Date;
+        summary: string | null;
         userId: string;
         totalCalls: number;
         totalDuration: number;

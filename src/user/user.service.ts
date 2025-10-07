@@ -17,24 +17,40 @@ export class UserService {
     private statisticsService: StatisticsService,
   ) {}
 
-  async create(createUserDto: CreateUserDto) {
+  async create(organizationId: number, createUserDto: CreateUserDto) {
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
     const { password, ...rest } = createUserDto;
     return this.prisma.user.create({
       data: {
         ...rest,
+        organizationId, // Multi-tenancy
         passwordHash: hashedPassword,
       },
     });
   }
 
-  findAll() {
-    return this.prisma.user.findMany();
+  findAll(organizationId?: number) {
+    return this.prisma.user.findMany({
+      where: organizationId ? { organizationId } : undefined,
+    });
   }
 
+  // Find user by phone (returns first match across all organizations - for backward compatibility)
   findOne(phone: string) {
-    return this.prisma.user.findUnique({
+    return this.prisma.user.findFirst({
       where: { phone },
+    });
+  }
+
+  // Find user by phone within specific organization
+  findOneByOrganization(organizationId: number, phone: string) {
+    return this.prisma.user.findUnique({
+      where: {
+        organizationId_phone: {
+          organizationId,
+          phone,
+        },
+      },
     });
   }
 

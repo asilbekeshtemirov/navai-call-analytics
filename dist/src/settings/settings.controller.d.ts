@@ -3,8 +3,11 @@ import { UpdateSettingsDto } from './dto/update-settings.dto.js';
 export declare class SettingsController {
     private readonly settingsService;
     constructor(settingsService: SettingsService);
-    get(): Promise<{
-        id: number;
+    get(organizationId: number): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        organizationId: number;
         analyticsStatus: boolean;
         scoringMode: import("@prisma/client").$Enums.ScoringMode;
         excludeSeconds: number;
@@ -14,10 +17,14 @@ export declare class SettingsController {
         sipuniApiKey: string | null;
         sipuniUserId: string | null;
         dataSource: import("@prisma/client").$Enums.DataSource;
-        updatedAt: Date;
+        syncSchedule: string | null;
+        autoSyncOnStartup: boolean;
     }>;
-    update(updateSettingsDto: UpdateSettingsDto): Promise<{
-        id: number;
+    update(organizationId: number, updateSettingsDto: UpdateSettingsDto): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        organizationId: number;
         analyticsStatus: boolean;
         scoringMode: import("@prisma/client").$Enums.ScoringMode;
         excludeSeconds: number;
@@ -27,6 +34,7 @@ export declare class SettingsController {
         sipuniApiKey: string | null;
         sipuniUserId: string | null;
         dataSource: import("@prisma/client").$Enums.DataSource;
-        updatedAt: Date;
+        syncSchedule: string | null;
+        autoSyncOnStartup: boolean;
     }>;
 }

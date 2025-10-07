@@ -14,11 +14,17 @@ let BranchService = class BranchService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    create(createBranchDto) {
-        return this.prisma.branch.create({ data: createBranchDto });
+    create(organizationId, createBranchDto) {
+        return this.prisma.branch.create({
+            data: {
+                ...createBranchDto,
+                organizationId,
+            },
+        });
     }
-    findAll() {
+    findAll(organizationId) {
         return this.prisma.branch.findMany({
+            where: { organizationId },
             include: {
                 departments: true,
                 users: {
@@ -28,9 +34,12 @@ let BranchService = class BranchService {
             },
         });
     }
-    async getManagers() {
+    async getManagers(organizationId) {
         const managers = await this.prisma.user.findMany({
-            where: { role: 'MANAGER' },
+            where: {
+                organizationId,
+                role: 'MANAGER',
+            },
             select: {
                 id: true,
                 firstName: true,
@@ -44,9 +53,12 @@ let BranchService = class BranchService {
             phone: m.phone,
         }));
     }
-    findOne(id) {
-        return this.prisma.branch.findUnique({
-            where: { id },
+    findOne(organizationId, id) {
+        return this.prisma.branch.findFirst({
+            where: {
+                id,
+                organizationId,
+            },
             include: {
                 departments: true,
                 users: true,

@@ -14,24 +14,26 @@ let SettingsService = class SettingsService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async get() {
-        let settings = await this.prisma.setting.findFirst();
+    async get(organizationId) {
+        let settings = await this.prisma.setting.findFirst({
+            where: { organizationId },
+        });
         if (!settings) {
             settings = await this.prisma.setting.create({
                 data: {
-                    id: 1,
+                    organizationId,
                     analyticsStatus: true,
                     scoringMode: 'TEN',
                     excludeSeconds: 0,
                     pbxUrl: null,
-                    language: 'rus',
+                    language: 'uz',
                 },
             });
         }
         return settings;
     }
-    async update(updateSettingsDto) {
-        const settings = await this.get();
+    async update(organizationId, updateSettingsDto) {
+        const settings = await this.get(organizationId);
         return this.prisma.setting.update({
             where: { id: settings.id },
             data: updateSettingsDto,

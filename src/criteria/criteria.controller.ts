@@ -11,6 +11,7 @@ import { CriteriaService } from './criteria.service.js';
 import { CreateCriteriaDto } from './dto/create-criteria.dto.js';
 import { UpdateCriteriaDto } from './dto/update-criteria.dto.js';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { OrganizationId } from '../auth/organization-id.decorator.js';
 
 @ApiTags('criteria')
 @ApiBearerAuth('access-token')
@@ -19,30 +20,40 @@ export class CriteriaController {
   constructor(private readonly criteriaService: CriteriaService) {}
 
   @Post()
-  create(@Body() createCriteriaDto: CreateCriteriaDto) {
-    return this.criteriaService.create(createCriteriaDto);
+  create(
+    @OrganizationId() organizationId: number,
+    @Body() createCriteriaDto: CreateCriteriaDto
+  ) {
+    return this.criteriaService.create(organizationId, createCriteriaDto);
   }
 
   @Get()
-  findAll() {
-    return this.criteriaService.findAll();
+  findAll(@OrganizationId() organizationId: number) {
+    return this.criteriaService.findAll(organizationId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.criteriaService.findOne(id);
+  findOne(
+    @OrganizationId() organizationId: number,
+    @Param('id') id: string
+  ) {
+    return this.criteriaService.findOne(organizationId, id);
   }
 
   @Patch(':id')
   update(
+    @OrganizationId() organizationId: number,
     @Param('id') id: string,
     @Body() updateCriteriaDto: UpdateCriteriaDto,
   ) {
-    return this.criteriaService.update(id, updateCriteriaDto);
+    return this.criteriaService.update(organizationId, id, updateCriteriaDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.criteriaService.remove(id);
+  remove(
+    @OrganizationId() organizationId: number,
+    @Param('id') id: string
+  ) {
+    return this.criteriaService.remove(organizationId, id);
   }
 }

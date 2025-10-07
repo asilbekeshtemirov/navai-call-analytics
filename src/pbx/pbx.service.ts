@@ -45,13 +45,19 @@ export class PbxService {
 
       // Qo'ng'iroqni database ga saqlash
       const call = await this.prisma.call.upsert({
-        where: { externalId: callid },
+        where: {
+          organizationId_externalId: {
+            organizationId: employee.organizationId,
+            externalId: callid,
+          },
+        },
         update: {
           status: status === 'Success' ? CallStatus.UPLOADED : CallStatus.ERROR,
           durationSec: parseInt(duration) || 0,
           fileUrl: link || null,
         },
         create: {
+          organizationId: employee.organizationId, // Multi-tenancy
           externalId: callid,
           callerNumber: type === 'in' ? phone : diversion,
           calleeNumber: type === 'in' ? diversion : phone,

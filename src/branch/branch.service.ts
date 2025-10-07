@@ -7,12 +7,18 @@ import { PrismaService } from '../prisma/prisma.service.js';
 export class BranchService {
   constructor(private prisma: PrismaService) {}
 
-  create(createBranchDto: CreateBranchDto) {
-    return this.prisma.branch.create({ data: createBranchDto });
+  create(organizationId: number, createBranchDto: CreateBranchDto) {
+    return this.prisma.branch.create({
+      data: {
+        ...createBranchDto,
+        organizationId, // Multi-tenancy
+      },
+    });
   }
 
-  findAll() {
+  findAll(organizationId: number) {
     return this.prisma.branch.findMany({
+      where: { organizationId }, // Multi-tenancy filter
       include: {
         departments: true,
         users: {
@@ -23,9 +29,12 @@ export class BranchService {
     });
   }
 
-  async getManagers() {
+  async getManagers(organizationId: number) {
     const managers = await this.prisma.user.findMany({
-      where: { role: 'MANAGER' },
+      where: {
+        organizationId, // Multi-tenancy filter
+        role: 'MANAGER',
+      },
       select: {
         id: true,
         firstName: true,
@@ -48,9 +57,12 @@ export class BranchService {
     );
   }
 
-  findOne(id: string) {
-    return this.prisma.branch.findUnique({
-      where: { id },
+  findOne(organizationId: number, id: string) {
+    return this.prisma.branch.findFirst({
+      where: {
+        id,
+        organizationId, // Multi-tenancy: Ensure branch belongs to user's organization
+      },
       include: {
         departments: true,
         users: true,

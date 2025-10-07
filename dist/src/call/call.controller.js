@@ -22,6 +22,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as fs from 'fs';
 import { Public } from '../auth/public.decorator.js';
+import { OrganizationId } from '../auth/organization-id.decorator.js';
 export const numbersStorage = diskStorage({
     destination: (req, file, cb) => {
         const uploadPath = './numbers';
@@ -45,11 +46,11 @@ let CallController = CallController_1 = class CallController {
     startProcess() {
         return this.callService.startProcess();
     }
-    findAll(branchId, departmentId, employeeId, status, dateFrom, dateTo) {
-        return this.callService.findAll({ branchId, departmentId, employeeId, status, dateFrom, dateTo });
+    findAll(organizationId, branchId, departmentId, employeeId, status, dateFrom, dateTo) {
+        return this.callService.findAll(organizationId, { branchId, departmentId, employeeId, status, dateFrom, dateTo });
     }
-    findOne(id) {
-        return this.callService.findOne(id);
+    findOne(organizationId, id) {
+        return this.callService.findOne(organizationId, id);
     }
     getTranscript(id) {
         return this.callService.getTranscript(id);
@@ -103,23 +104,25 @@ __decorate([
     ApiQuery({ name: 'status', required: false, description: "Ixtiyoriy: Qo'ng'iroq holati bo'yicha filter (UPLOADED, PROCESSING, DONE, ERROR)" }),
     ApiQuery({ name: 'dateFrom', required: false, description: 'Ixtiyoriy: Boshlanish sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)' }),
     ApiQuery({ name: 'dateTo', required: false, description: 'Ixtiyoriy: Tugash sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)' }),
-    __param(0, Query('branchId')),
-    __param(1, Query('departmentId')),
-    __param(2, Query('employeeId')),
-    __param(3, Query('status')),
-    __param(4, Query('dateFrom')),
-    __param(5, Query('dateTo')),
+    __param(0, OrganizationId()),
+    __param(1, Query('branchId')),
+    __param(2, Query('departmentId')),
+    __param(3, Query('employeeId')),
+    __param(4, Query('status')),
+    __param(5, Query('dateFrom')),
+    __param(6, Query('dateTo')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String, String, String]),
+    __metadata("design:paramtypes", [Number, String, String, String, String, String, String]),
     __metadata("design:returntype", void 0)
 ], CallController.prototype, "findAll", null);
 __decorate([
     Get(':id'),
     Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE),
     ApiOperation({ summary: 'Get call by ID with full details' }),
-    __param(0, Param('id')),
+    __param(0, OrganizationId()),
+    __param(1, Param('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [Number, String]),
     __metadata("design:returntype", void 0)
 ], CallController.prototype, "findOne", null);
 __decorate([

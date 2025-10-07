@@ -18,19 +18,20 @@ import { RolesGuard } from '../auth/roles.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
 import { UserRole } from '@prisma/client';
 import { UnifiedStatisticsDto } from './dto/unified-statistics.dto.js';
+import { OrganizationId } from '../auth/organization-id.decorator.js';
 let CompanyController = class CompanyController {
     companyService;
     constructor(companyService) {
         this.companyService = companyService;
     }
-    async getEmployeesPerformance(period = 'today') {
-        return this.companyService.getEmployeesPerformance(period);
+    async getEmployeesPerformance(organizationId, period = 'today') {
+        return this.companyService.getEmployeesPerformance(organizationId, period);
     }
-    async getRecentCalls(limit) {
-        return this.companyService.getRecentCalls(limit ? parseInt(limit) : 50);
+    async getRecentCalls(organizationId, limit) {
+        return this.companyService.getRecentCalls(organizationId, limit ? parseInt(limit) : 50);
     }
-    async getUnifiedStatistics(filters) {
-        return this.companyService.getUnifiedStatistics(filters);
+    async getUnifiedStatistics(organizationId, filters) {
+        return this.companyService.getUnifiedStatistics(organizationId, filters);
     }
 };
 __decorate([
@@ -42,9 +43,10 @@ __decorate([
         required: false,
         enum: ['today', 'week', 'month'],
     }),
-    __param(0, Query('period')),
+    __param(0, OrganizationId()),
+    __param(1, Query('period')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [Number, String]),
     __metadata("design:returntype", Promise)
 ], CompanyController.prototype, "getEmployeesPerformance", null);
 __decorate([
@@ -52,9 +54,10 @@ __decorate([
     Roles(UserRole.ADMIN, UserRole.MANAGER),
     ApiOperation({ summary: "So'nggi qo'ng'iroqlar" }),
     ApiQuery({ name: 'limit', required: false, type: Number }),
-    __param(0, Query('limit')),
+    __param(0, OrganizationId()),
+    __param(1, Query('limit')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [Number, String]),
     __metadata("design:returntype", Promise)
 ], CompanyController.prototype, "getRecentCalls", null);
 __decorate([
@@ -64,9 +67,10 @@ __decorate([
         summary: 'Birlashtirilgan statistika - barcha statistika turlarini bir joyda olish',
         description: "Bu endpoint orqali overview, daily, monthly, dashboard ma'lumotlarini sana oralig'i bilan filter qilish mumkin",
     }),
-    __param(0, Query()),
+    __param(0, OrganizationId()),
+    __param(1, Query()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [UnifiedStatisticsDto]),
+    __metadata("design:paramtypes", [Number, UnifiedStatisticsDto]),
     __metadata("design:returntype", Promise)
 ], CompanyController.prototype, "getUnifiedStatistics", null);
 CompanyController = __decorate([

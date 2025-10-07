@@ -6,19 +6,21 @@ import { UpdateSettingsDto } from './dto/update-settings.dto.js';
 export class SettingsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async get() {
-    let settings = await this.prisma.setting.findFirst();
+  async get(organizationId: number) {
+    let settings = await this.prisma.setting.findFirst({
+      where: { organizationId }, // Multi-tenancy filter
+    });
 
-    // Create default settings if none exist
+    // Create default settings if none exist for this organization
     if (!settings) {
       settings = await this.prisma.setting.create({
         data: {
-          id: 1,
+          organizationId, // Multi-tenancy
           analyticsStatus: true,
           scoringMode: 'TEN',
           excludeSeconds: 0,
           pbxUrl: null,
-          language: 'rus',
+          language: 'uz',
         },
       });
     }
@@ -26,8 +28,8 @@ export class SettingsService {
     return settings;
   }
 
-  async update(updateSettingsDto: UpdateSettingsDto) {
-    const settings = await this.get();
+  async update(organizationId: number, updateSettingsDto: UpdateSettingsDto) {
+    const settings = await this.get(organizationId);
 
     return this.prisma.setting.update({
       where: { id: settings.id },

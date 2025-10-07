@@ -26,6 +26,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { BranchModule } from './branch/branch.module.js';
 import { SipuniModule } from './sipuni/sipuni.module.js';
 import { SettingsModule } from './settings/settings.module.js';
+import { OrganizationModule } from './organization/organization.module.js';
 let AppModule = class AppModule {
 };
 AppModule = __decorate([
@@ -50,6 +51,7 @@ AppModule = __decorate([
             SettingsModule,
             BranchModule,
             SipuniModule,
+            OrganizationModule,
         ],
         controllers: [AppController],
         providers: [AppService],

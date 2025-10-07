@@ -19,22 +19,35 @@ let UserService = class UserService {
         this.prisma = prisma;
         this.statisticsService = statisticsService;
     }
-    async create(createUserDto) {
+    async create(organizationId, createUserDto) {
         const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
         const { password, ...rest } = createUserDto;
         return this.prisma.user.create({
             data: {
                 ...rest,
+                organizationId,
                 passwordHash: hashedPassword,
             },
         });
     }
-    findAll() {
-        return this.prisma.user.findMany();
+    findAll(organizationId) {
+        return this.prisma.user.findMany({
+            where: organizationId ? { organizationId } : undefined,
+        });
     }
     findOne(phone) {
-        return this.prisma.user.findUnique({
+        return this.prisma.user.findFirst({
             where: { phone },
+        });
+    }
+    findOneByOrganization(organizationId, phone) {
+        return this.prisma.user.findUnique({
+            where: {
+                organizationId_phone: {
+                    organizationId,
+                    phone,
+                },
+            },
         });
     }
     findOneById(id) {

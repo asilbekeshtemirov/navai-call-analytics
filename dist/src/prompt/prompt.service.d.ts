@@ -6,36 +6,36 @@ export declare class PromptService {
     constructor(prisma: PrismaService);
     create(createPromptDto: CreatePromptDto): import("@prisma/client").Prisma.Prisma__PromptClient<{
         id: string;
-        updatedAt: Date;
         createdAt: Date;
+        updatedAt: Date;
         text: string;
         topicId: string;
     }, never, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     findAll(): import("@prisma/client").Prisma.PrismaPromise<{
         id: string;
-        updatedAt: Date;
         createdAt: Date;
+        updatedAt: Date;
         text: string;
         topicId: string;
     }[]>;
     findOne(id: string): import("@prisma/client").Prisma.Prisma__PromptClient<{
         id: string;
-        updatedAt: Date;
         createdAt: Date;
+        updatedAt: Date;
         text: string;
         topicId: string;
     } | null, null, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     update(id: string, updatePromptDto: UpdatePromptDto): import("@prisma/client").Prisma.Prisma__PromptClient<{
         id: string;
-        updatedAt: Date;
         createdAt: Date;
+        updatedAt: Date;
         text: string;
         topicId: string;
     }, never, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     remove(id: string): import("@prisma/client").Prisma.Prisma__PromptClient<{
         id: string;
-        updatedAt: Date;
         createdAt: Date;
+        updatedAt: Date;
         text: string;
         topicId: string;
     }, never, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;

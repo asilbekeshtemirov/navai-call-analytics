@@ -7,26 +7,40 @@ import { PrismaService } from '../prisma/prisma.service.js';
 export class CriteriaService {
   constructor(private prisma: PrismaService) {}
 
-  create(createCriteriaDto: CreateCriteriaDto) {
-    return this.prisma.criteria.create({ data: createCriteriaDto });
+  create(organizationId: number, createCriteriaDto: CreateCriteriaDto) {
+    return this.prisma.criteria.create({
+      data: {
+        ...createCriteriaDto,
+        organizationId, // Multi-tenancy
+      },
+    });
   }
 
-  findAll() {
-    return this.prisma.criteria.findMany();
+  findAll(organizationId: number) {
+    return this.prisma.criteria.findMany({
+      where: { organizationId }, // Multi-tenancy filter
+    });
   }
 
-  findOne(id: string) {
-    return this.prisma.criteria.findUnique({ where: { id } });
+  findOne(organizationId: number, id: string) {
+    return this.prisma.criteria.findFirst({
+      where: {
+        id,
+        organizationId, // Multi-tenancy: Ensure criteria belongs to user's organization
+      },
+    });
   }
 
-  update(id: string, updateCriteriaDto: UpdateCriteriaDto) {
+  update(organizationId: number, id: string, updateCriteriaDto: UpdateCriteriaDto) {
     return this.prisma.criteria.update({
       where: { id },
       data: updateCriteriaDto,
     });
   }
 
-  remove(id: string) {
-    return this.prisma.criteria.delete({ where: { id } });
+  remove(organizationId: number, id: string) {
+    return this.prisma.criteria.delete({
+      where: { id },
+    });
   }
 }

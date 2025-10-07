@@ -15,60 +15,66 @@ import { CriteriaService } from './criteria.service.js';
 import { CreateCriteriaDto } from './dto/create-criteria.dto.js';
 import { UpdateCriteriaDto } from './dto/update-criteria.dto.js';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { OrganizationId } from '../auth/organization-id.decorator.js';
 let CriteriaController = class CriteriaController {
     criteriaService;
     constructor(criteriaService) {
         this.criteriaService = criteriaService;
     }
-    create(createCriteriaDto) {
-        return this.criteriaService.create(createCriteriaDto);
+    create(organizationId, createCriteriaDto) {
+        return this.criteriaService.create(organizationId, createCriteriaDto);
     }
-    findAll() {
-        return this.criteriaService.findAll();
+    findAll(organizationId) {
+        return this.criteriaService.findAll(organizationId);
     }
-    findOne(id) {
-        return this.criteriaService.findOne(id);
+    findOne(organizationId, id) {
+        return this.criteriaService.findOne(organizationId, id);
     }
-    update(id, updateCriteriaDto) {
-        return this.criteriaService.update(id, updateCriteriaDto);
+    update(organizationId, id, updateCriteriaDto) {
+        return this.criteriaService.update(organizationId, id, updateCriteriaDto);
     }
-    remove(id) {
-        return this.criteriaService.remove(id);
+    remove(organizationId, id) {
+        return this.criteriaService.remove(organizationId, id);
     }
 };
 __decorate([
     Post(),
-    __param(0, Body()),
+    __param(0, OrganizationId()),
+    __param(1, Body()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [CreateCriteriaDto]),
+    __metadata("design:paramtypes", [Number, CreateCriteriaDto]),
     __metadata("design:returntype", void 0)
 ], CriteriaController.prototype, "create", null);
 __decorate([
     Get(),
+    __param(0, OrganizationId()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", void 0)
 ], CriteriaController.prototype, "findAll", null);
 __decorate([
     Get(':id'),
-    __param(0, Param('id')),
+    __param(0, OrganizationId()),
+    __param(1, Param('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [Number, String]),
     __metadata("design:returntype", void 0)
 ], CriteriaController.prototype, "findOne", null);
 __decorate([
     Patch(':id'),
-    __param(0, Param('id')),
-    __param(1, Body()),
+    __param(0, OrganizationId()),
+    __param(1, Param('id')),
+    __param(2, Body()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, UpdateCriteriaDto]),
+    __metadata("design:paramtypes", [Number, String, UpdateCriteriaDto]),
     __metadata("design:returntype", void 0)
 ], CriteriaController.prototype, "update", null);
 __decorate([
     Delete(':id'),
-    __param(0, Param('id')),
+    __param(0, OrganizationId()),
+    __param(1, Param('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [Number, String]),
     __metadata("design:returntype", void 0)
 ], CriteriaController.prototype, "remove", null);
 CriteriaController = __decorate([

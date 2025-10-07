@@ -20,5 +20,7 @@ export declare class UpdateSettingsDto {
     sipuniApiKey?: string;
     sipuniUserId?: string;
     dataSource?: DataSource;
+    syncSchedule?: string;
+    autoSyncOnStartup?: boolean;
 }
 export {};

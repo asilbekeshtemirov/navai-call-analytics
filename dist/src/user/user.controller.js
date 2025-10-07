@@ -21,13 +21,14 @@ import { Roles } from '../auth/roles.decorator.js';
 import { UserRole } from '@prisma/client';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto.js';
 import { UnifiedUserStatisticsDto } from './dto/unified-user-statistics.dto.js';
+import { OrganizationId } from '../auth/organization-id.decorator.js';
 let UserController = class UserController {
     userService;
     constructor(userService) {
         this.userService = userService;
     }
-    create(createUserDto) {
-        return this.userService.create(createUserDto);
+    create(organizationId, createUserDto) {
+        return this.userService.create(organizationId, createUserDto);
     }
     findAll() {
         return this.userService.findAll();
@@ -51,9 +52,10 @@ let UserController = class UserController {
 __decorate([
     Post(),
     Roles(UserRole.ADMIN),
-    __param(0, Body()),
+    __param(0, OrganizationId()),
+    __param(1, Body()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [CreateUserDto]),
+    __metadata("design:paramtypes", [Number, CreateUserDto]),
     __metadata("design:returntype", void 0)
 ], UserController.prototype, "create", null);
 __decorate([

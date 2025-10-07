@@ -16,7 +16,8 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AiService } from '../ai/ai.service.js';
-import { Cron } from '@nestjs/schedule';
+import { SchedulerRegistry } from '@nestjs/schedule';
+import { CronJob } from 'cron';
 import axios from 'axios';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
@@ -27,16 +28,18 @@ let SipuniService = SipuniService_1 = class SipuniService {
     prisma;
     http;
     aiService;
+    schedulerRegistry;
     logger = new Logger(SipuniService_1.name);
     saveDir = './recordings';
     sipuniApiUrl;
     sipuniApiKey;
     sipuniUserId;
-    constructor(config, prisma, http, aiService) {
+    constructor(config, prisma, http, aiService, schedulerRegistry) {
         this.config = config;
         this.prisma = prisma;
         this.http = http;
         this.aiService = aiService;
+        this.schedulerRegistry = schedulerRegistry;
         this.sipuniApiUrl =
             this.config.get('SIPUNI_API_URL') || 'https://sipuni.com/api';
         this.sipuniApiKey = this.config.get('SIPUNI_API_KEY') || '';
@@ -46,21 +49,96 @@ let SipuniService = SipuniService_1 = class SipuniService {
             fs.mkdirSync(this.saveDir, { recursive: true });
         }
     }
-    async loadSipuniCredentials() {
-        const settings = await this.prisma.setting.findFirst();
-        this.logger.log(`[CONFIG] Loaded settings: ${JSON.stringify(settings)}`);
+    async onModuleInit() {
+        this.logger.log('[STARTUP] Initializing Sipuni auto-sync...');
+        try {
+            const organizations = await this.prisma.organization.findMany({
+                where: { isActive: true },
+                include: { settings: true },
+            });
+            this.logger.log(`[STARTUP] Found ${organizations.length} active organizations`);
+            for (const org of organizations) {
+                try {
+                    const settings = org.settings?.[0];
+                    if (settings?.syncSchedule) {
+                        await this.setupDynamicCronJob(org.id, org.name, settings.syncSchedule);
+                    }
+                    if (settings?.autoSyncOnStartup) {
+                        this.logger.log(`[STARTUP] Auto-sync enabled for ${org.name}, syncing from month start...`);
+                        await this.syncFromMonthStart(org.id);
+                    }
+                    else {
+                        this.logger.log(`[STARTUP] Auto-sync disabled for ${org.name}, skipping...`);
+                    }
+                }
+                catch (error) {
+                    this.logger.error(`[STARTUP] Failed to initialize ${org.name}: ${error.message}`);
+                }
+            }
+            this.logger.log('[STARTUP] Sipuni auto-sync initialization completed');
+        }
+        catch (error) {
+            this.logger.error(`[STARTUP] Failed to initialize auto-sync: ${error.message}`);
+        }
+    }
+    async setupDynamicCronJob(orgId, orgName, cronSchedule) {
+        try {
+            const jobName = `sipuni-sync-${orgId}`;
+            try {
+                this.schedulerRegistry.deleteCronJob(jobName);
+                this.logger.log(`[CRON] Removed existing job for ${orgName}`);
+            }
+            catch (e) {
+            }
+            const job = new CronJob(cronSchedule, async () => {
+                this.logger.log(`[CRON] Running scheduled sync for ${orgName} (${cronSchedule})`);
+                await this.syncAndProcessRecordings(orgId, 500);
+            });
+            this.schedulerRegistry.addCronJob(jobName, job);
+            job.start();
+            this.logger.log(`[CRON] Setup dynamic job for ${orgName}: ${cronSchedule}`);
+        }
+        catch (error) {
+            this.logger.error(`[CRON] Failed to setup job for ${orgName}: ${error.message}`);
+        }
+    }
+    async syncFromMonthStart(organizationId) {
+        try {
+            const now = new Date();
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const fromDate = this.formatDateForSipuni(monthStart);
+            const toDate = this.formatDateForSipuni(now);
+            this.logger.log(`[STARTUP] Syncing from ${fromDate} to ${toDate} for org ${organizationId}`);
+            const result = await this.syncAndProcessRecordings(organizationId, 1000);
+            this.logger.log(`[STARTUP] Sync completed for org ${organizationId}: ${result.message}`);
+        }
+        catch (error) {
+            this.logger.error(`[STARTUP] Failed to sync from month start for org ${organizationId}: ${error.message}`);
+        }
+    }
+    formatDateForSipuni(date) {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}.${month}.${year}`;
+    }
+    async loadSipuniCredentials(organizationId) {
+        const settings = await this.prisma.setting.findFirst({
+            where: { organizationId },
+        });
+        this.logger.log(`[CONFIG] Loaded settings for org ${organizationId}: ${JSON.stringify(settings)}`);
         if (settings &&
             settings.sipuniApiUrl &&
             settings.sipuniApiKey &&
             settings.sipuniUserId) {
-            this.logger.log(`[CONFIG] Using Sipuni credentials from Settings`);
+            this.logger.log(`[CONFIG] Using Sipuni credentials from Settings for org ${organizationId}`);
             return {
                 apiUrl: settings.sipuniApiUrl,
                 apiKey: settings.sipuniApiKey,
                 userId: settings.sipuniUserId,
             };
         }
-        this.logger.log(`[CONFIG] Using Sipuni credentials from .env (fallback)`);
+        this.logger.log(`[CONFIG] Using Sipuni credentials from .env (fallback) for org ${organizationId}`);
         return {
             apiUrl: this.sipuniApiUrl,
             apiKey: this.sipuniApiKey,
@@ -96,10 +174,10 @@ let SipuniService = SipuniService_1 = class SipuniService {
         ];
         return params.join('+');
     }
-    async exportStatistics(exportDto) {
+    async exportStatistics(organizationId, exportDto) {
         try {
-            this.logger.log(`[EXPORT] Exporting statistics from ${exportDto.from} to ${exportDto.to}`);
-            const credentials = await this.loadSipuniCredentials();
+            this.logger.log(`[EXPORT] Exporting statistics from ${exportDto.from} to ${exportDto.to} for org ${organizationId}`);
+            const credentials = await this.loadSipuniCredentials(organizationId);
             if (!credentials.apiKey || credentials.apiKey.length === 0) {
                 throw new Error('SIPUNI_API_KEY is not configured');
             }
@@ -147,9 +225,9 @@ let SipuniService = SipuniService_1 = class SipuniService {
             throw error;
         }
     }
-    async fetchCallRecords(from, to) {
-        this.logger.log(`[FETCH] Fetching call records from ${from} to ${to}`);
-        const csvData = await this.exportStatistics({
+    async fetchCallRecords(organizationId, from, to) {
+        this.logger.log(`[FETCH] Fetching call records from ${from} to ${to} for org ${organizationId}`);
+        const csvData = await this.exportStatistics(organizationId, {
             user: this.sipuniUserId,
             from,
             to,
@@ -185,8 +263,8 @@ let SipuniService = SipuniService_1 = class SipuniService {
         })
             .filter((record) => record.record?.trim());
     }
-    async testConnection() {
-        const credentials = await this.loadSipuniCredentials();
+    async testConnection(organizationId) {
+        const credentials = await this.loadSipuniCredentials(organizationId);
         const source = credentials.apiKey === this.sipuniApiKey ? '.env' : 'Settings';
         return {
             apiUrl: credentials.apiUrl,
@@ -195,10 +273,10 @@ let SipuniService = SipuniService_1 = class SipuniService {
             source,
         };
     }
-    async manualSync(from, to) {
+    async manualSync(organizationId, from, to) {
         try {
-            this.logger.log(`[MANUAL] Manual sync requested from ${from} to ${to}`);
-            const callRecords = await this.fetchCallRecords(from, to);
+            this.logger.log(`[MANUAL] Manual sync requested from ${from} to ${to} for org ${organizationId}`);
+            const callRecords = await this.fetchCallRecords(organizationId, from, to);
             const results = await Promise.allSettled(callRecords.map((record) => this.processCallRecord(record)));
             const processedCount = results.filter((r) => r.status === 'fulfilled').length;
             const message = `Successfully processed ${processedCount} out of ${callRecords.length} call records`;
@@ -255,10 +333,10 @@ let SipuniService = SipuniService_1 = class SipuniService {
     async transcribeAudio(audioFile) {
         return '';
     }
-    async fetchAllRecords(limit = 500, order = 'desc', page = 1) {
-        this.logger.log(`[FETCH_ALL] Fetching records (limit: ${limit}, order: ${order}, page: ${page})`);
+    async fetchAllRecords(organizationId, limit = 500, order = 'desc', page = 1) {
+        this.logger.log(`[FETCH_ALL] Fetching records for org ${organizationId} (limit: ${limit}, order: ${order}, page: ${page})`);
         try {
-            const credentials = await this.loadSipuniCredentials();
+            const credentials = await this.loadSipuniCredentials(organizationId);
             const hashString = [
                 limit,
                 order,
@@ -314,14 +392,14 @@ let SipuniService = SipuniService_1 = class SipuniService {
             throw error;
         }
     }
-    async downloadRecordingById(recordId, filename) {
+    async downloadRecordingById(organizationId, recordId, filename) {
         const filepath = path.join(this.saveDir, `${filename}.mp3`);
         if (fs.existsSync(filepath)) {
             this.logger.log(`[DOWNLOAD] File already exists: ${filepath}`);
             return filepath;
         }
         try {
-            const credentials = await this.loadSipuniCredentials();
+            const credentials = await this.loadSipuniCredentials(organizationId);
             const hashString = [
                 recordId,
                 credentials.userId,
@@ -347,10 +425,10 @@ let SipuniService = SipuniService_1 = class SipuniService {
             throw error;
         }
     }
-    async syncAndProcessRecordings(limit = 500) {
+    async syncAndProcessRecordings(organizationId, limit = 500) {
         try {
-            this.logger.log(`[SYNC] Starting Sipuni sync with limit ${limit}...`);
-            const records = await this.fetchAllRecords(limit);
+            this.logger.log(`[SYNC] Starting Sipuni sync for org ${organizationId} with limit ${limit}...`);
+            const records = await this.fetchAllRecords(organizationId, limit);
             if (records.length === 0) {
                 this.logger.log('[SYNC] No new records found');
                 return {
@@ -364,26 +442,6 @@ let SipuniService = SipuniService_1 = class SipuniService {
             let failed = 0;
             for (const record of records) {
                 try {
-                    const externalId = record.recordId && record.recordId.trim() !== ''
-                        ? record.recordId
-                        : record.orderId && record.orderId.trim() !== ''
-                            ? record.orderId
-                            : `sipuni_${record.time}_${record.from}_${record.to}`.replace(/[:\s]/g, '_');
-                    const existingCall = await this.prisma.call.findUnique({
-                        where: { externalId },
-                    });
-                    if (existingCall) {
-                        this.logger.log(`[SYNC] Call ${externalId} already exists (status: ${existingCall.status}), skipping`);
-                        skipped++;
-                        continue;
-                    }
-                    const hasRecording = record.recordId && record.recordId.trim() !== '';
-                    let audioFile = 'no-audio.mp3';
-                    if (hasRecording) {
-                        const filename = `sipuni_${record.time.replace(/[:\s]/g, '_')}`;
-                        audioFile = await this.downloadRecordingById(record.recordId, filename);
-                    }
-                    const callDate = this.parseSipuniDate(record.time);
                     let extCode = record.from;
                     if (record.type === 'Входящий' &&
                         record.answered &&
@@ -395,14 +453,35 @@ let SipuniService = SipuniService_1 = class SipuniService {
                     });
                     if (!employee) {
                         this.logger.warn(`[SYNC] Employee not found for extCode: ${extCode} (from: ${record.from}, answered: ${record.answered}, type: ${record.type}), skipping call ${record.recordId}`);
-                        if (fs.existsSync(audioFile)) {
-                            fs.unlinkSync(audioFile);
-                        }
                         skipped++;
                         continue;
                     }
+                    const externalId = record.recordId && record.recordId.trim() !== ''
+                        ? record.recordId
+                        : record.orderId && record.orderId.trim() !== ''
+                            ? record.orderId
+                            : `sipuni_${record.time}_${record.from}_${record.to}`.replace(/[:\s]/g, '_');
+                    const existingCall = await this.prisma.call.findFirst({
+                        where: {
+                            organizationId: employee.organizationId,
+                            externalId,
+                        },
+                    });
+                    if (existingCall) {
+                        this.logger.log(`[SYNC] Call ${externalId} already exists (status: ${existingCall.status}), skipping`);
+                        skipped++;
+                        continue;
+                    }
+                    const hasRecording = record.recordId && record.recordId.trim() !== '';
+                    let audioFile = 'no-audio.mp3';
+                    if (hasRecording) {
+                        const filename = `sipuni_${record.time.replace(/[:\s]/g, '_')}`;
+                        audioFile = await this.downloadRecordingById(employee.organizationId, record.recordId, filename);
+                    }
+                    const callDate = this.parseSipuniDate(record.time);
                     const call = await this.prisma.call.create({
                         data: {
+                            organizationId: employee.organizationId,
                             externalId,
                             employeeId: employee.id,
                             branchId: employee.branchId,
@@ -450,30 +529,15 @@ let SipuniService = SipuniService_1 = class SipuniService {
         const [hours, minutes, seconds] = timePart.split(':');
         return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes), parseInt(seconds));
     }
-    async dailySipuniSync() {
-        try {
-            this.logger.log('[CRON] Starting daily Sipuni sync...');
-            await this.syncAndProcessRecordings(500);
-            this.logger.log('[CRON] Daily Sipuni sync completed successfully');
-        }
-        catch (error) {
-            this.logger.error(`[CRON] Daily Sipuni sync failed: ${error.message}`);
-        }
-    }
 };
-__decorate([
-    Cron('50 23 * * *'),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", Promise)
-], SipuniService.prototype, "dailySipuniSync", null);
 SipuniService = SipuniService_1 = __decorate([
     Injectable(),
     __param(3, Inject(forwardRef(() => AiService))),
     __metadata("design:paramtypes", [ConfigService,
         PrismaService,
         HttpService,
-        AiService])
+        AiService,
+        SchedulerRegistry])
 ], SipuniService);
 export { SipuniService };
 //# sourceMappingURL=sipuni.service.js.map

@@ -105,7 +105,7 @@ export class DownloaderService {
 
           // First, try to find by client number
           if (call.client) {
-            employee = await this.prisma.user.findUnique({
+            employee = await this.prisma.user.findFirst({
               where: { phone: call.client },
             });
             if (employee) {
@@ -118,7 +118,7 @@ export class DownloaderService {
 
           // If not found, try to find by caller number
           if (!employee && call.caller) {
-            employee = await this.prisma.user.findUnique({
+            employee = await this.prisma.user.findFirst({
               where: { phone: call.caller },
             });
             if (employee) {
@@ -138,8 +138,11 @@ export class DownloaderService {
           }
 
           // Check if call already exists in database
-          const existingCall = await this.prisma.call.findUnique({
-            where: { externalId: call.uid },
+          const existingCall = await this.prisma.call.findFirst({
+            where: {
+              organizationId: employee.organizationId,
+              externalId: call.uid,
+            },
           });
 
           if (existingCall) {
@@ -176,6 +179,7 @@ export class DownloaderService {
           // Create a new call record in the database
           const newCall = await this.prisma.call.create({
             data: {
+              organizationId: employee.organizationId, // Multi-tenancy
               externalId: call.uid,
               callerNumber: call.caller || 'Unknown', // Handle undefined caller
               calleeNumber: call.client, // Assuming call.client is the employee's number

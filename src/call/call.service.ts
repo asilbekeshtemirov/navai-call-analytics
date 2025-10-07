@@ -273,8 +273,11 @@ export class CallService {
     }
 
     // Create session in database
+    // TODO: Get organizationId from authenticated user context
+    // For now, using default organization
     const session = await this.prisma.callSession.create({
       data: {
+        organizationId: 1, // Multi-tenancy: Using default org for public endpoints
         sessionId,
         status: 'PENDING',
         totalNumbers: totalNumbers,
@@ -332,7 +335,7 @@ export class CallService {
     }
   }
 
-  async findAll(filters?: {
+  async findAll(organizationId: number, filters?: {
     branchId?: string;
     departmentId?: string;
     employeeId?: string;
@@ -340,7 +343,9 @@ export class CallService {
     dateFrom?: string;
     dateTo?: string;
   }) {
-    const where: any = {};
+    const where: any = {
+      organizationId, // Multi-tenancy: Only show calls from user's organization
+    };
 
     if (filters?.branchId) where.branchId = filters.branchId;
     if (filters?.departmentId) where.departmentId = filters.departmentId;
@@ -367,9 +372,12 @@ export class CallService {
     });
   }
 
-  async findOne(id: string) {
-    return this.prisma.call.findUnique({
-      where: { id },
+  async findOne(organizationId: number, id: string) {
+    return this.prisma.call.findFirst({
+      where: {
+        id,
+        organizationId, // Multi-tenancy: Ensure call belongs to user's organization
+      },
       include: {
         employee: true,
         manager: true,

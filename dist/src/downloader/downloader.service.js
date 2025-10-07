@@ -76,7 +76,7 @@ let DownloaderService = DownloaderService_1 = class DownloaderService {
                     let employee = null;
                     let employeePhone = null;
                     if (call.client) {
-                        employee = await this.prisma.user.findUnique({
+                        employee = await this.prisma.user.findFirst({
                             where: { phone: call.client },
                         });
                         if (employee) {
@@ -85,7 +85,7 @@ let DownloaderService = DownloaderService_1 = class DownloaderService {
                         }
                     }
                     if (!employee && call.caller) {
-                        employee = await this.prisma.user.findUnique({
+                        employee = await this.prisma.user.findFirst({
                             where: { phone: call.caller },
                         });
                         if (employee) {
@@ -97,8 +97,11 @@ let DownloaderService = DownloaderService_1 = class DownloaderService {
                         this.logger.warn(`Employee not found for phone numbers (client: ${call.client}, caller: ${call.caller}). Skipping call ${call.uid}.`);
                         continue;
                     }
-                    const existingCall = await this.prisma.call.findUnique({
-                        where: { externalId: call.uid },
+                    const existingCall = await this.prisma.call.findFirst({
+                        where: {
+                            organizationId: employee.organizationId,
+                            externalId: call.uid,
+                        },
                     });
                     if (existingCall) {
                         this.logger.log(`Call ${call.uid} already exists in database. Skipping.`);
@@ -122,6 +125,7 @@ let DownloaderService = DownloaderService_1 = class DownloaderService {
                     }
                     const newCall = await this.prisma.call.create({
                         data: {
+                            organizationId: employee.organizationId,
                             externalId: call.uid,
                             callerNumber: call.caller || 'Unknown',
                             calleeNumber: call.client,

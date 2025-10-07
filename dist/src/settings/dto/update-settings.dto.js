@@ -33,6 +33,8 @@ export class UpdateSettingsDto {
     sipuniApiKey;
     sipuniUserId;
     dataSource;
+    syncSchedule;
+    autoSyncOnStartup;
 }
 __decorate([
     ApiPropertyOptional({ description: 'Enable/disable analytics' }),
@@ -119,4 +121,21 @@ __decorate([
     IsEnum(DataSource),
     __metadata("design:type", String)
 ], UpdateSettingsDto.prototype, "dataSource", void 0);
+__decorate([
+    ApiPropertyOptional({
+        description: 'Cron schedule for automatic sync (e.g., "50 23 * * *" for 23:50 daily, "0 22 * * *" for 22:00 daily)',
+        example: '0 22 * * *',
+    }),
+    IsOptional(),
+    IsString(),
+    __metadata("design:type", String)
+], UpdateSettingsDto.prototype, "syncSchedule", void 0);
+__decorate([
+    ApiPropertyOptional({
+        description: 'Enable automatic sync on application startup (from month start to current date)',
+    }),
+    IsOptional(),
+    IsBoolean(),
+    __metadata("design:type", Boolean)
+], UpdateSettingsDto.prototype, "autoSyncOnStartup", void 0);
 //# sourceMappingURL=update-settings.dto.js.map

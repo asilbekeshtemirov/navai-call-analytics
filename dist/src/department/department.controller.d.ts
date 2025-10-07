@@ -6,37 +6,37 @@ export declare class DepartmentController {
     constructor(departmentService: DepartmentService);
     create(createDepartmentDto: CreateDepartmentDto): import("@prisma/client").Prisma.Prisma__DepartmentClient<{
         id: string;
-        updatedAt: Date;
         name: string;
         createdAt: Date;
+        updatedAt: Date;
         branchId: string;
     }, never, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     findAll(): import("@prisma/client").Prisma.PrismaPromise<{
         id: string;
-        updatedAt: Date;
         name: string;
         createdAt: Date;
+        updatedAt: Date;
         branchId: string;
     }[]>;
     findOne(id: string): import("@prisma/client").Prisma.Prisma__DepartmentClient<{
         id: string;
-        updatedAt: Date;
         name: string;
         createdAt: Date;
+        updatedAt: Date;
         branchId: string;
     } | null, null, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     update(id: string, updateDepartmentDto: UpdateDepartmentDto): import("@prisma/client").Prisma.Prisma__DepartmentClient<{
         id: string;
-        updatedAt: Date;
         name: string;
         createdAt: Date;
+        updatedAt: Date;
         branchId: string;
     }, never, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     remove(id: string): import("@prisma/client").Prisma.Prisma__DepartmentClient<{
         id: string;
-        updatedAt: Date;
         name: string;
         createdAt: Date;
+        updatedAt: Date;
         branchId: string;
     }, never, import("@prisma/client/runtime/library").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
 }

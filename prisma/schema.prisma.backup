@@ -1,0 +1,339 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id             String       @id @default(uuid())
+  name           String       @db.VarChar(255)
+  slug           String       @unique @db.VarChar(100)
+  description    String?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  branches       Branch[]
+  users          User[]
+  calls          Call[]
+  criteria       Criteria[]
+  settings       Setting[]
+  callSessions   CallSession[]
+  dailyStats     DailyStats[]
+  monthlyStats   MonthlyStats[]
+
+  @@map("organizations")
+}
+
+model Branch {
+  id             String       @id @default(uuid())
+  organizationId String
+  name           String       @db.VarChar(255)
+  address        String?      @db.VarChar(255)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  calls          Call[]
+  departments    Department[]
+  users          User[]
+
+  @@index([organizationId])
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  branchId  String
+  name      String   @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  calls     Call[]
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  users     User[]
+}
+
+model User {
+  id              String        @id @default(uuid())
+  organizationId  String
+  firstName       String        @db.VarChar(120)
+  lastName        String        @db.VarChar(120)
+  phone           String        @db.VarChar(32)
+  extCode         String?       @db.VarChar(16)
+  role            UserRole      @default(EMPLOYEE)
+  passwordHash    String
+  branchId        String?
+  departmentId    String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  callsAsEmployee Call[]        @relation("EmployeeCalls")
+  callsAsManager  Call[]        @relation("ManagerCalls")
+  reports         Report[]
+  branch          Branch?       @relation(fields: [branchId], references: [id])
+  department      Department?   @relation(fields: [departmentId], references: [id])
+
+  @@unique([organizationId, phone])
+  @@index([organizationId])
+  @@index([organizationId, extCode])
+}
+
+model Criteria {
+  id             String       @id @default(uuid())
+  organizationId String
+  name           String       @db.VarChar(255)
+  weight         Int          @default(1)
+  description    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  scores         CallScore[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model Topic {
+  id        String   @id @default(uuid())
+  name      String   @unique @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  prompts   Prompt[]
+}
+
+model Prompt {
+  id        String   @id @default(uuid())
+  topicId   String
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  topic     Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+}
+
+model Call {
+  id             String              @id @default(uuid())
+  organizationId String
+  externalId     String
+  employeeId     String
+  managerId      String?
+  branchId       String?
+  departmentId   String?
+  fileUrl        String
+  status         CallStatus          @default(UPLOADED)
+  callerNumber   String?
+  calleeNumber   String?
+  callDate       DateTime
+  createdAt      DateTime            @default(now())
+  durationSec    Int?
+  transcription  String?
+  analysis       Json?
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  branch         Branch?             @relation(fields: [branchId], references: [id])
+  department     Department?         @relation(fields: [departmentId], references: [id])
+  employee       User                @relation("EmployeeCalls", fields: [employeeId], references: [id])
+  manager        User?               @relation("ManagerCalls", fields: [managerId], references: [id])
+  scores         CallScore[]
+  segments       TranscriptSegment[]
+  violations     Violation[]
+
+  @@unique([organizationId, externalId])
+  @@index([organizationId])
+  @@index([organizationId, employeeId])
+  @@index([organizationId, status])
+  @@index([organizationId, callDate])
+}
+
+model TranscriptSegment {
+  id      String @id @default(uuid())
+  callId  String
+  startMs Int
+  endMs   Int
+  speaker String @db.VarChar(32)
+  text    String
+  call    Call   @relation(fields: [callId], references: [id], onDelete: Cascade)
+}
+
+model CallScore {
+  id         String   @id @default(uuid())
+  callId     String
+  criteriaId String
+  score      Int
+  notes      String?
+  call       Call     @relation(fields: [callId], references: [id], onDelete: Cascade)
+  criteria   Criteria @relation(fields: [criteriaId], references: [id], onDelete: Cascade)
+
+  @@unique([callId, criteriaId])
+}
+
+model Violation {
+  id          String  @id @default(uuid())
+  callId      String
+  type        String  @db.VarChar(255)
+  timestampMs Int
+  details     String?
+  call        Call    @relation(fields: [callId], references: [id], onDelete: Cascade)
+}
+
+model Report {
+  id            String   @id @default(uuid())
+  userId        String
+  dateFrom      DateTime
+  dateTo        DateTime
+  totalCalls    Int
+  totalDuration Int
+  avgScore      Float
+  summary       String?
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Setting {
+  id              String       @id @default(uuid())
+  organizationId  String       @unique
+  analyticsStatus Boolean      @default(true)
+  scoringMode     ScoringMode  @default(TEN)
+  excludeSeconds  Int          @default(0)
+  pbxUrl          String?      @db.VarChar(255)
+  language        String?      @db.VarChar(16)
+
+  // Sipuni configuration
+  sipuniApiUrl    String?      @db.VarChar(255)
+  sipuniApiKey    String?      @db.VarChar(255)
+  sipuniUserId    String?      @db.VarChar(255)
+
+  // Data source selection
+  dataSource      DataSource   @default(PBX)
+
+  // Sync schedule configuration
+  syncSchedule    String?      @default("50 23 * * *") @db.VarChar(50)  // Cron format: "50 23 * * *" means 23:50 daily
+  autoSyncOnStartup Boolean    @default(true)  // Auto sync from month start on app startup
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("settings")
+}
+
+model CallSession {
+  id               String            @id @default(uuid())
+  organizationId   String
+  sessionId        String            @unique
+  status           SessionStatus     @default(PENDING)
+  totalNumbers     Int               @default(0)
+  processedNumbers Int               @default(0)
+  connectedCalls   Int               @default(0)
+  failedCalls      Int               @default(0)
+  remoteResponse   String?
+  errorMessage     String?
+  startedAt        DateTime          @default(now())
+  completedAt      DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  callResults      CallResult[]
+
+  @@index([organizationId])
+  @@map("call_sessions")
+}
+
+model CallResult {
+  id              String            @id @default(uuid())
+  sessionId       String
+  phoneNumber     String            @db.VarChar(32)
+  callStatus      CallResultStatus
+  callDuration    Int?              // seconds
+  operatorName    String?           @db.VarChar(255)
+  operatorId      String?
+  callStartTime   DateTime?
+  callEndTime     DateTime?
+  recordingUrl    String?
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  session         CallSession       @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([phoneNumber])
+  @@index([callStatus])
+  @@map("call_results")
+}
+
+model DailyStats {
+  id             String       @id @default(cuid())
+  organizationId String
+  date           DateTime     @db.Date
+  extCode        String       @db.VarChar(10)
+  callsCount     Int          @default(0)
+  totalDuration  Int          @default(0) // seconds
+  averageScore   Float?
+  totalScore     Float        @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, date, extCode])
+  @@index([organizationId])
+  @@map("daily_stats")
+}
+
+model MonthlyStats {
+  id             String       @id @default(cuid())
+  organizationId String
+  year           Int
+  month          Int
+  extCode        String       @db.VarChar(10)
+  callsCount     Int          @default(0)
+  totalDuration  Int          @default(0) // seconds
+  averageScore   Float?
+  totalScore     Float        @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, year, month, extCode])
+  @@index([organizationId])
+  @@map("monthly_stats")
+}
+
+enum UserRole {
+  SUPERADMIN
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+enum CallStatus {
+  UPLOADED
+  PROCESSING
+  DONE
+  ERROR
+}
+
+enum ScoringMode {
+  TEN
+  HUNDRED
+}
+
+enum DataSource {
+  PBX
+  SIPUNI
+}
+
+enum SessionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum CallResultStatus {
+  ANSWERED              // Telefon ko'tarildi
+  NO_ANSWER             // Javob berilmadi
+  BUSY                  // Band
+  FAILED                // O'chirilgan/mavjud emas
+  CONNECTED_TO_OPERATOR // Operator bilan bog'landi
+  REJECTED              // Rad etildi
+  INVALID_NUMBER        // Noto'g'ri raqam
+  NETWORK_ERROR         // Tarmoq xatosi
+}

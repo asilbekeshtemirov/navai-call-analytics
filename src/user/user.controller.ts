@@ -24,6 +24,8 @@ import { Roles } from '../auth/roles.decorator.js';
 import { UserRole } from '@prisma/client';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto.js';
 import { UnifiedUserStatisticsDto } from './dto/unified-user-statistics.dto.js';
+import { OrganizationId } from '../auth/organization-id.decorator.js';
+
 @ApiTags('users')
 @ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard, RolesGuard) // Apply guards to the entire controller
@@ -33,8 +35,11 @@ export class UserController {
 
   @Post()
   @Roles(UserRole.ADMIN)
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
+  create(
+    @OrganizationId() organizationId: number,
+    @Body() createUserDto: CreateUserDto
+  ) {
+    return this.userService.create(organizationId, createUserDto);
   }
 
   @Get()

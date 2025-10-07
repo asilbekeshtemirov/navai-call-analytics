@@ -6,7 +6,7 @@ export declare class CallController {
     constructor(callService: CallService);
     uploadFile(file: Express.Multer.File): Promise<any>;
     startProcess(): Promise<any>;
-    findAll(branchId?: string, departmentId?: string, employeeId?: string, status?: string, dateFrom?: string, dateTo?: string): Promise<({
+    findAll(organizationId: number, branchId?: string, departmentId?: string, employeeId?: string, status?: string, dateFrom?: string, dateTo?: string): Promise<({
         branch: {
             id: string;
             name: string;
@@ -18,18 +18,19 @@ export declare class CallController {
         scores: ({
             criteria: {
                 id: string;
-                updatedAt: Date;
                 name: string;
-                createdAt: Date;
-                weight: number;
                 description: string | null;
+                createdAt: Date;
+                updatedAt: Date;
+                organizationId: number;
+                weight: number;
             };
         } & {
             id: string;
-            criteriaId: string;
-            notes: string | null;
             score: number;
             callId: string;
+            criteriaId: string;
+            notes: string | null;
         })[];
         employee: {
             id: string;
@@ -39,17 +40,20 @@ export declare class CallController {
         };
         violations: {
             id: string;
-            type: string;
-            timestampMs: number;
-            details: string | null;
             callId: string;
+            timestampMs: number;
+            type: string;
+            details: string | null;
         }[];
     } & {
         id: string;
         createdAt: Date;
+        organizationId: number;
         branchId: string | null;
         departmentId: string | null;
         externalId: string;
+        employeeId: string;
+        managerId: string | null;
         fileUrl: string;
         status: import("@prisma/client").$Enums.CallStatus;
         callerNumber: string | null;
@@ -58,48 +62,49 @@ export declare class CallController {
         durationSec: number | null;
         transcription: string | null;
         analysis: import("@prisma/client/runtime/library").JsonValue | null;
-        employeeId: string;
-        managerId: string | null;
     })[]>;
-    findOne(id: string): Promise<({
+    findOne(organizationId: number, id: string): Promise<({
         branch: {
             id: string;
-            updatedAt: Date;
             name: string;
-            address: string | null;
             createdAt: Date;
+            updatedAt: Date;
+            organizationId: number;
+            address: string | null;
         } | null;
         department: {
             id: string;
-            updatedAt: Date;
             name: string;
             createdAt: Date;
+            updatedAt: Date;
             branchId: string;
         } | null;
         scores: ({
             criteria: {
                 id: string;
-                updatedAt: Date;
                 name: string;
-                createdAt: Date;
-                weight: number;
                 description: string | null;
+                createdAt: Date;
+                updatedAt: Date;
+                organizationId: number;
+                weight: number;
             };
         } & {
             id: string;
-            criteriaId: string;
-            notes: string | null;
             score: number;
             callId: string;
+            criteriaId: string;
+            notes: string | null;
         })[];
         employee: {
             id: string;
-            updatedAt: Date;
             createdAt: Date;
+            updatedAt: Date;
+            organizationId: number;
             branchId: string | null;
-            phone: string;
             firstName: string;
             lastName: string;
+            phone: string;
             extCode: string | null;
             role: import("@prisma/client").$Enums.UserRole;
             passwordHash: string;
@@ -107,12 +112,13 @@ export declare class CallController {
         };
         manager: {
             id: string;
-            updatedAt: Date;
             createdAt: Date;
+            updatedAt: Date;
+            organizationId: number;
             branchId: string | null;
-            phone: string;
             firstName: string;
             lastName: string;
+            phone: string;
             extCode: string | null;
             role: import("@prisma/client").$Enums.UserRole;
             passwordHash: string;
@@ -128,17 +134,20 @@ export declare class CallController {
         }[];
         violations: {
             id: string;
-            type: string;
-            timestampMs: number;
-            details: string | null;
             callId: string;
+            timestampMs: number;
+            type: string;
+            details: string | null;
         }[];
     } & {
         id: string;
         createdAt: Date;
+        organizationId: number;
         branchId: string | null;
         departmentId: string | null;
         externalId: string;
+        employeeId: string;
+        managerId: string | null;
         fileUrl: string;
         status: import("@prisma/client").$Enums.CallStatus;
         callerNumber: string | null;
@@ -147,8 +156,6 @@ export declare class CallController {
         durationSec: number | null;
         transcription: string | null;
         analysis: import("@prisma/client/runtime/library").JsonValue | null;
-        employeeId: string;
-        managerId: string | null;
     }) | null>;
     getTranscript(id: string): Promise<{
         id: string;
@@ -166,8 +173,9 @@ export declare class CallController {
         isCompleted: boolean;
         hasError: boolean;
         id: string;
-        updatedAt: Date;
         createdAt: Date;
+        updatedAt: Date;
+        organizationId: number;
         status: import("@prisma/client").$Enums.SessionStatus;
         sessionId: string;
         totalNumbers: number;
@@ -187,8 +195,9 @@ export declare class CallController {
         isCompleted: boolean;
         hasError: boolean;
         id: string;
-        updatedAt: Date;
         createdAt: Date;
+        updatedAt: Date;
+        organizationId: number;
         status: import("@prisma/client").$Enums.SessionStatus;
         sessionId: string;
         totalNumbers: number;

@@ -17,7 +17,7 @@ export class CompanyService {
   ) {}
 
   // Barcha xodimlar performance
-  async getEmployeesPerformance(period: string = 'today'): Promise<any> {
+  async getEmployeesPerformance(organizationId: number, period: string = 'today'): Promise<any> {
     let startDate: Date;
     let endDate: Date = new Date();
 
@@ -37,7 +37,10 @@ export class CompanyService {
     }
 
     const employees = await this.prisma.user.findMany({
-      where: { role: 'EMPLOYEE' },
+      where: {
+        organizationId,
+        role: 'EMPLOYEE'
+      },
       select: {
         id: true,
         firstName: true,
@@ -50,6 +53,7 @@ export class CompanyService {
       employees.map(async (employee) => {
         const calls = await this.prisma.call.findMany({
           where: {
+            organizationId,
             employeeId: employee.id,
             status: 'DONE',
             callDate: {
@@ -91,8 +95,9 @@ export class CompanyService {
   }
 
   // So'nggi qo'ng'iroqlar
-  async getRecentCalls(limit: number = 50): Promise<any> {
+  async getRecentCalls(organizationId: number, limit: number = 50): Promise<any> {
     return this.prisma.call.findMany({
+      where: { organizationId },
       take: limit,
       orderBy: { callDate: 'desc' },
       include: {
@@ -108,7 +113,7 @@ export class CompanyService {
   }
 
   // Birlashtirilgan statistika - barcha endpoint larni bir joyga birlashtiradi
-  async getUnifiedStatistics(filters: UnifiedStatisticsDto): Promise<any> {
+  async getUnifiedStatistics(organizationId: number, filters: UnifiedStatisticsDto): Promise<any> {
     const {
       type,
       dateFrom,
@@ -159,7 +164,7 @@ export class CompanyService {
 
       // Agar type ALL yoki SIPUNI bo'lsa
       if (type === StatisticsType.ALL || type === StatisticsType.SIPUNI) {
-        result.data.sipuni = await this.getFilteredSipuniStats(filters);
+        result.data.sipuni = await this.getFilteredSipuniStats(organizationId, filters);
       }
 
       // Qo'shimcha ma'lumotlar
@@ -340,6 +345,7 @@ export class CompanyService {
 
   // Filterlangan Sipuni statistikalari
   private async getFilteredSipuniStats(
+    organizationId: number,
     filters: UnifiedStatisticsDto,
   ): Promise<any> {
     try {
@@ -356,6 +362,7 @@ export class CompanyService {
 
       // Sipuni dan call records olish
       const sipuniRecords: any[] = await this.sipuniService.fetchCallRecords(
+        organizationId,
         fromDate,
         toDate,
       );

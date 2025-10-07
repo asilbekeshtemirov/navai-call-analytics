@@ -90,4 +90,19 @@ export class UpdateSettingsDto {
   @IsOptional()
   @IsEnum(DataSource)
   dataSource?: DataSource;
+
+  @ApiPropertyOptional({
+    description: 'Cron schedule for automatic sync (e.g., "50 23 * * *" for 23:50 daily, "0 22 * * *" for 22:00 daily)',
+    example: '0 22 * * *',
+  })
+  @IsOptional()
+  @IsString()
+  syncSchedule?: string;
+
+  @ApiPropertyOptional({
+    description: 'Enable automatic sync on application startup (from month start to current date)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  autoSyncOnStartup?: boolean;
 }

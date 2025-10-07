@@ -3,7 +3,7 @@ export declare class SipuniController {
     private readonly sipuniService;
     private readonly logger;
     constructor(sipuniService: SipuniService);
-    testConnection(): Promise<{
+    testConnection(organizationId: number): Promise<{
         success: boolean;
         message: string;
         config: {
@@ -19,7 +19,7 @@ export declare class SipuniController {
         timestamp: string;
         config?: undefined;
     }>;
-    syncAndProcess(limit?: string): Promise<{
+    syncAndProcess(organizationId: number, limit?: string): Promise<{
         success: boolean;
         message: string;
         recordsProcessed: number;

@@ -267,6 +267,7 @@ let CallService = CallService_1 = class CallService {
         }
         const session = await this.prisma.callSession.create({
             data: {
+                organizationId: 1,
                 sessionId,
                 status: 'PENDING',
                 totalNumbers: totalNumbers,
@@ -313,8 +314,10 @@ let CallService = CallService_1 = class CallService {
             throw e;
         }
     }
-    async findAll(filters) {
-        const where = {};
+    async findAll(organizationId, filters) {
+        const where = {
+            organizationId,
+        };
         if (filters?.branchId)
             where.branchId = filters.branchId;
         if (filters?.departmentId)
@@ -344,9 +347,12 @@ let CallService = CallService_1 = class CallService {
             orderBy: { createdAt: 'desc' },
         });
     }
-    async findOne(id) {
-        return this.prisma.call.findUnique({
-            where: { id },
+    async findOne(organizationId, id) {
+        return this.prisma.call.findFirst({
+            where: {
+                id,
+                organizationId,
+            },
             include: {
                 employee: true,
                 manager: true,

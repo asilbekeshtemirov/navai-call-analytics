@@ -21,7 +21,7 @@ let CompanyService = class CompanyService {
         this.statisticsService = statisticsService;
         this.sipuniService = sipuniService;
     }
-    async getEmployeesPerformance(period = 'today') {
+    async getEmployeesPerformance(organizationId, period = 'today') {
         let startDate;
         let endDate = new Date();
         switch (period) {
@@ -39,7 +39,10 @@ let CompanyService = class CompanyService {
                 endDate = new Date();
         }
         const employees = await this.prisma.user.findMany({
-            where: { role: 'EMPLOYEE' },
+            where: {
+                organizationId,
+                role: 'EMPLOYEE'
+            },
             select: {
                 id: true,
                 firstName: true,
@@ -50,6 +53,7 @@ let CompanyService = class CompanyService {
         const performance = await Promise.all(employees.map(async (employee) => {
             const calls = await this.prisma.call.findMany({
                 where: {
+                    organizationId,
                     employeeId: employee.id,
                     status: 'DONE',
                     callDate: {
@@ -81,8 +85,9 @@ let CompanyService = class CompanyService {
         }));
         return performance.sort((a, b) => b.stats.totalCalls - a.stats.totalCalls);
     }
-    async getRecentCalls(limit = 50) {
+    async getRecentCalls(organizationId, limit = 50) {
         return this.prisma.call.findMany({
+            where: { organizationId },
             take: limit,
             orderBy: { callDate: 'desc' },
             include: {
@@ -96,7 +101,7 @@ let CompanyService = class CompanyService {
             },
         });
     }
-    async getUnifiedStatistics(filters) {
+    async getUnifiedStatistics(organizationId, filters) {
         const { type, dateFrom, dateTo, extCode, employeeId, departmentId, branchId, } = filters;
         const startDate = dateFrom ? new Date(dateFrom) : null;
         const endDate = dateTo ? new Date(dateTo) : null;
@@ -126,7 +131,7 @@ let CompanyService = class CompanyService {
                 result.data.dashboard = await this.getFilteredDashboardData(filters);
             }
             if (type === StatisticsType.ALL || type === StatisticsType.SIPUNI) {
-                result.data.sipuni = await this.getFilteredSipuniStats(filters);
+                result.data.sipuni = await this.getFilteredSipuniStats(organizationId, filters);
             }
             result.data.summary = await this.getFilteredSummary(filters);
             return result;
@@ -248,7 +253,7 @@ let CompanyService = class CompanyService {
     async getFilteredDashboardData(filters) {
         return await this.getFilteredOverview(filters);
     }
-    async getFilteredSipuniStats(filters) {
+    async getFilteredSipuniStats(organizationId, filters) {
         try {
             const { dateFrom, dateTo } = filters;
             const fromDate = dateFrom
@@ -257,7 +262,7 @@ let CompanyService = class CompanyService {
             const toDate = dateTo
                 ? new Date(dateTo).toLocaleDateString('ru-RU')
                 : new Date().toLocaleDateString('ru-RU');
-            const sipuniRecords = await this.sipuniService.fetchCallRecords(fromDate, toDate);
+            const sipuniRecords = await this.sipuniService.fetchCallRecords(organizationId, fromDate, toDate);
             const totalSipuniCalls = sipuniRecords.length;
             const totalSipuniDuration = sipuniRecords.reduce((sum, record) => sum + (record.duration || 0), 0);
             const processedCalls = await this.prisma.call.count({
