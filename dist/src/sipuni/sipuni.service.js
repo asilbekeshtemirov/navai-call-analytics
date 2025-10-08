@@ -64,10 +64,8 @@ let SipuniService = SipuniService_1 = class SipuniService {
                         await this.setupDynamicCronJob(org.id, org.name, settings.syncSchedule);
                     }
                     if (settings?.autoSyncOnStartup) {
-                        this.logger.log(`[STARTUP] Auto-sync enabled for ${org.name}, syncing from month start...`);
-                        await this.updateCSVFromSipuni(org.id);
-                        await this.updateEmployeesFromCSV(org.id);
-                        await this.syncFromMonthStart(org.id);
+                        this.logger.log(`[STARTUP] Auto-sync is enabled for ${org.name}, but skipping startup sync to prevent automatic execution`);
+                        this.logger.log(`[STARTUP] To manually sync, use the API endpoint or frontend interface`);
                     }
                     else {
                         this.logger.log(`[STARTUP] Auto-sync disabled for ${org.name}, skipping...`);
@@ -416,7 +414,16 @@ let SipuniService = SipuniService_1 = class SipuniService {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 responseType: 'arraybuffer',
                 timeout: 60000,
+                validateStatus: (status) => status < 500,
             });
+            if (response.status === 404) {
+                this.logger.warn(`[DOWNLOAD] Recording not found (404) for recordId: ${recordId}`);
+                throw new Error('Recording not found (404)');
+            }
+            if (response.status !== 200) {
+                this.logger.warn(`[DOWNLOAD] Unexpected status ${response.status} for recordId: ${recordId}`);
+                throw new Error(`Unexpected status: ${response.status}`);
+            }
             fs.writeFileSync(filepath, response.data);
             const sizeKB = Math.round(response.data.length / 1024);
             this.logger.log(`[DOWNLOAD] Downloaded ${sizeKB} KB to ${filepath}`);
@@ -497,8 +504,18 @@ let SipuniService = SipuniService_1 = class SipuniService {
                     const hasRecording = record.recordId && record.recordId.trim() !== '';
                     let audioFile = 'no-audio.mp3';
                     if (hasRecording) {
-                        const filename = `sipuni_${record.time.replace(/[:\s]/g, '_')}`;
-                        audioFile = await this.downloadRecordingById(employee.organizationId, record.recordId, filename);
+                        try {
+                            const filename = `sipuni_${record.time.replace(/[:\s]/g, '_')}`;
+                            audioFile = await this.downloadRecordingById(employee.organizationId, record.recordId, filename);
+                        }
+                        catch (downloadError) {
+                            if (downloadError.message.includes('404') || downloadError.message.includes('not found')) {
+                                this.logger.warn(`[SYNC] Recording not available for ${record.recordId}, skipping call creation`);
+                                skipped++;
+                                continue;
+                            }
+                            throw downloadError;
+                        }
                     }
                     const callDate = this.parseSipuniDate(record.time);
                     const call = await this.prisma.call.create({
