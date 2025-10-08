@@ -93,16 +93,8 @@ export class SipuniService implements OnModuleInit {
 
           // Auto-sync from month start if enabled
           if (settings?.autoSyncOnStartup) {
-            this.logger.log(`[STARTUP] Auto-sync enabled for ${org.name}, syncing from month start...`);
-
-            // First: Update CSV with fresh data from Sipuni
-            await this.updateCSVFromSipuni(org.id);
-
-            // Second: Update employees from CSV
-            await this.updateEmployeesFromCSV(org.id);
-
-            // Third: Sync and process recordings
-            await this.syncFromMonthStart(org.id);
+            this.logger.log(`[STARTUP] Auto-sync is enabled for ${org.name}, but skipping startup sync to prevent automatic execution`);
+            this.logger.log(`[STARTUP] To manually sync, use the API endpoint or frontend interface`);
           } else {
             this.logger.log(`[STARTUP] Auto-sync disabled for ${org.name}, skipping...`);
           }
@@ -639,8 +631,20 @@ export class SipuniService implements OnModuleInit {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           responseType: 'arraybuffer',
           timeout: 60000,
+          validateStatus: (status) => status < 500, // Accept 4xx errors
         },
       );
+
+      // Check if response is 404 or other error
+      if (response.status === 404) {
+        this.logger.warn(`[DOWNLOAD] Recording not found (404) for recordId: ${recordId}`);
+        throw new Error('Recording not found (404)');
+      }
+
+      if (response.status !== 200) {
+        this.logger.warn(`[DOWNLOAD] Unexpected status ${response.status} for recordId: ${recordId}`);
+        throw new Error(`Unexpected status: ${response.status}`);
+      }
 
       fs.writeFileSync(filepath, response.data);
       const sizeKB = Math.round(response.data.length / 1024);
@@ -770,12 +774,24 @@ export class SipuniService implements OnModuleInit {
           // Download recording if available
           let audioFile = 'no-audio.mp3'; // Default for unanswered calls
           if (hasRecording) {
-            const filename = `sipuni_${record.time.replace(/[:\s]/g, '_')}`;
-            audioFile = await this.downloadRecordingById(
-              employee.organizationId,
-              record.recordId,
-              filename,
-            );
+            try {
+              const filename = `sipuni_${record.time.replace(/[:\s]/g, '_')}`;
+              audioFile = await this.downloadRecordingById(
+                employee.organizationId,
+                record.recordId,
+                filename,
+              );
+            } catch (downloadError: any) {
+              // If recording download fails (404 or other error), skip this call
+              if (downloadError.message.includes('404') || downloadError.message.includes('not found')) {
+                this.logger.warn(
+                  `[SYNC] Recording not available for ${record.recordId}, skipping call creation`,
+                );
+                skipped++;
+                continue; // Skip to next record
+              }
+              throw downloadError; // Re-throw other errors
+            }
           }
 
           // Parse call date
