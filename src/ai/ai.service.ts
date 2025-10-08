@@ -52,18 +52,16 @@ export class AiService {
       this.config.get<string>('STT_API_URL') ||
       'https://ai.navai.pro/v1/asr/transcribe';
 
-    // Check if file exists
     if (!fs.existsSync(audioFileUrl)) {
       this.logger.error(`Audio file not found: ${audioFileUrl}`);
       return [];
     }
 
     try {
-      // Create form data with the audio file
       const formData = new FormData();
       formData.append('file', fs.createReadStream(audioFileUrl));
       formData.append('diarization', 'true');
-      formData.append('language', 'uz'); // Uzbek language
+      formData.append('language', 'uz'); 
 
       this.logger.log(`[STT] Uploading audio file to: ${sttApiUrl}`);
       this.logger.log(`[STT] File path: ${audioFileUrl}`);
@@ -75,7 +73,7 @@ export class AiService {
         headers: {
           ...formData.getHeaders(),
         },
-        timeout: 300000, // 5 minutes timeout for large files
+        timeout: 300000,
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
       });
@@ -85,7 +83,6 @@ export class AiService {
         `[STT] Response data: ${JSON.stringify(response.data).substring(0, 500)}`,
       );
 
-      // Parse the response based on Navai API format
       if (response.data && Array.isArray(response.data.segments)) {
         const segments: TranscriptSegment[] = response.data.segments.map(
           (seg: any) => ({
@@ -114,7 +111,6 @@ export class AiService {
         if (error.response) {
           this.logger.error(`[STT] Response status: ${error.response.status}`);
 
-          // 413 - File too large
           if (error.response.status === 413) {
             const fileSize = fs.statSync(audioFileUrl).size;
             const fileSizeMB = (fileSize / (1024 * 1024)).toFixed(2);
@@ -139,7 +135,6 @@ export class AiService {
       }
       this.logger.warn('[STT] Returning empty transcript due to error');
 
-      // Throw error so it can be caught by processCall and status set to ERROR
       throw error;
     }
   }
@@ -160,7 +155,6 @@ export class AiService {
 
     const prompt = this.buildAnalysisPrompt(fullTranscript, criteria, maxScore);
 
-    // Using Gemini API for LLM/Analysis
     try {
       const model = this.geminiAi.getGenerativeModel({
         model: 'gemini-2.5-flash',
@@ -169,7 +163,6 @@ export class AiService {
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
       });
 
-      // Assuming Gemini returns a text response that needs to be parsed into AnalysisResult
       const analysisText = geminiResponse.response.text();
       if (!analysisText) {
         throw new Error('Gemini API did not return any text for analysis.');
