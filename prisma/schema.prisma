@@ -206,7 +206,7 @@ model Setting {
 
   // Sync schedule configuration
   syncSchedule    String?      @default("50 23 * * *") @db.VarChar(50)  // Cron format: "50 23 * * *" means 23:50 daily
-  autoSyncOnStartup Boolean    @default(true)  // Auto sync from month start on app startup
+  autoSyncOnStartup Boolean    @default(false)  // Auto sync from month start on app startup
 
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
@@ -242,7 +242,7 @@ model CallResult {
   sessionId       String
   phoneNumber     String            @db.VarChar(32)
   callStatus      CallResultStatus
-  callDuration    Int?              // seconds
+  callDuration    Int?             
   operatorName    String?           @db.VarChar(255)
   operatorId      String?
   callStartTime   DateTime?
@@ -265,7 +265,7 @@ model DailyStats {
   date           DateTime     @db.Date
   extCode        String       @db.VarChar(10)
   callsCount     Int          @default(0)
-  totalDuration  Int          @default(0) // seconds
+  totalDuration  Int          @default(0) 
   averageScore   Float?
   totalScore     Float        @default(0)
   createdAt      DateTime     @default(now())
@@ -284,7 +284,7 @@ model MonthlyStats {
   month          Int
   extCode        String       @db.VarChar(10)
   callsCount     Int          @default(0)
-  totalDuration  Int          @default(0) // seconds
+  totalDuration  Int          @default(0) 
   averageScore   Float?
   totalScore     Float        @default(0)
   createdAt      DateTime     @default(now())
@@ -334,6 +334,6 @@ enum CallResultStatus {
   FAILED                // O'chirilgan/mavjud emas
   CONNECTED_TO_OPERATOR // Operator bilan bog'landi
   REJECTED              // Rad etildi
-  INVALID_NUMBER        // Noto'g'ri raqam
-  NETWORK_ERROR         // Tarmoq xatosi
+  INVALID_NUMBER        
+  NETWORK_ERROR         
 }
