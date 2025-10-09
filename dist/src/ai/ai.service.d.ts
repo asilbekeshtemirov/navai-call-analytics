@@ -26,7 +26,8 @@ export declare class AiService {
     private readonly logger;
     private readonly geminiAi;
     constructor(prisma: PrismaService, config: ConfigService);
-    transcribeAudio(audioFileUrl: string): Promise<TranscriptSegment[]>;
+    transcribeAudio(audioFileUrl: string, retryCount?: number): Promise<TranscriptSegment[]>;
+    private shouldRetrySTT;
     analyzeTranscript(callId: string, segments: TranscriptSegment[]): Promise<AnalysisResult>;
     private buildAnalysisPrompt;
     processCall(callId: string): Promise<void>;

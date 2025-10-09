@@ -45,7 +45,7 @@ export class AiService {
     this.geminiAi = new GoogleGenerativeAI(geminiApiKey);
   }
 
-  async transcribeAudio(audioFileUrl: string): Promise<TranscriptSegment[]> {
+  async transcribeAudio(audioFileUrl: string, retryCount: number = 0): Promise<TranscriptSegment[]> {
     this.logger.log(`Transcribing audio from file: ${audioFileUrl}`);
 
     const sttApiUrl =
@@ -57,23 +57,34 @@ export class AiService {
       return [];
     }
 
+    const maxRetries = 3;
+    const fileStats = fs.statSync(audioFileUrl);
+    const fileSizeMB = (fileStats.size / (1024 * 1024)).toFixed(2);
+
+    // Dynamic timeout based on file size
+    // Base: 10 minutes (600000ms) + 2 minutes per MB
+    const baseTimeout = 600000; // 10 minutes base
+    const perMbTimeout = 120000; // 2 minutes per MB
+    const dynamicTimeout = baseTimeout + (fileStats.size / (1024 * 1024)) * perMbTimeout;
+    const timeout = Math.min(dynamicTimeout, 3600000); // Max 60 minutes (1 hour) for 50MB+ files
+
+    this.logger.log(`[STT] File size: ${fileSizeMB}MB, Timeout: ${Math.round(timeout / 1000)}s`);
+
     try {
       const formData = new FormData();
       formData.append('file', fs.createReadStream(audioFileUrl));
       formData.append('diarization', 'true');
-      formData.append('language', 'uz'); 
+      formData.append('language', 'uz');
 
       this.logger.log(`[STT] Uploading audio file to: ${sttApiUrl}`);
       this.logger.log(`[STT] File path: ${audioFileUrl}`);
-      this.logger.log(
-        `[STT] File size: ${fs.statSync(audioFileUrl).size} bytes`,
-      );
+      this.logger.log(`[STT] Attempt ${retryCount + 1}/${maxRetries + 1}`);
 
       const response = await axios.post(sttApiUrl, formData, {
         headers: {
           ...formData.getHeaders(),
         },
-        timeout: 300000,
+        timeout: timeout,
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
       });
@@ -108,13 +119,20 @@ export class AiService {
       if (axios.isAxiosError(error)) {
         this.logger.error(`[STT] Axios error: ${error.message}`);
         this.logger.error(`[STT] Error code: ${error.code}`);
+
+        // Check if we should retry
+        const shouldRetry = this.shouldRetrySTT(error, retryCount, maxRetries);
+
         if (error.response) {
           this.logger.error(`[STT] Response status: ${error.response.status}`);
 
           if (error.response.status === 413) {
-            const fileSize = fs.statSync(audioFileUrl).size;
-            const fileSizeMB = (fileSize / (1024 * 1024)).toFixed(2);
-            this.logger.warn(`[STT] File too large (${fileSizeMB}MB) - will be marked as ERROR for manual processing`);
+            this.logger.warn(`[STT] File too large (${fileSizeMB}MB) - Payload Too Large error`);
+            // Don't retry 413 errors, they won't succeed
+          } else if (shouldRetry) {
+            this.logger.warn(`[STT] Retrying... (${retryCount + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, 5000 * (retryCount + 1))); // Exponential backoff
+            return this.transcribeAudio(audioFileUrl, retryCount + 1);
           }
 
           this.logger.error(
@@ -125,7 +143,12 @@ export class AiService {
           );
         } else if (error.request) {
           this.logger.error('[STT] No response received from server');
-          this.logger.error(`[STT] Request details: ${error.request}`);
+
+          if (shouldRetry) {
+            this.logger.warn(`[STT] Retrying after network error... (${retryCount + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, 5000 * (retryCount + 1)));
+            return this.transcribeAudio(audioFileUrl, retryCount + 1);
+          }
         }
       } else if (error instanceof Error) {
         this.logger.error(`[STT] Error: ${error.message}`);
@@ -133,10 +156,43 @@ export class AiService {
       } else {
         this.logger.error('[STT] Unknown error occurred');
       }
-      this.logger.warn('[STT] Returning empty transcript due to error');
 
+      this.logger.warn('[STT] All retry attempts exhausted or non-retryable error');
       throw error;
     }
+  }
+
+  /**
+   * Determine if STT request should be retried
+   */
+  private shouldRetrySTT(error: any, retryCount: number, maxRetries: number): boolean {
+    if (retryCount >= maxRetries) {
+      return false; // Max retries reached
+    }
+
+    if (axios.isAxiosError(error)) {
+      // Retry on timeout
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        return true;
+      }
+
+      // Retry on network errors
+      if (error.code === 'ECONNRESET' || error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT') {
+        return true;
+      }
+
+      // Retry on 5xx server errors
+      if (error.response && error.response.status >= 500 && error.response.status < 600) {
+        return true;
+      }
+
+      // Retry on 429 (Too Many Requests)
+      if (error.response && error.response.status === 429) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   async analyzeTranscript(

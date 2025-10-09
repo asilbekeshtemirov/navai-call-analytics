@@ -79,7 +79,7 @@ export class CallController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Get all calls with filters' })
   @ApiQuery({ name: 'branchId', required: false, description: "Ixtiyoriy: Filial ID si bo'yicha filter" })
   @ApiQuery({ name: 'departmentId', required: false, description: "Ixtiyoriy: Bo'lim ID si bo'yicha filter" })
@@ -100,7 +100,7 @@ export class CallController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Get call by ID with full details' })
   findOne(
     @OrganizationId() organizationId: number,
@@ -110,7 +110,7 @@ export class CallController {
   }
 
   @Get(':id/transcript')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Get call transcript segments' })
   getTranscript(@Param('id') id: string) {
     return this.callService.getTranscript(id);

@@ -10,7 +10,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 @ApiBearerAuth('access-token')
 @Controller('downloader')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
+@Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
 export class DownloaderController {
   constructor(private readonly downloaderService: DownloaderService) {}
 

@@ -11,7 +11,7 @@ import { ConfigService } from '@nestjs/config';
 @ApiTags('sipuni')
 @Controller('sipuni')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth()
+@ApiBearerAuth('access-token')
 export class SipuniController {
   private readonly logger = new Logger(SipuniController.name);
 
@@ -21,8 +21,8 @@ export class SipuniController {
   ) {}
 
   @Get('test-connection')
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Test Sipuni API connection (ADMIN only)' })
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Test Sipuni API connection (ADMIN & SUPERADMIN only)' })
   @ApiResponse({ status: 200, description: 'Connection test result' })
   async testConnection(@OrganizationId() organizationId: number) {
     try {
@@ -49,9 +49,9 @@ export class SipuniController {
   }
 
   @Post('sync-and-process')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
   @ApiOperation({
-    summary: "Sipuni ma'lumotlarini yuklab olib tahlil qilish (STT + AI) - ADMIN only",
+    summary: "Sipuni ma'lumotlarini yuklab olib tahlil qilish (STT + AI) - ADMIN & SUPERADMIN only",
     description: "from va to parametrlari: DD.MM.YYYY formatida (masalan: 01.10.2025)",
   })
   @ApiResponse({ status: 200, description: 'Sync and process completed' })

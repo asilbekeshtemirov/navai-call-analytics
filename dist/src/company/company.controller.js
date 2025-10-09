@@ -36,7 +36,7 @@ let CompanyController = class CompanyController {
 };
 __decorate([
     Get('employees/performance'),
-    Roles(UserRole.ADMIN, UserRole.MANAGER),
+    Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERADMIN),
     ApiOperation({ summary: 'Barcha xodimlar performance' }),
     ApiQuery({
         name: 'period',
@@ -51,7 +51,7 @@ __decorate([
 ], CompanyController.prototype, "getEmployeesPerformance", null);
 __decorate([
     Get('calls/recent'),
-    Roles(UserRole.ADMIN, UserRole.MANAGER),
+    Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERADMIN),
     ApiOperation({ summary: "So'nggi qo'ng'iroqlar" }),
     ApiQuery({ name: 'limit', required: false, type: Number }),
     __param(0, OrganizationId()),
@@ -62,7 +62,7 @@ __decorate([
 ], CompanyController.prototype, "getRecentCalls", null);
 __decorate([
     Get('statistics'),
-    Roles(UserRole.ADMIN, UserRole.MANAGER),
+    Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERADMIN),
     ApiOperation({
         summary: 'Birlashtirilgan statistika - barcha statistika turlarini bir joyda olish',
         description: "Bu endpoint orqali overview, daily, monthly, dashboard ma'lumotlarini sana oralig'i bilan filter qilish mumkin",

@@ -20,7 +20,8 @@ let RolesGuard = RolesGuard_1 = class RolesGuard {
     }
     canActivate(context) {
         const requiredRoles = this.reflector.getAllAndOverride(ROLES_KEY, [context.getHandler(), context.getClass()]);
-        if (!requiredRoles) {
+        if (!requiredRoles || requiredRoles.length === 0) {
+            this.logger.debug('[ROLES] No roles specified - allowing access (authenticated users only)');
             return true;
         }
         const { user } = context.switchToHttp().getRequest();
@@ -29,11 +30,15 @@ let RolesGuard = RolesGuard_1 = class RolesGuard {
             return false;
         }
         if (user.role === UserRole.SUPERADMIN) {
+            this.logger.debug(`[ROLES] SUPERADMIN access granted for ${user.phone}`);
             return true;
         }
         const hasRole = requiredRoles.some((role) => user.role === role);
         if (!hasRole) {
-            this.logger.warn(`[ROLES] Access denied - User role: ${user.role}, Required: ${requiredRoles.join(', ')}`);
+            this.logger.warn(`[ROLES] Access denied - User: ${user.phone}, Role: ${user.role}, Required: ${requiredRoles.join(', ')}`);
+        }
+        else {
+            this.logger.debug(`[ROLES] Access granted - User: ${user.phone}, Role: ${user.role}`);
         }
         return hasRole;
     }

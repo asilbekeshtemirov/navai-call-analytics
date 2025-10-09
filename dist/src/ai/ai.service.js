@@ -30,7 +30,7 @@ let AiService = AiService_1 = class AiService {
         }
         this.geminiAi = new GoogleGenerativeAI(geminiApiKey);
     }
-    async transcribeAudio(audioFileUrl) {
+    async transcribeAudio(audioFileUrl, retryCount = 0) {
         this.logger.log(`Transcribing audio from file: ${audioFileUrl}`);
         const sttApiUrl = this.config.get('STT_API_URL') ||
             'https://ai.navai.pro/v1/asr/transcribe';
@@ -38,6 +38,14 @@ let AiService = AiService_1 = class AiService {
             this.logger.error(`Audio file not found: ${audioFileUrl}`);
             return [];
         }
+        const maxRetries = 3;
+        const fileStats = fs.statSync(audioFileUrl);
+        const fileSizeMB = (fileStats.size / (1024 * 1024)).toFixed(2);
+        const baseTimeout = 600000;
+        const perMbTimeout = 120000;
+        const dynamicTimeout = baseTimeout + (fileStats.size / (1024 * 1024)) * perMbTimeout;
+        const timeout = Math.min(dynamicTimeout, 3600000);
+        this.logger.log(`[STT] File size: ${fileSizeMB}MB, Timeout: ${Math.round(timeout / 1000)}s`);
         try {
             const formData = new FormData();
             formData.append('file', fs.createReadStream(audioFileUrl));
@@ -45,12 +53,12 @@ let AiService = AiService_1 = class AiService {
             formData.append('language', 'uz');
             this.logger.log(`[STT] Uploading audio file to: ${sttApiUrl}`);
             this.logger.log(`[STT] File path: ${audioFileUrl}`);
-            this.logger.log(`[STT] File size: ${fs.statSync(audioFileUrl).size} bytes`);
+            this.logger.log(`[STT] Attempt ${retryCount + 1}/${maxRetries + 1}`);
             const response = await axios.post(sttApiUrl, formData, {
                 headers: {
                     ...formData.getHeaders(),
                 },
-                timeout: 300000,
+                timeout: timeout,
                 maxContentLength: Infinity,
                 maxBodyLength: Infinity,
             });
@@ -74,19 +82,27 @@ let AiService = AiService_1 = class AiService {
             if (axios.isAxiosError(error)) {
                 this.logger.error(`[STT] Axios error: ${error.message}`);
                 this.logger.error(`[STT] Error code: ${error.code}`);
+                const shouldRetry = this.shouldRetrySTT(error, retryCount, maxRetries);
                 if (error.response) {
                     this.logger.error(`[STT] Response status: ${error.response.status}`);
                     if (error.response.status === 413) {
-                        const fileSize = fs.statSync(audioFileUrl).size;
-                        const fileSizeMB = (fileSize / (1024 * 1024)).toFixed(2);
-                        this.logger.warn(`[STT] File too large (${fileSizeMB}MB) - will be marked as ERROR for manual processing`);
+                        this.logger.warn(`[STT] File too large (${fileSizeMB}MB) - Payload Too Large error`);
+                    }
+                    else if (shouldRetry) {
+                        this.logger.warn(`[STT] Retrying... (${retryCount + 1}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, 5000 * (retryCount + 1)));
+                        return this.transcribeAudio(audioFileUrl, retryCount + 1);
                     }
                     this.logger.error(`[STT] Response data: ${JSON.stringify(error.response.data)}`);
                     this.logger.error(`[STT] Response headers: ${JSON.stringify(error.response.headers)}`);
                 }
                 else if (error.request) {
                     this.logger.error('[STT] No response received from server');
-                    this.logger.error(`[STT] Request details: ${error.request}`);
+                    if (shouldRetry) {
+                        this.logger.warn(`[STT] Retrying after network error... (${retryCount + 1}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, 5000 * (retryCount + 1)));
+                        return this.transcribeAudio(audioFileUrl, retryCount + 1);
+                    }
                 }
             }
             else if (error instanceof Error) {
@@ -96,9 +112,29 @@ let AiService = AiService_1 = class AiService {
             else {
                 this.logger.error('[STT] Unknown error occurred');
             }
-            this.logger.warn('[STT] Returning empty transcript due to error');
+            this.logger.warn('[STT] All retry attempts exhausted or non-retryable error');
             throw error;
         }
+    }
+    shouldRetrySTT(error, retryCount, maxRetries) {
+        if (retryCount >= maxRetries) {
+            return false;
+        }
+        if (axios.isAxiosError(error)) {
+            if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+                return true;
+            }
+            if (error.code === 'ECONNRESET' || error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT') {
+                return true;
+            }
+            if (error.response && error.response.status >= 500 && error.response.status < 600) {
+                return true;
+            }
+            if (error.response && error.response.status === 429) {
+                return true;
+            }
+        }
+        return false;
     }
     async analyzeTranscript(callId, segments) {
         this.logger.log(`Analyzing transcript for call: ${callId}`);

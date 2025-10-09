@@ -7,7 +7,8 @@
       "Bash(curl -s -X POST http://localhost:3000/sipuni-integration -H \"Content-Type: application/json\" -H \"X-API-Key: navai-secure-webhook-key-2025\" -d \"{\"\"organizationId\"\": 1, \"\"limit\"\": 10}\")",
       "Read(//c/Users/user/OneDrive/Desktop/Navai.2/navai-analytics-frontend/**)",
       "Bash(npx ts-node:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

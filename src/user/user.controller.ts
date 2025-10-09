@@ -34,7 +34,7 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
   create(
     @OrganizationId() organizationId: number,
     @Body() createUserDto: CreateUserDto
@@ -43,14 +43,14 @@ export class UserController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'O\'z organizatsiyasidagi barcha userlarni ko\'rish' })
   findAll(@OrganizationId() organizationId: number) {
     return this.userService.findAll(organizationId);
   }
 
   @Get(':id/statistics')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERADMIN)
   @ApiOperation({
     summary:
       'Birlashtirilgan user statistika - barcha statistika turlarini bir joyda olish',
@@ -65,25 +65,25 @@ export class UserController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERADMIN)
   findOne(@Param('id') id: string) {
     return this.userService.findOneById(id);
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN) // Only ADMIN can update users
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN) // Only ADMIN & SUPERADMIN can update users
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.userService.update(id, updateUserDto);
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN) // Only ADMIN can delete users
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN) // Only ADMIN & SUPERADMIN can delete users
   remove(@Param('id') id: string) {
     return this.userService.remove(id);
   }
 
   @Patch(':id/role')
-  @Roles(UserRole.ADMIN) // Only ADMIN can update user roles
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN) // Only ADMIN & SUPERADMIN can update user roles
   @ApiOperation({ summary: 'Update user role' })
   async updateUserRole(
     @Param('id') id: string,

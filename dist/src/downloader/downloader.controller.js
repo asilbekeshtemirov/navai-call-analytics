@@ -35,7 +35,7 @@ DownloaderController = __decorate([
     ApiBearerAuth('access-token'),
     Controller('downloader'),
     UseGuards(JwtAuthGuard, RolesGuard),
-    Roles(UserRole.ADMIN),
+    Roles(UserRole.ADMIN, UserRole.SUPERADMIN),
     __metadata("design:paramtypes", [DownloaderService])
 ], DownloaderController);
 export { DownloaderController };

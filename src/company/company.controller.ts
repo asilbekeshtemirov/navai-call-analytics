@@ -21,7 +21,7 @@ export class CompanyController {
   constructor(private readonly companyService: CompanyService) {}
 
   @Get('employees/performance')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: 'Barcha xodimlar performance' })
   @ApiQuery({
     name: 'period',
@@ -36,7 +36,7 @@ export class CompanyController {
   }
 
   @Get('calls/recent')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERADMIN)
   @ApiOperation({ summary: "So'nggi qo'ng'iroqlar" })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   async getRecentCalls(
@@ -47,7 +47,7 @@ export class CompanyController {
   }
 
   @Get('statistics')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERADMIN)
   @ApiOperation({
     summary:
       'Birlashtirilgan statistika - barcha statistika turlarini bir joyda olish',

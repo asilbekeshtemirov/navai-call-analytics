@@ -51,7 +51,7 @@ let UserController = class UserController {
 };
 __decorate([
     Post(),
-    Roles(UserRole.ADMIN),
+    Roles(UserRole.ADMIN, UserRole.SUPERADMIN),
     __param(0, OrganizationId()),
     __param(1, Body()),
     __metadata("design:type", Function),
@@ -60,7 +60,7 @@ __decorate([
 ], UserController.prototype, "create", null);
 __decorate([
     Get(),
-    Roles(UserRole.ADMIN, UserRole.MANAGER),
+    Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERADMIN),
     ApiOperation({ summary: 'O\'z organizatsiyasidagi barcha userlarni ko\'rish' }),
     __param(0, OrganizationId()),
     __metadata("design:type", Function),
@@ -69,7 +69,7 @@ __decorate([
 ], UserController.prototype, "findAll", null);
 __decorate([
     Get(':id/statistics'),
-    Roles(UserRole.ADMIN, UserRole.MANAGER),
+    Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERADMIN),
     ApiOperation({
         summary: 'Birlashtirilgan user statistika - barcha statistika turlarini bir joyda olish',
         description: "Bu endpoint orqali daily, monthly, summary ma'lumotlarini sana oralig'i bilan filter qilish mumkin",
@@ -82,7 +82,7 @@ __decorate([
 ], UserController.prototype, "getUnifiedUserStatistics", null);
 __decorate([
     Get(':id'),
-    Roles(UserRole.ADMIN, UserRole.MANAGER),
+    Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERADMIN),
     __param(0, Param('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -90,7 +90,7 @@ __decorate([
 ], UserController.prototype, "findOne", null);
 __decorate([
     Patch(':id'),
-    Roles(UserRole.ADMIN),
+    Roles(UserRole.ADMIN, UserRole.SUPERADMIN),
     __param(0, Param('id')),
     __param(1, Body()),
     __metadata("design:type", Function),
@@ -99,7 +99,7 @@ __decorate([
 ], UserController.prototype, "update", null);
 __decorate([
     Delete(':id'),
-    Roles(UserRole.ADMIN),
+    Roles(UserRole.ADMIN, UserRole.SUPERADMIN),
     __param(0, Param('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -107,7 +107,7 @@ __decorate([
 ], UserController.prototype, "remove", null);
 __decorate([
     Patch(':id/role'),
-    Roles(UserRole.ADMIN),
+    Roles(UserRole.ADMIN, UserRole.SUPERADMIN),
     ApiOperation({ summary: 'Update user role' }),
     __param(0, Param('id')),
     __param(1, Body()),
