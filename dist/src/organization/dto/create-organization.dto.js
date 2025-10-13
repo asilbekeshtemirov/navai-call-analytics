@@ -8,7 +8,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, MinLength, Matches } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, MinLength, Matches, } from 'class-validator';
 export class CreateOrganizationDto {
     name;
     slug;
@@ -29,11 +29,14 @@ __decorate([
     __metadata("design:type", String)
 ], CreateOrganizationDto.prototype, "name", void 0);
 __decorate([
-    ApiProperty({ example: 'my-company', description: 'URL uchun slug (faqat kichik harflar, raqamlar va tire)' }),
+    ApiProperty({
+        example: 'my-company',
+        description: 'URL uchun slug (faqat kichik harflar, raqamlar va tire)',
+    }),
     IsString(),
     IsNotEmpty(),
     Matches(/^[a-z0-9-]+$/, {
-        message: 'Slug faqat kichik harflar, raqamlar va tire (-) dan iborat bo\'lishi kerak',
+        message: "Slug faqat kichik harflar, raqamlar va tire (-) dan iborat bo'lishi kerak",
     }),
     __metadata("design:type", String)
 ], CreateOrganizationDto.prototype, "slug", void 0);
@@ -50,13 +53,16 @@ __decorate([
     __metadata("design:type", String)
 ], CreateOrganizationDto.prototype, "branchName", void 0);
 __decorate([
-    ApiProperty({ example: 'Tashkent, Uzbekistan', description: 'Filial manzili' }),
+    ApiProperty({
+        example: 'Tashkent, Uzbekistan',
+        description: 'Filial manzili',
+    }),
     IsString(),
     IsNotEmpty(),
     __metadata("design:type", String)
 ], CreateOrganizationDto.prototype, "branchAddress", void 0);
 __decorate([
-    ApiProperty({ example: 'Sales Department', description: 'Bo\'lim nomi' }),
+    ApiProperty({ example: 'Sales Department', description: "Bo'lim nomi" }),
     IsString(),
     IsNotEmpty(),
     __metadata("design:type", String)
@@ -74,7 +80,10 @@ __decorate([
     __metadata("design:type", String)
 ], CreateOrganizationDto.prototype, "adminLastName", void 0);
 __decorate([
-    ApiProperty({ example: '+998901234567', description: 'Admin telefon raqami' }),
+    ApiProperty({
+        example: '+998901234567',
+        description: 'Admin telefon raqami',
+    }),
     IsString(),
     IsNotEmpty(),
     __metadata("design:type", String)
@@ -86,7 +95,10 @@ __decorate([
     __metadata("design:type", String)
 ], CreateOrganizationDto.prototype, "adminExtCode", void 0);
 __decorate([
-    ApiProperty({ example: 'admin123', description: 'Admin paroli (minimum 6 ta belgi)' }),
+    ApiProperty({
+        example: 'admin123',
+        description: 'Admin paroli (minimum 6 ta belgi)',
+    }),
     IsString(),
     IsNotEmpty(),
     MinLength(6),

@@ -407,4 +407,36 @@ export class StatisticsService {
           : 0,
     };
   }
+
+  async exportReports(filters: { dateFrom?: string, dateTo?: string, organizationId: number }) {
+    const where: any = {
+        organizationId: filters.organizationId,
+    };
+    if (filters.dateFrom || filters.dateTo) {
+        where.createdAt = {};
+        if (filters.dateFrom) where.createdAt.gte = new Date(filters.dateFrom);
+        if (filters.dateTo) where.createdAt.lte = new Date(filters.dateTo);
+    }
+
+    const reports = await this.prisma.report.findMany({
+        where,
+        include: {
+            user: true,
+        },
+        orderBy: {
+            createdAt: 'desc',
+        },
+    });
+
+    if (reports.length === 0) {
+        return 'No reports found for the given criteria.';
+    }
+
+    const header = 'ID,User ID,User Name,Date From,Date To,Total Calls,Total Duration,Avg Score,Summary,Created At\n';
+    const rows = reports.map(report => {
+        return `${report.id},${report.userId},${report.user.firstName} ${report.user.lastName},${report.dateFrom.toISOString()},${report.dateTo.toISOString()},${report.totalCalls},${report.totalDuration},${report.avgScore},"${report.summary}",${report.createdAt.toISOString()}`;
+    }).join('\n');
+
+    return header + rows;
+  }
 }

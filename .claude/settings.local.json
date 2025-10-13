@@ -12,7 +12,8 @@
       "Bash(netstat:*)",
       "Bash(findstr:*)",
       "Bash(taskkill:*)",
-      "Read(//c/Users/user/OneDrive/Desktop/Navai.2/**)"
+      "Read(//c/Users/user/OneDrive/Desktop/Navai.2/**)",
+      "Bash(npx prisma generate:*)"
     ],
     "deny": [],
     "ask": []

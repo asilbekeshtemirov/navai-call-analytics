@@ -92,7 +92,8 @@ export class UpdateSettingsDto {
   dataSource?: DataSource;
 
   @ApiPropertyOptional({
-    description: 'Cron schedule for automatic sync (e.g., "50 23 * * *" for 23:50 daily, "0 22 * * *" for 22:00 daily)',
+    description:
+      'Cron schedule for automatic sync (e.g., "50 23 * * *" for 23:50 daily, "0 22 * * *" for 22:00 daily)',
     example: '0 22 * * *',
   })
   @IsOptional()
@@ -100,7 +101,8 @@ export class UpdateSettingsDto {
   syncSchedule?: string;
 
   @ApiPropertyOptional({
-    description: 'Enable automatic sync on application startup (from month start to current date)',
+    description:
+      'Enable automatic sync on application startup (from month start to current date)',
   })
   @IsOptional()
   @IsBoolean()

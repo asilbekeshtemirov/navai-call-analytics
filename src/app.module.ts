@@ -8,11 +8,9 @@ import { AuthModule } from './auth/auth.module.js';
 import { UserModule } from './user/user.module.js';
 import { DepartmentModule } from './department/department.module.js';
 import { CriteriaModule } from './criteria/criteria.module.js';
-import { TopicModule } from './topic/topic.module.js';
-import { PromptModule } from './prompt/prompt.module.js';
-import { ReportModule } from './report/report.module.js';
+
 import { AiModule } from './ai/ai.module.js';
-import { DownloaderModule } from './downloader/downloader.module.js';
+
 import { StatisticsModule } from './statistics/statistics.module.js';
 import { PbxModule } from './pbx/pbx.module.js';
 import { CompanyModule } from './company/company.module.js';
@@ -32,11 +30,8 @@ import { OrganizationModule } from './organization/organization.module.js';
     UserModule,
     DepartmentModule,
     CriteriaModule,
-    TopicModule,
-    PromptModule,
-    ReportModule,
     AiModule,
-    DownloaderModule,
+
     StatisticsModule,
     PbxModule,
     CompanyModule,

@@ -30,9 +30,22 @@ let UserService = class UserService {
             },
         });
     }
-    findAll(organizationId) {
+    findAll(organizationId, filters) {
+        const where = {
+            organizationId,
+        };
+        if (filters?.branchId) {
+            where.branchId = filters.branchId;
+        }
+        if (filters?.departmentId) {
+            where.departmentId = filters.departmentId;
+        }
         return this.prisma.user.findMany({
-            where: organizationId ? { organizationId } : undefined,
+            where,
+            include: {
+                branch: true,
+                department: true,
+            },
         });
     }
     findOne(phone) {

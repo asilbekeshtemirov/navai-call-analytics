@@ -20,7 +20,23 @@ export declare class UserController {
         passwordHash: string;
         departmentId: string | null;
     }>;
-    findAll(organizationId: number): import("@prisma/client").Prisma.PrismaPromise<{
+    findAll(organizationId: number, branchId?: string, departmentId?: string): import("@prisma/client").Prisma.PrismaPromise<({
+        branch: {
+            id: string;
+            organizationId: number;
+            name: string;
+            address: string | null;
+            createdAt: Date;
+            updatedAt: Date;
+        } | null;
+        department: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            branchId: string;
+        } | null;
+    } & {
         id: string;
         organizationId: number;
         createdAt: Date;
@@ -33,7 +49,7 @@ export declare class UserController {
         role: import("@prisma/client").$Enums.UserRole;
         passwordHash: string;
         departmentId: string | null;
-    }[]>;
+    })[]>;
     getUnifiedUserStatistics(id: string, filters: UnifiedUserStatisticsDto): Promise<any>;
     findOne(id: string): import("@prisma/client").Prisma.Prisma__UserClient<{
         id: string;

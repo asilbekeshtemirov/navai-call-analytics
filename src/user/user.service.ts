@@ -29,9 +29,25 @@ export class UserService {
     });
   }
 
-  findAll(organizationId?: number) {
+  findAll(
+    organizationId?: number,
+    filters?: { branchId?: string; departmentId?: string },
+  ) {
+    const where: any = {
+      organizationId,
+    };
+    if (filters?.branchId) {
+      where.branchId = filters.branchId;
+    }
+    if (filters?.departmentId) {
+      where.departmentId = filters.departmentId;
+    }
     return this.prisma.user.findMany({
-      where: organizationId ? { organizationId } : undefined,
+      where,
+      include: {
+        branch: true,
+        department: true,
+      },
     });
   }
 

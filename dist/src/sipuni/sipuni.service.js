@@ -11,7 +11,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 var SipuniService_1;
-import { Injectable, Logger, forwardRef, Inject } from '@nestjs/common';
+import { Injectable, Logger, forwardRef, Inject, } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -457,7 +457,7 @@ let SipuniService = SipuniService_1 = class SipuniService {
             if (fromDate && toDate) {
                 const fromDateTime = this.parseSipuniDate(`${fromDate} 00:00:00`);
                 const toDateTime = this.parseSipuniDate(`${toDate} 23:59:59`);
-                filteredRecords = records.filter(record => {
+                filteredRecords = records.filter((record) => {
                     try {
                         const recordDate = this.parseSipuniDate(record.time);
                         return recordDate >= fromDateTime && recordDate <= toDateTime;
@@ -509,7 +509,8 @@ let SipuniService = SipuniService_1 = class SipuniService {
                             audioFile = await this.downloadRecordingById(employee.organizationId, record.recordId, filename);
                         }
                         catch (downloadError) {
-                            if (downloadError.message.includes('404') || downloadError.message.includes('not found')) {
+                            if (downloadError.message.includes('404') ||
+                                downloadError.message.includes('not found')) {
                                 this.logger.warn(`[SYNC] Recording not available for ${record.recordId}, skipping call creation`);
                                 skipped++;
                                 continue;
@@ -535,7 +536,7 @@ let SipuniService = SipuniService_1 = class SipuniService {
                     });
                     this.logger.log(`[SYNC] Created call record ${call.id} for ${externalId} (hasRecording: ${hasRecording})`);
                     if (hasRecording) {
-                        this.aiService.processCall(call.id).catch(error => {
+                        this.aiService.processCall(call.id).catch((error) => {
                             this.logger.error(`[SYNC] Background AI processing failed for ${call.id}: ${error.message}`);
                         });
                     }
@@ -547,7 +548,8 @@ let SipuniService = SipuniService_1 = class SipuniService {
                     await new Promise((resolve) => setTimeout(resolve, 10));
                 }
                 catch (error) {
-                    if (error.message && error.message.includes('Unique constraint failed')) {
+                    if (error.message &&
+                        error.message.includes('Unique constraint failed')) {
                         this.logger.warn(`[SYNC] Skipping duplicate record ${record.recordId} - already exists in database`);
                         skipped++;
                     }
@@ -580,7 +582,8 @@ let SipuniService = SipuniService_1 = class SipuniService {
         try {
             const csvPath = path.join(process.cwd(), 'sipuni-all-records.csv');
             const header = 'Тип;Статус;Время;Схема;Откуда;Куда;Кто ответил;Длительность звонка, сек;Длительность разговора, сек;Время ответа, сек;Оценка;ID записи;Метка;Теги;ID заказа звонка;Запись существует;Новый клиент\n';
-            const rows = records.map(r => [
+            const rows = records
+                .map((r) => [
                 r.type,
                 r.status,
                 r.time,
@@ -597,8 +600,9 @@ let SipuniService = SipuniService_1 = class SipuniService {
                 r.tags,
                 r.orderId,
                 r.recordExists,
-                r.newClient
-            ].join(';')).join('\n');
+                r.newClient,
+            ].join(';'))
+                .join('\n');
             fs.writeFileSync(csvPath, header + rows, 'utf-8');
             this.logger.log(`[CSV] Saved ${records.length} records to ${csvPath}`);
         }
@@ -626,8 +630,8 @@ let SipuniService = SipuniService_1 = class SipuniService {
                 return;
             }
             const csvContent = fs.readFileSync(csvPath, 'utf-8');
-            const lines = csvContent.split('\n').filter(l => l.trim());
-            const records = lines.slice(1).map(line => {
+            const lines = csvContent.split('\n').filter((l) => l.trim());
+            const records = lines.slice(1).map((line) => {
                 const cols = line.split(';');
                 return {
                     from: cols[4],
@@ -670,8 +674,30 @@ let SipuniService = SipuniService_1 = class SipuniService {
             }
             const bcrypt = await import('bcrypt');
             const passwordHash = await bcrypt.hash('password123', 10);
-            const firstNames = ['Alisher', 'Bobur', 'Dilshod', 'Eldor', 'Farrux', 'Gulnora', 'Hasan', 'Iroda', 'Jasur', 'Kamila'];
-            const lastNames = ['Navoiy', 'Mirzo', 'Qodirov', 'Tursunov', 'Usmonov', 'Karimova', 'Rashidov', 'Sadikova', 'Yusupov', 'Azizova'];
+            const firstNames = [
+                'Alisher',
+                'Bobur',
+                'Dilshod',
+                'Eldor',
+                'Farrux',
+                'Gulnora',
+                'Hasan',
+                'Iroda',
+                'Jasur',
+                'Kamila',
+            ];
+            const lastNames = [
+                'Navoiy',
+                'Mirzo',
+                'Qodirov',
+                'Tursunov',
+                'Usmonov',
+                'Karimova',
+                'Rashidov',
+                'Sadikova',
+                'Yusupov',
+                'Azizova',
+            ];
             let createdCount = 0;
             let updatedCount = 0;
             for (const [index, extCode] of uniqueExtCodes.entries()) {

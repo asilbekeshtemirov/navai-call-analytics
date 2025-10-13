@@ -23,7 +23,7 @@ export class BranchController {
   @ApiOperation({ summary: 'Yangi filial yaratish' })
   create(
     @OrganizationId() organizationId: number,
-    @Body() createBranchDto: CreateBranchDto
+    @Body() createBranchDto: CreateBranchDto,
   ) {
     return this.branchService.create(organizationId, createBranchDto);
   }
@@ -42,10 +42,7 @@ export class BranchController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Bitta filialni olish' })
-  findOne(
-    @OrganizationId() organizationId: number,
-    @Param('id') id: string
-  ) {
+  findOne(@OrganizationId() organizationId: number, @Param('id') id: string) {
     return this.branchService.findOne(organizationId, id);
   }
 

@@ -47,7 +47,14 @@ let CallController = CallController_1 = class CallController {
         return this.callService.startProcess();
     }
     findAll(organizationId, branchId, departmentId, employeeId, status, dateFrom, dateTo) {
-        return this.callService.findAll(organizationId, { branchId, departmentId, employeeId, status, dateFrom, dateTo });
+        return this.callService.findAll(organizationId, {
+            branchId,
+            departmentId,
+            employeeId,
+            status,
+            dateFrom,
+            dateTo,
+        });
     }
     findOne(organizationId, id) {
         return this.callService.findOne(organizationId, id);
@@ -98,12 +105,36 @@ __decorate([
     Get(),
     Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE, UserRole.SUPERADMIN),
     ApiOperation({ summary: 'Get all calls with filters' }),
-    ApiQuery({ name: 'branchId', required: false, description: "Ixtiyoriy: Filial ID si bo'yicha filter" }),
-    ApiQuery({ name: 'departmentId', required: false, description: "Ixtiyoriy: Bo'lim ID si bo'yicha filter" }),
-    ApiQuery({ name: 'employeeId', required: false, description: "Ixtiyoriy: Xodim ID si bo'yicha filter" }),
-    ApiQuery({ name: 'status', required: false, description: "Ixtiyoriy: Qo'ng'iroq holati bo'yicha filter (UPLOADED, PROCESSING, DONE, ERROR)" }),
-    ApiQuery({ name: 'dateFrom', required: false, description: 'Ixtiyoriy: Boshlanish sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)' }),
-    ApiQuery({ name: 'dateTo', required: false, description: 'Ixtiyoriy: Tugash sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)' }),
+    ApiQuery({
+        name: 'branchId',
+        required: false,
+        description: "Ixtiyoriy: Filial ID si bo'yicha filter",
+    }),
+    ApiQuery({
+        name: 'departmentId',
+        required: false,
+        description: "Ixtiyoriy: Bo'lim ID si bo'yicha filter",
+    }),
+    ApiQuery({
+        name: 'employeeId',
+        required: false,
+        description: "Ixtiyoriy: Xodim ID si bo'yicha filter",
+    }),
+    ApiQuery({
+        name: 'status',
+        required: false,
+        description: "Ixtiyoriy: Qo'ng'iroq holati bo'yicha filter (UPLOADED, PROCESSING, DONE, ERROR)",
+    }),
+    ApiQuery({
+        name: 'dateFrom',
+        required: false,
+        description: 'Ixtiyoriy: Boshlanish sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)',
+    }),
+    ApiQuery({
+        name: 'dateTo',
+        required: false,
+        description: 'Ixtiyoriy: Tugash sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)',
+    }),
     __param(0, OrganizationId()),
     __param(1, Query('branchId')),
     __param(2, Query('departmentId')),
@@ -150,7 +181,7 @@ __decorate([
       - totalNumbers, processedNumbers, connectedCalls, failedCalls: Statistika
 
       Real-time monitoring uchun har 3-5 sekundda polling qilish tavsiya etiladi.
-    `
+    `,
     }),
     __param(0, Param('sessionId')),
     __metadata("design:type", Function),
@@ -172,9 +203,13 @@ __decorate([
       - Status tavsifi (o'zbekcha)
 
       Sessions eng yangilaridan eskilariga qarab tartiblangan.
-    `
+    `,
     }),
-    ApiQuery({ name: 'limit', required: false, description: 'Limit the number of sessions returned (default: 50)' }),
+    ApiQuery({
+        name: 'limit',
+        required: false,
+        description: 'Limit the number of sessions returned (default: 50)',
+    }),
     __param(0, Query('limit')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),

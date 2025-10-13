@@ -10,8 +10,9 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Get, Query, Post, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, } from '@nestjs/swagger';
+import { Controller, Get, Query, Post, Body, Res } from '@nestjs/common';
+import { OrganizationId } from '../auth/organization-id.decorator.js';
+import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth, } from '@nestjs/swagger';
 import { StatisticsService } from './statistics.service.js';
 import { UnifiedStatisticsDto } from './dto/unified-statistics.dto.js';
 let StatisticsController = class StatisticsController {
@@ -21,6 +22,16 @@ let StatisticsController = class StatisticsController {
     }
     async getUnifiedStatistics(filters) {
         return this.statisticsService.getUnifiedStatistics(filters);
+    }
+    async exportReports(organizationId, res, dateFrom, dateTo) {
+        const csv = await this.statisticsService.exportReports({
+            dateFrom,
+            dateTo,
+            organizationId,
+        });
+        res.header('Content-Type', 'text/csv');
+        res.attachment('reports.csv');
+        return res.send(csv);
     }
     async calculateStats(body) {
         const date = new Date(body.date);
@@ -39,6 +50,19 @@ __decorate([
     __metadata("design:paramtypes", [UnifiedStatisticsDto]),
     __metadata("design:returntype", Promise)
 ], StatisticsController.prototype, "getUnifiedStatistics", null);
+__decorate([
+    Get('export'),
+    ApiOperation({ summary: 'Export reports to a CSV file' }),
+    ApiQuery({ name: 'dateFrom', required: false }),
+    ApiQuery({ name: 'dateTo', required: false }),
+    __param(0, OrganizationId()),
+    __param(1, Res()),
+    __param(2, Query('dateFrom')),
+    __param(3, Query('dateTo')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object, String, String]),
+    __metadata("design:returntype", Promise)
+], StatisticsController.prototype, "exportReports", null);
 __decorate([
     Post('calculate'),
     ApiOperation({

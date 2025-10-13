@@ -20,7 +20,7 @@ export class SettingsController {
   @ApiOperation({ summary: 'Update system settings' })
   update(
     @OrganizationId() organizationId: number,
-    @Body() updateSettingsDto: UpdateSettingsDto
+    @Body() updateSettingsDto: UpdateSettingsDto,
   ) {
     return this.settingsService.update(organizationId, updateSettingsDto);
   }

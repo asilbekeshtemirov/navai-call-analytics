@@ -11,8 +11,8 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 var SipuniController_1, SipuniWebhookController_1;
-import { Controller, Post, Get, Query, Logger, UseGuards, Headers, UnauthorizedException, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
+import { Controller, Post, Get, Query, Logger, UseGuards, Headers, UnauthorizedException, Body, } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiHeader, } from '@nestjs/swagger';
 import { SipuniService } from './sipuni.service.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/roles.guard.js';
@@ -68,7 +68,9 @@ let SipuniController = SipuniController_1 = class SipuniController {
 __decorate([
     Get('test-connection'),
     Roles(UserRole.ADMIN, UserRole.SUPERADMIN),
-    ApiOperation({ summary: 'Test Sipuni API connection (ADMIN & SUPERADMIN only)' }),
+    ApiOperation({
+        summary: 'Test Sipuni API connection (ADMIN & SUPERADMIN only)',
+    }),
     ApiResponse({ status: 200, description: 'Connection test result' }),
     __param(0, OrganizationId()),
     __metadata("design:type", Function),
@@ -80,7 +82,7 @@ __decorate([
     Roles(UserRole.ADMIN, UserRole.SUPERADMIN),
     ApiOperation({
         summary: "Sipuni ma'lumotlarini yuklab olib tahlil qilish (STT + AI) - ADMIN & SUPERADMIN only",
-        description: "from va to parametrlari: DD.MM.YYYY formatida (masalan: 01.10.2025)",
+        description: 'from va to parametrlari: DD.MM.YYYY formatida (masalan: 01.10.2025)',
     }),
     ApiResponse({ status: 200, description: 'Sync and process completed' }),
     __param(0, OrganizationId()),
@@ -142,7 +144,7 @@ __decorate([
     Post(),
     ApiOperation({
         summary: 'Webhook endpoint for Sipuni integration',
-        description: 'Public endpoint protected by API key. Requires X-API-Key header.'
+        description: 'Public endpoint protected by API key. Requires X-API-Key header.',
     }),
     ApiHeader({
         name: 'X-API-Key',

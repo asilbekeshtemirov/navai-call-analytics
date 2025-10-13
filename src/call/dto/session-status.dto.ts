@@ -9,7 +9,7 @@ export class SessionStatusDto {
 
   @ApiProperty({
     enum: ['PENDING', 'RUNNING', 'COMPLETED', 'FAILED'],
-    example: 'COMPLETED'
+    example: 'COMPLETED',
   })
   status: string;
 
@@ -19,23 +19,23 @@ export class SessionStatusDto {
   @ApiProperty({ example: 150, description: 'Qayta ishlangan raqamlar soni' })
   processedNumbers: number;
 
-  @ApiProperty({ example: 120, description: 'Muvaffaqiyatli qo\'ng\'iroqlar' })
+  @ApiProperty({ example: 120, description: "Muvaffaqiyatli qo'ng'iroqlar" })
   connectedCalls: number;
 
-  @ApiProperty({ example: 30, description: 'Muvaffaqiyatsiz qo\'ng\'iroqlar' })
+  @ApiProperty({ example: 30, description: "Muvaffaqiyatsiz qo'ng'iroqlar" })
   failedCalls: number;
 
   @ApiProperty({
     example: 'Call process completed successfully',
     nullable: true,
-    description: 'Remote serverdan qaytgan javob'
+    description: 'Remote serverdan qaytgan javob',
   })
   remoteResponse: string | null;
 
   @ApiProperty({
     example: null,
     nullable: true,
-    description: 'Xato xabari (agar bo\'lsa)'
+    description: "Xato xabari (agar bo'lsa)",
   })
   errorMessage: string | null;
 
@@ -45,14 +45,14 @@ export class SessionStatusDto {
   @ApiProperty({
     example: '2025-10-06T18:32:15.000Z',
     nullable: true,
-    description: 'Tugagan vaqti (agar tugagan bo\'lsa)'
+    description: "Tugagan vaqti (agar tugagan bo'lsa)",
   })
   completedAt: Date | null;
 
   @ApiProperty({
     example: 135,
     description: 'Davomiyligi (sekundlarda)',
-    nullable: true
+    nullable: true,
   })
   durationSeconds?: number;
 
@@ -64,7 +64,7 @@ export class SessionStatusDto {
 
   @ApiProperty({
     example: 'Qayta ishlanmoqda...',
-    description: 'Status tavsifi'
+    description: 'Status tavsifi',
   })
   statusDescription?: string;
 

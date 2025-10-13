@@ -8,7 +8,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsEnum, IsOptional, IsInt, IsDateString, IsUrl } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsInt, IsDateString, IsUrl, } from 'class-validator';
 export var CallResultStatus;
 (function (CallResultStatus) {
     CallResultStatus["ANSWERED"] = "ANSWERED";
@@ -55,13 +55,17 @@ __decorate([
       REJECTED - Rad etildi
       INVALID_NUMBER - Noto'g'ri raqam
       NETWORK_ERROR - Tarmoq xatosi
-    `
+    `,
     }),
     IsEnum(CallResultStatus),
     __metadata("design:type", String)
 ], CallResultDto.prototype, "callStatus", void 0);
 __decorate([
-    ApiProperty({ example: 45, required: false, description: 'Qo\'ng\'iroq davomiyligi (sekundlarda)' }),
+    ApiProperty({
+        example: 45,
+        required: false,
+        description: "Qo'ng'iroq davomiyligi (sekundlarda)",
+    }),
     IsOptional(),
     IsInt(),
     __metadata("design:type", Number)
@@ -91,13 +95,16 @@ __decorate([
     __metadata("design:type", String)
 ], CallResultDto.prototype, "callEndTime", void 0);
 __decorate([
-    ApiProperty({ example: 'https://recordings.example.com/call-12345.mp3', required: false }),
+    ApiProperty({
+        example: 'https://recordings.example.com/call-12345.mp3',
+        required: false,
+    }),
     IsOptional(),
     IsUrl(),
     __metadata("design:type", String)
 ], CallResultDto.prototype, "recordingUrl", void 0);
 __decorate([
-    ApiProperty({ example: 'Mijoz mahsulot haqida so\'radi', required: false }),
+    ApiProperty({ example: "Mijoz mahsulot haqida so'radi", required: false }),
     IsOptional(),
     IsString(),
     __metadata("design:type", String)
@@ -171,7 +178,7 @@ __decorate([
     __metadata("design:type", Date)
 ], CallResultResponseDto.prototype, "updatedAt", void 0);
 __decorate([
-    ApiProperty({ description: 'Status tavsifi o\'zbekcha' }),
+    ApiProperty({ description: "Status tavsifi o'zbekcha" }),
     __metadata("design:type", String)
 ], CallResultResponseDto.prototype, "statusDescription", void 0);
 //# sourceMappingURL=call-result.dto.js.map

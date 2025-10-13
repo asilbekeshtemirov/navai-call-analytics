@@ -41,7 +41,7 @@ __decorate([
     Roles(UserRole.SUPERADMIN),
     ApiOperation({
         summary: 'Yangi kompaniya yaratish (faqat SUPERADMIN)',
-        description: 'Yangi kompaniya, filial, bo\'lim, admin foydalanuvchi va standart sozlamalarni yaratadi'
+        description: "Yangi kompaniya, filial, bo'lim, admin foydalanuvchi va standart sozlamalarni yaratadi",
     }),
     __param(0, Body()),
     __metadata("design:type", Function),
@@ -51,7 +51,7 @@ __decorate([
 __decorate([
     Get(),
     Roles(UserRole.SUPERADMIN),
-    ApiOperation({ summary: 'Barcha kompaniyalarni ko\'rish (faqat SUPERADMIN)' }),
+    ApiOperation({ summary: "Barcha kompaniyalarni ko'rish (faqat SUPERADMIN)" }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
@@ -59,7 +59,7 @@ __decorate([
 __decorate([
     Get(':id'),
     Roles(UserRole.SUPERADMIN),
-    ApiOperation({ summary: 'Bitta kompaniyani ko\'rish (faqat SUPERADMIN)' }),
+    ApiOperation({ summary: "Bitta kompaniyani ko'rish (faqat SUPERADMIN)" }),
     __param(0, Param('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -68,7 +68,9 @@ __decorate([
 __decorate([
     Patch(':id/status'),
     Roles(UserRole.SUPERADMIN),
-    ApiOperation({ summary: 'Kompaniya holatini o\'zgartirish (faqat SUPERADMIN)' }),
+    ApiOperation({
+        summary: "Kompaniya holatini o'zgartirish (faqat SUPERADMIN)",
+    }),
     __param(0, Param('id')),
     __param(1, Body('isActive')),
     __metadata("design:type", Function),

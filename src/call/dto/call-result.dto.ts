@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsEnum, IsOptional, IsInt, IsDateString, IsUrl } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsOptional,
+  IsInt,
+  IsDateString,
+  IsUrl,
+} from 'class-validator';
 
 export enum CallResultStatus {
   ANSWERED = 'ANSWERED',
@@ -33,12 +40,16 @@ export class CallResultDto {
       REJECTED - Rad etildi
       INVALID_NUMBER - Noto'g'ri raqam
       NETWORK_ERROR - Tarmoq xatosi
-    `
+    `,
   })
   @IsEnum(CallResultStatus)
   callStatus: CallResultStatus;
 
-  @ApiProperty({ example: 45, required: false, description: 'Qo\'ng\'iroq davomiyligi (sekundlarda)' })
+  @ApiProperty({
+    example: 45,
+    required: false,
+    description: "Qo'ng'iroq davomiyligi (sekundlarda)",
+  })
   @IsOptional()
   @IsInt()
   callDuration?: number;
@@ -63,12 +74,15 @@ export class CallResultDto {
   @IsDateString()
   callEndTime?: string;
 
-  @ApiProperty({ example: 'https://recordings.example.com/call-12345.mp3', required: false })
+  @ApiProperty({
+    example: 'https://recordings.example.com/call-12345.mp3',
+    required: false,
+  })
   @IsOptional()
   @IsUrl()
   recordingUrl?: string;
 
-  @ApiProperty({ example: 'Mijoz mahsulot haqida so\'radi', required: false })
+  @ApiProperty({ example: "Mijoz mahsulot haqida so'radi", required: false })
   @IsOptional()
   @IsString()
   notes?: string;
@@ -114,6 +128,6 @@ export class CallResultResponseDto {
   @ApiProperty()
   updatedAt: Date;
 
-  @ApiProperty({ description: 'Status tavsifi o\'zbekcha' })
+  @ApiProperty({ description: "Status tavsifi o'zbekcha" })
   statusDescription?: string;
 }

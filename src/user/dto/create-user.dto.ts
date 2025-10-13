@@ -24,7 +24,10 @@ export class CreateUserDto {
   @IsNotEmpty()
   phone: string;
 
-  @ApiProperty({ required: false, description: 'Extension code (e.g., 201, 202)' })
+  @ApiProperty({
+    required: false,
+    description: 'Extension code (e.g., 201, 202)',
+  })
   @IsString()
   @IsOptional()
   extCode?: string;

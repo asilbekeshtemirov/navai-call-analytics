@@ -52,11 +52,23 @@ export class CallService {
         })
         .on('error', (err: any) => {
           if (err.level === 'client-authentication') {
-            reject(new Error('SSH authentication failed. Please check PRIVATE_KEY_BASE64 in .env file'));
+            reject(
+              new Error(
+                'SSH authentication failed. Please check PRIVATE_KEY_BASE64 in .env file',
+              ),
+            );
           } else if (err.code === 'ECONNREFUSED') {
-            reject(new Error(`Connection refused to ${params.host}:${params.port}. Check if SSH server is running`));
+            reject(
+              new Error(
+                `Connection refused to ${params.host}:${params.port}. Check if SSH server is running`,
+              ),
+            );
           } else if (err.code === 'ETIMEDOUT') {
-            reject(new Error(`Connection timeout to ${params.host}:${params.port}. Check firewall and network`));
+            reject(
+              new Error(
+                `Connection timeout to ${params.host}:${params.port}. Check firewall and network`,
+              ),
+            );
           } else {
             reject(new Error(`SSH connection error: ${err.message || err}`));
           }
@@ -79,34 +91,45 @@ export class CallService {
 
       conn
         .on('ready', () => {
-          conn.exec(
-            params.command,
-            (err: Error | undefined, stream: any) => {
-              if (err) {
+          conn.exec(params.command, (err: Error | undefined, stream: any) => {
+            if (err) {
+              conn.end();
+              return reject(
+                new Error(`Command execution error: ${err.message}`),
+              );
+            }
+            stream
+              .on('close', (code: number, signal: string) => {
                 conn.end();
-                return reject(new Error(`Command execution error: ${err.message}`));
-              }
-              stream
-                .on('close', (code: number, signal: string) => {
-                  conn.end();
-                  resolve({ stdout, stderr, code, signal });
-                })
-                .on('data', (data: Buffer) => {
-                  stdout += data.toString();
-                })
-                .stderr.on('data', (data: Buffer) => {
-                  stderr += data.toString();
-                });
-            },
-          );
+                resolve({ stdout, stderr, code, signal });
+              })
+              .on('data', (data: Buffer) => {
+                stdout += data.toString();
+              })
+              .stderr.on('data', (data: Buffer) => {
+                stderr += data.toString();
+              });
+          });
         })
         .on('error', (err: any) => {
           if (err.level === 'client-authentication') {
-            reject(new Error('SSH authentication failed. Please check PRIVATE_KEY_BASE64 in .env file'));
+            reject(
+              new Error(
+                'SSH authentication failed. Please check PRIVATE_KEY_BASE64 in .env file',
+              ),
+            );
           } else if (err.code === 'ECONNREFUSED') {
-            reject(new Error(`Connection refused to ${params.host}:${params.port}. Check if SSH server is running`));
+            reject(
+              new Error(
+                `Connection refused to ${params.host}:${params.port}. Check if SSH server is running`,
+              ),
+            );
           } else if (err.code === 'ETIMEDOUT') {
-            reject(new Error(`Connection timeout to ${params.host}:${params.port}. Check firewall and network`));
+            reject(
+              new Error(
+                `Connection timeout to ${params.host}:${params.port}. Check firewall and network`,
+              ),
+            );
           } else {
             reject(new Error(`SSH connection error: ${err.message || err}`));
           }
@@ -130,17 +153,23 @@ export class CallService {
     const REMOTE_PATH = this.configService.get<string>('REMOTE_PATH');
 
     if (!REMOTE_HOST || !REMOTE_USER || !REMOTE_PATH) {
-      throw new BadRequestException('SSH configuration is incomplete. Check REMOTE_HOST, REMOTE_USER, and REMOTE_PATH in .env');
+      throw new BadRequestException(
+        'SSH configuration is incomplete. Check REMOTE_HOST, REMOTE_USER, and REMOTE_PATH in .env',
+      );
     }
     if (!PRIVATE_KEY_BASE64) {
-      throw new BadRequestException('PRIVATE_KEY_BASE64 is not set in .env file. Please follow instructions in .env.example to generate it');
+      throw new BadRequestException(
+        'PRIVATE_KEY_BASE64 is not set in .env file. Please follow instructions in .env.example to generate it',
+      );
     }
 
     let PRIVATE_KEY: string;
     try {
       PRIVATE_KEY = Buffer.from(PRIVATE_KEY_BASE64, 'base64').toString('utf-8');
     } catch (err) {
-      throw new BadRequestException('PRIVATE_KEY_BASE64 is invalid. Make sure it is a valid base64 encoded string');
+      throw new BadRequestException(
+        'PRIVATE_KEY_BASE64 is invalid. Make sure it is a valid base64 encoded string',
+      );
     }
 
     const fileExtension = file.originalname.split('.').pop();
@@ -153,7 +182,9 @@ export class CallService {
         await workbook.xlsx.readFile(file.path);
         const worksheet = workbook.getWorksheet(1);
         if (!worksheet) {
-          throw new Error('The first worksheet is not found in the Excel file.');
+          throw new Error(
+            'The first worksheet is not found in the Excel file.',
+          );
         }
         const numbers: string[] = [];
         worksheet.eachRow((row) => {
@@ -178,7 +209,6 @@ export class CallService {
           remoteFilePath: REMOTE_PATH,
         });
 
-        
         return {
           ok: true,
           message: 'Excel file processed and uploaded successfully.',
@@ -189,14 +219,23 @@ export class CallService {
         this.logger.error('Excel upload or SSH error', e);
         throw e;
       } finally {
-        fs.unlink(file.path, (err) => { if (err) this.logger.error(`Failed to delete temp file: ${file.path}`, err); });
-        fs.unlink(localNumbersPath, (err) => { if (err && err.code !== 'ENOENT') this.logger.error(`Failed to delete temp file: ${localNumbersPath}`, err); });
+        fs.unlink(file.path, (err) => {
+          if (err)
+            this.logger.error(`Failed to delete temp file: ${file.path}`, err);
+        });
+        fs.unlink(localNumbersPath, (err) => {
+          if (err && err.code !== 'ENOENT')
+            this.logger.error(
+              `Failed to delete temp file: ${localNumbersPath}`,
+              err,
+            );
+        });
       }
     } else if (fileExtension === 'txt') {
       try {
         // Count numbers in txt file
         const content = fs.readFileSync(file.path, 'utf-8');
-        const numbers = content.split('\n').filter(line => line.trim());
+        const numbers = content.split('\n').filter((line) => line.trim());
         totalNumbers = numbers.length;
         this.logger.log(`Total numbers: ${totalNumbers}`);
 
@@ -219,11 +258,17 @@ export class CallService {
         this.logger.error('TXT upload or SSH error', e);
         throw e;
       } finally {
-        fs.unlink(file.path, (err) => { if (err) this.logger.error(`Failed to delete temp file: ${file.path}`, err); });
+        fs.unlink(file.path, (err) => {
+          if (err)
+            this.logger.error(`Failed to delete temp file: ${file.path}`, err);
+        });
       }
     } else {
       // Using fs.unlink to clean up the unwanted file immediately
-      fs.unlink(file.path, (err) => { if (err) this.logger.error(`Failed to delete temp file: ${file.path}`, err); });
+      fs.unlink(file.path, (err) => {
+        if (err)
+          this.logger.error(`Failed to delete temp file: ${file.path}`, err);
+      });
       throw new BadRequestException('Only .xlsx and .txt files are allowed!');
     }
   }
@@ -238,17 +283,23 @@ export class CallService {
     const REMOTE_PATH = this.configService.get<string>('REMOTE_PATH');
 
     if (!REMOTE_HOST || !REMOTE_USER || !REMOTE_COMMAND) {
-      throw new BadRequestException('SSH configuration is incomplete. Check REMOTE_HOST, REMOTE_USER, and REMOTE_COMMAND in .env');
+      throw new BadRequestException(
+        'SSH configuration is incomplete. Check REMOTE_HOST, REMOTE_USER, and REMOTE_COMMAND in .env',
+      );
     }
     if (!PRIVATE_KEY_BASE64) {
-      throw new BadRequestException('PRIVATE_KEY_BASE64 is not set in .env file. Please follow instructions in .env.example to generate it');
+      throw new BadRequestException(
+        'PRIVATE_KEY_BASE64 is not set in .env file. Please follow instructions in .env.example to generate it',
+      );
     }
 
     let PRIVATE_KEY: string;
     try {
       PRIVATE_KEY = Buffer.from(PRIVATE_KEY_BASE64, 'base64').toString('utf-8');
     } catch (err) {
-      throw new BadRequestException('PRIVATE_KEY_BASE64 is invalid. Make sure it is a valid base64 encoded string');
+      throw new BadRequestException(
+        'PRIVATE_KEY_BASE64 is invalid. Make sure it is a valid base64 encoded string',
+      );
     }
 
     // Generate unique session ID
@@ -336,14 +387,17 @@ export class CallService {
     }
   }
 
-  async findAll(organizationId: number, filters?: {
-    branchId?: string;
-    departmentId?: string;
-    employeeId?: string;
-    status?: string;
-    dateFrom?: string;
-    dateTo?: string;
-  }) {
+  async findAll(
+    organizationId: number,
+    filters?: {
+      branchId?: string;
+      departmentId?: string;
+      employeeId?: string;
+      status?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    },
+  ) {
     const where: any = {
       organizationId, // Multi-tenancy: Only show calls from user's organization
     };
@@ -412,12 +466,12 @@ export class CallService {
     let durationSeconds: number | null = null;
     if (session.completedAt) {
       durationSeconds = Math.floor(
-        (session.completedAt.getTime() - session.startedAt.getTime()) / 1000
+        (session.completedAt.getTime() - session.startedAt.getTime()) / 1000,
       );
     } else {
       // If still running, calculate duration from now
       durationSeconds = Math.floor(
-        (new Date().getTime() - session.startedAt.getTime()) / 1000
+        (new Date().getTime() - session.startedAt.getTime()) / 1000,
       );
     }
 
@@ -425,7 +479,7 @@ export class CallService {
     let progressPercentage = 0;
     if (session.totalNumbers > 0) {
       progressPercentage = Math.floor(
-        (session.processedNumbers / session.totalNumbers) * 100
+        (session.processedNumbers / session.totalNumbers) * 100,
       );
     } else {
       // If totalNumbers not set, use status-based percentage
@@ -461,7 +515,7 @@ export class CallService {
         statusDescription = 'Xatolik yuz berdi';
         break;
       default:
-        statusDescription = 'Noma\'lum status';
+        statusDescription = "Noma'lum status";
     }
 
     return {
@@ -471,7 +525,8 @@ export class CallService {
       statusDescription,
       // Additional computed fields
       isRunning: session.status === 'RUNNING',
-      isCompleted: session.status === 'COMPLETED' || session.status === 'FAILED',
+      isCompleted:
+        session.status === 'COMPLETED' || session.status === 'FAILED',
       hasError: session.status === 'FAILED' || !!session.errorMessage,
     };
   }
@@ -483,16 +538,16 @@ export class CallService {
     });
 
     // Enrich each session with computed fields
-    return sessions.map(session => {
+    return sessions.map((session) => {
       // Calculate duration
       let durationSeconds: number | null = null;
       if (session.completedAt) {
         durationSeconds = Math.floor(
-          (session.completedAt.getTime() - session.startedAt.getTime()) / 1000
+          (session.completedAt.getTime() - session.startedAt.getTime()) / 1000,
         );
       } else if (session.status === 'RUNNING') {
         durationSeconds = Math.floor(
-          (new Date().getTime() - session.startedAt.getTime()) / 1000
+          (new Date().getTime() - session.startedAt.getTime()) / 1000,
         );
       }
 
@@ -500,25 +555,43 @@ export class CallService {
       let progressPercentage = 0;
       if (session.totalNumbers > 0) {
         progressPercentage = Math.floor(
-          (session.processedNumbers / session.totalNumbers) * 100
+          (session.processedNumbers / session.totalNumbers) * 100,
         );
       } else {
         switch (session.status) {
-          case 'PENDING': progressPercentage = 0; break;
-          case 'RUNNING': progressPercentage = 50; break;
-          case 'COMPLETED': progressPercentage = 100; break;
-          case 'FAILED': progressPercentage = 0; break;
+          case 'PENDING':
+            progressPercentage = 0;
+            break;
+          case 'RUNNING':
+            progressPercentage = 50;
+            break;
+          case 'COMPLETED':
+            progressPercentage = 100;
+            break;
+          case 'FAILED':
+            progressPercentage = 0;
+            break;
         }
       }
 
       // Status description
       let statusDescription = '';
       switch (session.status) {
-        case 'PENDING': statusDescription = 'Navbatda...'; break;
-        case 'RUNNING': statusDescription = 'Qayta ishlanmoqda...'; break;
-        case 'COMPLETED': statusDescription = 'Muvaffaqiyatli tugallandi'; break;
-        case 'FAILED': statusDescription = 'Xatolik yuz berdi'; break;
-        default: statusDescription = 'Noma\'lum status'; break;
+        case 'PENDING':
+          statusDescription = 'Navbatda...';
+          break;
+        case 'RUNNING':
+          statusDescription = 'Qayta ishlanmoqda...';
+          break;
+        case 'COMPLETED':
+          statusDescription = 'Muvaffaqiyatli tugallandi';
+          break;
+        case 'FAILED':
+          statusDescription = 'Xatolik yuz berdi';
+          break;
+        default:
+          statusDescription = "Noma'lum status";
+          break;
       }
 
       return {
@@ -527,7 +600,8 @@ export class CallService {
         progressPercentage,
         statusDescription,
         isRunning: session.status === 'RUNNING',
-        isCompleted: session.status === 'COMPLETED' || session.status === 'FAILED',
+        isCompleted:
+          session.status === 'COMPLETED' || session.status === 'FAILED',
         hasError: session.status === 'FAILED' || !!session.errorMessage,
       };
     });

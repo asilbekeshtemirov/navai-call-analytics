@@ -17,7 +17,10 @@ export class CompanyService {
   ) {}
 
   // Barcha xodimlar performance
-  async getEmployeesPerformance(organizationId: number, period: string = 'today'): Promise<any> {
+  async getEmployeesPerformance(
+    organizationId: number,
+    period: string = 'today',
+  ): Promise<any> {
     let startDate: Date;
     let endDate: Date = new Date();
 
@@ -39,7 +42,7 @@ export class CompanyService {
     const employees = await this.prisma.user.findMany({
       where: {
         organizationId,
-        role: 'EMPLOYEE'
+        role: 'EMPLOYEE',
       },
       select: {
         id: true,
@@ -95,7 +98,10 @@ export class CompanyService {
   }
 
   // So'nggi qo'ng'iroqlar
-  async getRecentCalls(organizationId: number, limit: number = 50): Promise<any> {
+  async getRecentCalls(
+    organizationId: number,
+    limit: number = 50,
+  ): Promise<any> {
     return this.prisma.call.findMany({
       where: { organizationId },
       take: limit,
@@ -113,7 +119,10 @@ export class CompanyService {
   }
 
   // Birlashtirilgan statistika - barcha endpoint larni bir joyga birlashtiradi
-  async getUnifiedStatistics(organizationId: number, filters: UnifiedStatisticsDto): Promise<any> {
+  async getUnifiedStatistics(
+    organizationId: number,
+    filters: UnifiedStatisticsDto,
+  ): Promise<any> {
     const {
       type,
       dateFrom,
@@ -164,7 +173,10 @@ export class CompanyService {
 
       // Agar type ALL yoki SIPUNI bo'lsa
       if (type === StatisticsType.ALL || type === StatisticsType.SIPUNI) {
-        result.data.sipuni = await this.getFilteredSipuniStats(organizationId, filters);
+        result.data.sipuni = await this.getFilteredSipuniStats(
+          organizationId,
+          filters,
+        );
       }
 
       // Qo'shimcha ma'lumotlar

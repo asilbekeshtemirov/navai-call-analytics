@@ -43,7 +43,10 @@ export class CompanyController {
     @OrganizationId() organizationId: number,
     @Query('limit') limit?: string,
   ): Promise<any> {
-    return this.companyService.getRecentCalls(organizationId, limit ? parseInt(limit) : 50);
+    return this.companyService.getRecentCalls(
+      organizationId,
+      limit ? parseInt(limit) : 50,
+    );
   }
 
   @Get('statistics')

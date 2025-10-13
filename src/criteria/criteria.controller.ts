@@ -22,7 +22,7 @@ export class CriteriaController {
   @Post()
   create(
     @OrganizationId() organizationId: number,
-    @Body() createCriteriaDto: CreateCriteriaDto
+    @Body() createCriteriaDto: CreateCriteriaDto,
   ) {
     return this.criteriaService.create(organizationId, createCriteriaDto);
   }
@@ -33,10 +33,7 @@ export class CriteriaController {
   }
 
   @Get(':id')
-  findOne(
-    @OrganizationId() organizationId: number,
-    @Param('id') id: string
-  ) {
+  findOne(@OrganizationId() organizationId: number, @Param('id') id: string) {
     return this.criteriaService.findOne(organizationId, id);
   }
 
@@ -50,10 +47,7 @@ export class CriteriaController {
   }
 
   @Delete(':id')
-  remove(
-    @OrganizationId() organizationId: number,
-    @Param('id') id: string
-  ) {
+  remove(@OrganizationId() organizationId: number, @Param('id') id: string) {
     return this.criteriaService.remove(organizationId, id);
   }
 }

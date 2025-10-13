@@ -1,4 +1,10 @@
-import { Injectable, Logger, forwardRef, Inject, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  forwardRef,
+  Inject,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -79,7 +85,9 @@ export class SipuniService implements OnModuleInit {
         include: { settings: true },
       });
 
-      this.logger.log(`[STARTUP] Found ${organizations.length} active organizations`);
+      this.logger.log(
+        `[STARTUP] Found ${organizations.length} active organizations`,
+      );
 
       // Setup dynamic cron jobs and auto-sync
       for (const org of organizations) {
@@ -88,24 +96,38 @@ export class SipuniService implements OnModuleInit {
 
           // Setup dynamic cron job for this organization
           if (settings?.syncSchedule) {
-            await this.setupDynamicCronJob(org.id, org.name, settings.syncSchedule);
+            await this.setupDynamicCronJob(
+              org.id,
+              org.name,
+              settings.syncSchedule,
+            );
           }
 
           // Auto-sync from month start if enabled
           if (settings?.autoSyncOnStartup) {
-            this.logger.log(`[STARTUP] Auto-sync is enabled for ${org.name}, but skipping startup sync to prevent automatic execution`);
-            this.logger.log(`[STARTUP] To manually sync, use the API endpoint or frontend interface`);
+            this.logger.log(
+              `[STARTUP] Auto-sync is enabled for ${org.name}, but skipping startup sync to prevent automatic execution`,
+            );
+            this.logger.log(
+              `[STARTUP] To manually sync, use the API endpoint or frontend interface`,
+            );
           } else {
-            this.logger.log(`[STARTUP] Auto-sync disabled for ${org.name}, skipping...`);
+            this.logger.log(
+              `[STARTUP] Auto-sync disabled for ${org.name}, skipping...`,
+            );
           }
         } catch (error: any) {
-          this.logger.error(`[STARTUP] Failed to initialize ${org.name}: ${error.message}`);
+          this.logger.error(
+            `[STARTUP] Failed to initialize ${org.name}: ${error.message}`,
+          );
         }
       }
 
       this.logger.log('[STARTUP] Sipuni auto-sync initialization completed');
     } catch (error: any) {
-      this.logger.error(`[STARTUP] Failed to initialize auto-sync: ${error.message}`);
+      this.logger.error(
+        `[STARTUP] Failed to initialize auto-sync: ${error.message}`,
+      );
     }
   }
 
@@ -113,7 +135,10 @@ export class SipuniService implements OnModuleInit {
    * Setup dynamic cron job for an organization
    */
   private async setupDynamicCronJob(
-    orgId: number, orgName: string, cronSchedule: string) {
+    orgId: number,
+    orgName: string,
+    cronSchedule: string,
+  ) {
     try {
       const jobName = `sipuni-sync-${orgId}`;
 
@@ -127,16 +152,22 @@ export class SipuniService implements OnModuleInit {
 
       // Create new cron job
       const job = new CronJob(cronSchedule, async () => {
-        this.logger.log(`[CRON] Running scheduled sync for ${orgName} (${cronSchedule})`);
+        this.logger.log(
+          `[CRON] Running scheduled sync for ${orgName} (${cronSchedule})`,
+        );
         await this.syncAndProcessRecordings(orgId, 500);
       });
 
       this.schedulerRegistry.addCronJob(jobName, job);
       job.start();
 
-      this.logger.log(`[CRON] Setup dynamic job for ${orgName}: ${cronSchedule}`);
+      this.logger.log(
+        `[CRON] Setup dynamic job for ${orgName}: ${cronSchedule}`,
+      );
     } catch (error: any) {
-      this.logger.error(`[CRON] Failed to setup job for ${orgName}: ${error.message}`);
+      this.logger.error(
+        `[CRON] Failed to setup job for ${orgName}: ${error.message}`,
+      );
     }
   }
 
@@ -152,13 +183,19 @@ export class SipuniService implements OnModuleInit {
       const fromDate = this.formatDateForSipuni(monthStart);
       const toDate = this.formatDateForSipuni(now);
 
-      this.logger.log(`[STARTUP] Syncing from ${fromDate} to ${toDate} for org ${organizationId}`);
+      this.logger.log(
+        `[STARTUP] Syncing from ${fromDate} to ${toDate} for org ${organizationId}`,
+      );
 
       const result = await this.syncAndProcessRecordings(organizationId, 1000);
 
-      this.logger.log(`[STARTUP] Sync completed for org ${organizationId}: ${result.message}`);
+      this.logger.log(
+        `[STARTUP] Sync completed for org ${organizationId}: ${result.message}`,
+      );
     } catch (error: any) {
-      this.logger.error(`[STARTUP] Failed to sync from month start for org ${organizationId}: ${error.message}`);
+      this.logger.error(
+        `[STARTUP] Failed to sync from month start for org ${organizationId}: ${error.message}`,
+      );
     }
   }
 
@@ -185,7 +222,9 @@ export class SipuniService implements OnModuleInit {
       where: { organizationId },
     });
 
-    this.logger.log(`[CONFIG] Loaded settings for org ${organizationId}: ${JSON.stringify(settings)}`);
+    this.logger.log(
+      `[CONFIG] Loaded settings for org ${organizationId}: ${JSON.stringify(settings)}`,
+    );
 
     if (
       settings &&
@@ -193,7 +232,9 @@ export class SipuniService implements OnModuleInit {
       settings.sipuniApiKey &&
       settings.sipuniUserId
     ) {
-      this.logger.log(`[CONFIG] Using Sipuni credentials from Settings for org ${organizationId}`);
+      this.logger.log(
+        `[CONFIG] Using Sipuni credentials from Settings for org ${organizationId}`,
+      );
       return {
         apiUrl: settings.sipuniApiUrl,
         apiKey: settings.sipuniApiKey,
@@ -202,7 +243,9 @@ export class SipuniService implements OnModuleInit {
     }
 
     // Fallback to .env values
-    this.logger.log(`[CONFIG] Using Sipuni credentials from .env (fallback) for org ${organizationId}`);
+    this.logger.log(
+      `[CONFIG] Using Sipuni credentials from .env (fallback) for org ${organizationId}`,
+    );
     return {
       apiUrl: this.sipuniApiUrl,
       apiKey: this.sipuniApiKey,
@@ -250,7 +293,10 @@ export class SipuniService implements OnModuleInit {
   /**
    * Export statistics from Sipuni API (PHP style implementation)
    */
-  async exportStatistics(organizationId: number, exportDto: SipuniExportDto): Promise<string> {
+  async exportStatistics(
+    organizationId: number,
+    exportDto: SipuniExportDto,
+  ): Promise<string> {
     try {
       this.logger.log(
         `[EXPORT] Exporting statistics from ${exportDto.from} to ${exportDto.to} for org ${organizationId}`,
@@ -338,7 +384,9 @@ export class SipuniService implements OnModuleInit {
     from: string,
     to: string,
   ): Promise<SipuniCallRecord[]> {
-    this.logger.log(`[FETCH] Fetching call records from ${from} to ${to} for org ${organizationId}`);
+    this.logger.log(
+      `[FETCH] Fetching call records from ${from} to ${to} for org ${organizationId}`,
+    );
 
     const csvData = await this.exportStatistics(organizationId, {
       user: this.sipuniUserId,
@@ -415,7 +463,9 @@ export class SipuniService implements OnModuleInit {
     to: string,
   ): Promise<{ success: boolean; message: string; recordsProcessed: number }> {
     try {
-      this.logger.log(`[MANUAL] Manual sync requested from ${from} to ${to} for org ${organizationId}`);
+      this.logger.log(
+        `[MANUAL] Manual sync requested from ${from} to ${to} for org ${organizationId}`,
+      );
 
       const callRecords = await this.fetchCallRecords(organizationId, from, to);
       const results = await Promise.allSettled(
@@ -637,12 +687,16 @@ export class SipuniService implements OnModuleInit {
 
       // Check if response is 404 or other error
       if (response.status === 404) {
-        this.logger.warn(`[DOWNLOAD] Recording not found (404) for recordId: ${recordId}`);
+        this.logger.warn(
+          `[DOWNLOAD] Recording not found (404) for recordId: ${recordId}`,
+        );
         throw new Error('Recording not found (404)');
       }
 
       if (response.status !== 200) {
-        this.logger.warn(`[DOWNLOAD] Unexpected status ${response.status} for recordId: ${recordId}`);
+        this.logger.warn(
+          `[DOWNLOAD] Unexpected status ${response.status} for recordId: ${recordId}`,
+        );
         throw new Error(`Unexpected status: ${response.status}`);
       }
 
@@ -666,10 +720,12 @@ export class SipuniService implements OnModuleInit {
     organizationId: number,
     limit: number = 500,
     fromDate?: string, // Format: DD.MM.YYYY
-    toDate?: string,   // Format: DD.MM.YYYY
+    toDate?: string, // Format: DD.MM.YYYY
   ): Promise<{ success: boolean; message: string; recordsProcessed: number }> {
     try {
-      this.logger.log(`[SYNC] Starting Sipuni sync for org ${organizationId} with limit ${limit}...`);
+      this.logger.log(
+        `[SYNC] Starting Sipuni sync for org ${organizationId} with limit ${limit}...`,
+      );
       if (fromDate && toDate) {
         this.logger.log(`[SYNC] Date filter: ${fromDate} to ${toDate}`);
       }
@@ -699,7 +755,7 @@ export class SipuniService implements OnModuleInit {
         const fromDateTime = this.parseSipuniDate(`${fromDate} 00:00:00`);
         const toDateTime = this.parseSipuniDate(`${toDate} 23:59:59`);
 
-        filteredRecords = records.filter(record => {
+        filteredRecords = records.filter((record) => {
           try {
             const recordDate = this.parseSipuniDate(record.time);
             return recordDate >= fromDateTime && recordDate <= toDateTime;
@@ -709,7 +765,9 @@ export class SipuniService implements OnModuleInit {
           }
         });
 
-        this.logger.log(`[SYNC] Filtered ${filteredRecords.length} records from ${records.length} total (date range: ${fromDate} - ${toDate})`);
+        this.logger.log(
+          `[SYNC] Filtered ${filteredRecords.length} records from ${records.length} total (date range: ${fromDate} - ${toDate})`,
+        );
       }
 
       // Step 3: Process each record
@@ -783,7 +841,10 @@ export class SipuniService implements OnModuleInit {
               );
             } catch (downloadError: any) {
               // If recording download fails (404 or other error), skip this call
-              if (downloadError.message.includes('404') || downloadError.message.includes('not found')) {
+              if (
+                downloadError.message.includes('404') ||
+                downloadError.message.includes('not found')
+              ) {
                 this.logger.warn(
                   `[SYNC] Recording not available for ${record.recordId}, skipping call creation`,
                 );
@@ -821,8 +882,10 @@ export class SipuniService implements OnModuleInit {
           // Process call through AI pipeline only if it has recording
           // Run in background for faster processing
           if (hasRecording) {
-            this.aiService.processCall(call.id).catch(error => {
-              this.logger.error(`[SYNC] Background AI processing failed for ${call.id}: ${error.message}`);
+            this.aiService.processCall(call.id).catch((error) => {
+              this.logger.error(
+                `[SYNC] Background AI processing failed for ${call.id}: ${error.message}`,
+              );
             });
           } else {
             this.logger.log(
@@ -839,7 +902,10 @@ export class SipuniService implements OnModuleInit {
           await new Promise((resolve) => setTimeout(resolve, 10));
         } catch (error: any) {
           // Check if it's a duplicate record error
-          if (error.message && error.message.includes('Unique constraint failed')) {
+          if (
+            error.message &&
+            error.message.includes('Unique constraint failed')
+          ) {
             this.logger.warn(
               `[SYNC] Skipping duplicate record ${record.recordId} - already exists in database`,
             );
@@ -888,35 +954,41 @@ export class SipuniService implements OnModuleInit {
   /**
    * Save records to CSV file
    */
-  private async saveRecordsToCSV(records: SipuniRecord[], organizationId: number): Promise<void> {
+  private async saveRecordsToCSV(
+    records: SipuniRecord[],
+    organizationId: number,
+  ): Promise<void> {
     try {
       const csvPath = path.join(process.cwd(), 'sipuni-all-records.csv');
 
       // CSV header
-      const header = 'Тип;Статус;Время;Схема;Откуда;Куда;Кто ответил;Длительность звонка, сек;Длительность разговора, сек;Время ответа, сек;Оценка;ID записи;Метка;Теги;ID заказа звонка;Запись существует;Новый клиент\n';
+      const header =
+        'Тип;Статус;Время;Схема;Откуда;Куда;Кто ответил;Длительность звонка, сек;Длительность разговора, сек;Время ответа, сек;Оценка;ID записи;Метка;Теги;ID заказа звонка;Запись существует;Новый клиент\n';
 
       // Convert records to CSV rows
-      const rows = records.map(r =>
-        [
-          r.type,
-          r.status,
-          r.time,
-          r.tree,
-          r.from,
-          r.to,
-          r.answered,
-          r.duration,
-          r.talkDuration,
-          r.answerTime,
-          r.rating,
-          r.recordId,
-          r.label,
-          r.tags,
-          r.orderId,
-          r.recordExists,
-          r.newClient
-        ].join(';')
-      ).join('\n');
+      const rows = records
+        .map((r) =>
+          [
+            r.type,
+            r.status,
+            r.time,
+            r.tree,
+            r.from,
+            r.to,
+            r.answered,
+            r.duration,
+            r.talkDuration,
+            r.answerTime,
+            r.rating,
+            r.recordId,
+            r.label,
+            r.tags,
+            r.orderId,
+            r.recordExists,
+            r.newClient,
+          ].join(';'),
+        )
+        .join('\n');
 
       // Write to file
       fs.writeFileSync(csvPath, header + rows, 'utf-8');
@@ -931,11 +1003,15 @@ export class SipuniService implements OnModuleInit {
    * Update CSV from Sipuni API
    */
   private async updateCSVFromSipuni(organizationId: number): Promise<void> {
-    this.logger.log(`[CSV-UPDATE] Fetching fresh data from Sipuni for org ${organizationId}...`);
+    this.logger.log(
+      `[CSV-UPDATE] Fetching fresh data from Sipuni for org ${organizationId}...`,
+    );
     try {
       const records = await this.fetchAllRecords(organizationId, 1000);
       await this.saveRecordsToCSV(records, organizationId);
-      this.logger.log(`[CSV-UPDATE] CSV updated with ${records.length} records`);
+      this.logger.log(
+        `[CSV-UPDATE] CSV updated with ${records.length} records`,
+      );
     } catch (error: any) {
       this.logger.error(`[CSV-UPDATE] Failed to update CSV: ${error.message}`);
     }
@@ -945,7 +1021,9 @@ export class SipuniService implements OnModuleInit {
    * Update employees from CSV file
    */
   private async updateEmployeesFromCSV(organizationId: number): Promise<void> {
-    this.logger.log(`[EMPLOYEES-UPDATE] Updating employees from CSV for org ${organizationId}...`);
+    this.logger.log(
+      `[EMPLOYEES-UPDATE] Updating employees from CSV for org ${organizationId}...`,
+    );
 
     try {
       const csvPath = path.join(process.cwd(), 'sipuni-all-records.csv');
@@ -956,10 +1034,10 @@ export class SipuniService implements OnModuleInit {
       }
 
       const csvContent = fs.readFileSync(csvPath, 'utf-8');
-      const lines = csvContent.split('\n').filter(l => l.trim());
+      const lines = csvContent.split('\n').filter((l) => l.trim());
 
       // Parse CSV (semicolon delimiter)
-      const records = lines.slice(1).map(line => {
+      const records = lines.slice(1).map((line) => {
         const cols = line.split(';');
         return {
           from: cols[4],
@@ -979,7 +1057,9 @@ export class SipuniService implements OnModuleInit {
       }
 
       const uniqueExtCodes = Array.from(extCodes).sort();
-      this.logger.log(`[EMPLOYEES-UPDATE] Found ${uniqueExtCodes.length} unique extension codes`);
+      this.logger.log(
+        `[EMPLOYEES-UPDATE] Found ${uniqueExtCodes.length} unique extension codes`,
+      );
 
       // Get branch and department
       let branch = await this.prisma.branch.findFirst({
@@ -1014,8 +1094,30 @@ export class SipuniService implements OnModuleInit {
       const passwordHash = await bcrypt.hash('password123', 10);
 
       // Employee name templates
-      const firstNames = ['Alisher', 'Bobur', 'Dilshod', 'Eldor', 'Farrux', 'Gulnora', 'Hasan', 'Iroda', 'Jasur', 'Kamila'];
-      const lastNames = ['Navoiy', 'Mirzo', 'Qodirov', 'Tursunov', 'Usmonov', 'Karimova', 'Rashidov', 'Sadikova', 'Yusupov', 'Azizova'];
+      const firstNames = [
+        'Alisher',
+        'Bobur',
+        'Dilshod',
+        'Eldor',
+        'Farrux',
+        'Gulnora',
+        'Hasan',
+        'Iroda',
+        'Jasur',
+        'Kamila',
+      ];
+      const lastNames = [
+        'Navoiy',
+        'Mirzo',
+        'Qodirov',
+        'Tursunov',
+        'Usmonov',
+        'Karimova',
+        'Rashidov',
+        'Sadikova',
+        'Yusupov',
+        'Azizova',
+      ];
 
       let createdCount = 0;
       let updatedCount = 0;
@@ -1055,13 +1157,19 @@ export class SipuniService implements OnModuleInit {
             updatedCount++;
           }
         } catch (error: any) {
-          this.logger.warn(`[EMPLOYEES-UPDATE] Failed to upsert ext ${extCode}: ${error.message}`);
+          this.logger.warn(
+            `[EMPLOYEES-UPDATE] Failed to upsert ext ${extCode}: ${error.message}`,
+          );
         }
       }
 
-      this.logger.log(`[EMPLOYEES-UPDATE] Complete: ${createdCount} created, ${updatedCount} updated`);
+      this.logger.log(
+        `[EMPLOYEES-UPDATE] Complete: ${createdCount} created, ${updatedCount} updated`,
+      );
     } catch (error: any) {
-      this.logger.error(`[EMPLOYEES-UPDATE] Failed to update employees: ${error.message}`);
+      this.logger.error(
+        `[EMPLOYEES-UPDATE] Failed to update employees: ${error.message}`,
+      );
     }
   }
 

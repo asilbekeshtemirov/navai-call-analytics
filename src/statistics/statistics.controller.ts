@@ -1,4 +1,6 @@
-import { Controller, Get, Query, Post, Body } from '@nestjs/common';
+import { Controller, Get, Query, Post, Body, Res } from '@nestjs/common';
+import type { Response } from 'express';
+import { OrganizationId } from '../auth/organization-id.decorator.js';
 import {
   ApiTags,
   ApiOperation,
@@ -23,6 +25,26 @@ export class StatisticsController {
   })
   async getUnifiedStatistics(@Query() filters: UnifiedStatisticsDto) {
     return this.statisticsService.getUnifiedStatistics(filters);
+  }
+
+  @Get('export')
+  @ApiOperation({ summary: 'Export reports to a CSV file' })
+  @ApiQuery({ name: 'dateFrom', required: false })
+  @ApiQuery({ name: 'dateTo', required: false })
+  async exportReports(
+    @OrganizationId() organizationId: number,
+    @Res() res: Response,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    const csv = await this.statisticsService.exportReports({
+      dateFrom,
+      dateTo,
+      organizationId,
+    });
+    res.header('Content-Type', 'text/csv');
+    res.attachment('reports.csv');
+    return res.send(csv);
   }
 
   @Post('calculate')

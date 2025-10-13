@@ -34,8 +34,11 @@ let AiService = AiService_1 = class AiService {
     }
     async transcribeAudio(audioFileUrl, retryCount = 0) {
         this.logger.log(`Transcribing audio from file: ${audioFileUrl}`);
-        const sttApiUrl = this.config.get('STT_API_URL') ||
-            'https://ai.navai.pro/v1/asr/transcribe';
+        const sttApiUrl = this.config.get('STT_API_URL');
+        if (!sttApiUrl) {
+            this.logger.error('STT_API_URL is not set in environment variables.');
+            throw new Error('STT API url is missing.');
+        }
         const sttApiKey = this.config.get('STT_API_KEY');
         if (!sttApiKey) {
             this.logger.error('STT_API_KEY is not set in environment variables.');
@@ -70,14 +73,17 @@ let AiService = AiService_1 = class AiService {
             });
             this.logger.log(`[STT] Response status: ${response.status}`);
             this.logger.log(`[STT] Response data: ${JSON.stringify(response.data).substring(0, 500)}`);
-            if (response.status === 400 && response.data?.detail?.includes('inappropriate')) {
+            if (response.status === 400 &&
+                response.data?.detail?.includes('inappropriate')) {
                 this.logger.warn(`[STT] Content flagged as inappropriate by moderation system`);
                 throw new Error('Transcribed content flagged as inappropriate by moderation system');
             }
             if (response.data && response.data.text) {
                 const transcriptText = response.data.text;
                 const duration = response.data.duration || 0;
-                const sentences = transcriptText.split(/[.!?]+/).filter((s) => s.trim().length > 0);
+                const sentences = transcriptText
+                    .split(/[.!?]+/)
+                    .filter((s) => s.trim().length > 0);
                 const segmentDuration = duration > 0 ? (duration * 1000) / sentences.length : 5000;
                 const segments = sentences.map((text, index) => ({
                     speaker: 'agent',
@@ -111,7 +117,7 @@ let AiService = AiService_1 = class AiService {
                     }
                     else if (shouldRetry) {
                         this.logger.warn(`[STT] Retrying... (${retryCount + 1}/${maxRetries})`);
-                        await new Promise(resolve => setTimeout(resolve, 5000 * (retryCount + 1)));
+                        await new Promise((resolve) => setTimeout(resolve, 5000 * (retryCount + 1)));
                         return this.transcribeAudio(audioFileUrl, retryCount + 1);
                     }
                     this.logger.error(`[STT] Response data: ${JSON.stringify(error.response.data)}`);
@@ -121,7 +127,7 @@ let AiService = AiService_1 = class AiService {
                     this.logger.error('[STT] No response received from server');
                     if (shouldRetry) {
                         this.logger.warn(`[STT] Retrying after network error... (${retryCount + 1}/${maxRetries})`);
-                        await new Promise(resolve => setTimeout(resolve, 5000 * (retryCount + 1)));
+                        await new Promise((resolve) => setTimeout(resolve, 5000 * (retryCount + 1)));
                         return this.transcribeAudio(audioFileUrl, retryCount + 1);
                     }
                 }
@@ -145,10 +151,14 @@ let AiService = AiService_1 = class AiService {
             if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
                 return true;
             }
-            if (error.code === 'ECONNRESET' || error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT') {
+            if (error.code === 'ECONNRESET' ||
+                error.code === 'ENOTFOUND' ||
+                error.code === 'ETIMEDOUT') {
                 return true;
             }
-            if (error.response && error.response.status >= 500 && error.response.status < 600) {
+            if (error.response &&
+                error.response.status >= 500 &&
+                error.response.status < 600) {
                 return true;
             }
             if (error.response && error.response.status === 429) {
@@ -246,7 +256,7 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
     }
     async addToTranscriptionQueue(callId, audioFileUrl, priority = 0) {
         this.logger.log(`Adding call ${callId} to transcription queue (priority: ${priority})`);
-        const existsInQueue = this.transcriptionQueue.some(item => item.callId === callId);
+        const existsInQueue = this.transcriptionQueue.some((item) => item.callId === callId);
         if (existsInQueue) {
             this.logger.warn(`Call ${callId} already in queue, skipping`);
             return;
@@ -273,7 +283,7 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
             try {
                 await this.processCall(item.callId);
                 this.logger.log(`Successfully processed call ${item.callId} from queue`);
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await new Promise((resolve) => setTimeout(resolve, 1000));
             }
             catch (error) {
                 this.logger.error(`Failed to process call ${item.callId} from queue: ${error.message}`);

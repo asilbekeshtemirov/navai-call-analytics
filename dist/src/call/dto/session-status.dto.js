@@ -37,7 +37,7 @@ __decorate([
 __decorate([
     ApiProperty({
         enum: ['PENDING', 'RUNNING', 'COMPLETED', 'FAILED'],
-        example: 'COMPLETED'
+        example: 'COMPLETED',
     }),
     __metadata("design:type", String)
 ], SessionStatusDto.prototype, "status", void 0);
@@ -50,18 +50,18 @@ __decorate([
     __metadata("design:type", Number)
 ], SessionStatusDto.prototype, "processedNumbers", void 0);
 __decorate([
-    ApiProperty({ example: 120, description: 'Muvaffaqiyatli qo\'ng\'iroqlar' }),
+    ApiProperty({ example: 120, description: "Muvaffaqiyatli qo'ng'iroqlar" }),
     __metadata("design:type", Number)
 ], SessionStatusDto.prototype, "connectedCalls", void 0);
 __decorate([
-    ApiProperty({ example: 30, description: 'Muvaffaqiyatsiz qo\'ng\'iroqlar' }),
+    ApiProperty({ example: 30, description: "Muvaffaqiyatsiz qo'ng'iroqlar" }),
     __metadata("design:type", Number)
 ], SessionStatusDto.prototype, "failedCalls", void 0);
 __decorate([
     ApiProperty({
         example: 'Call process completed successfully',
         nullable: true,
-        description: 'Remote serverdan qaytgan javob'
+        description: 'Remote serverdan qaytgan javob',
     }),
     __metadata("design:type", Object)
 ], SessionStatusDto.prototype, "remoteResponse", void 0);
@@ -69,7 +69,7 @@ __decorate([
     ApiProperty({
         example: null,
         nullable: true,
-        description: 'Xato xabari (agar bo\'lsa)'
+        description: "Xato xabari (agar bo'lsa)",
     }),
     __metadata("design:type", Object)
 ], SessionStatusDto.prototype, "errorMessage", void 0);
@@ -81,7 +81,7 @@ __decorate([
     ApiProperty({
         example: '2025-10-06T18:32:15.000Z',
         nullable: true,
-        description: 'Tugagan vaqti (agar tugagan bo\'lsa)'
+        description: "Tugagan vaqti (agar tugagan bo'lsa)",
     }),
     __metadata("design:type", Object)
 ], SessionStatusDto.prototype, "completedAt", void 0);
@@ -89,7 +89,7 @@ __decorate([
     ApiProperty({
         example: 135,
         description: 'Davomiyligi (sekundlarda)',
-        nullable: true
+        nullable: true,
     }),
     __metadata("design:type", Number)
 ], SessionStatusDto.prototype, "durationSeconds", void 0);
@@ -103,7 +103,7 @@ __decorate([
 __decorate([
     ApiProperty({
         example: 'Qayta ishlanmoqda...',
-        description: 'Status tavsifi'
+        description: 'Status tavsifi',
     }),
     __metadata("design:type", String)
 ], SessionStatusDto.prototype, "statusDescription", void 0);

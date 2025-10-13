@@ -12,4 +12,3 @@ export class SipService {
     // For example, save to database, notify administrators, etc.
   }
 }
-

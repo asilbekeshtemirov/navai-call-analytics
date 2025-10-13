@@ -31,7 +31,7 @@ let AuthService = class AuthService {
             sub: user.id,
             phone: user.phone,
             role: user.role,
-            organizationId: user.organizationId
+            organizationId: user.organizationId,
         };
         return {
             access_token: await this.jwtService.signAsync(payload),

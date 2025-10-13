@@ -31,7 +31,11 @@ export class CriteriaService {
     });
   }
 
-  update(organizationId: number, id: string, updateCriteriaDto: UpdateCriteriaDto) {
+  update(
+    organizationId: number,
+    id: string,
+    updateCriteriaDto: UpdateCriteriaDto,
+  ) {
     return this.prisma.criteria.update({
       where: { id },
       data: updateCriteriaDto,

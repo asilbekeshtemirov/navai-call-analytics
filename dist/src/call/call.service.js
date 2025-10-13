@@ -185,16 +185,20 @@ let CallService = CallService_1 = class CallService {
                 throw e;
             }
             finally {
-                fs.unlink(file.path, (err) => { if (err)
-                    this.logger.error(`Failed to delete temp file: ${file.path}`, err); });
-                fs.unlink(localNumbersPath, (err) => { if (err && err.code !== 'ENOENT')
-                    this.logger.error(`Failed to delete temp file: ${localNumbersPath}`, err); });
+                fs.unlink(file.path, (err) => {
+                    if (err)
+                        this.logger.error(`Failed to delete temp file: ${file.path}`, err);
+                });
+                fs.unlink(localNumbersPath, (err) => {
+                    if (err && err.code !== 'ENOENT')
+                        this.logger.error(`Failed to delete temp file: ${localNumbersPath}`, err);
+                });
             }
         }
         else if (fileExtension === 'txt') {
             try {
                 const content = fs.readFileSync(file.path, 'utf-8');
-                const numbers = content.split('\n').filter(line => line.trim());
+                const numbers = content.split('\n').filter((line) => line.trim());
                 totalNumbers = numbers.length;
                 this.logger.log(`Total numbers: ${totalNumbers}`);
                 await this.sshUploadFile({
@@ -217,13 +221,17 @@ let CallService = CallService_1 = class CallService {
                 throw e;
             }
             finally {
-                fs.unlink(file.path, (err) => { if (err)
-                    this.logger.error(`Failed to delete temp file: ${file.path}`, err); });
+                fs.unlink(file.path, (err) => {
+                    if (err)
+                        this.logger.error(`Failed to delete temp file: ${file.path}`, err);
+                });
             }
         }
         else {
-            fs.unlink(file.path, (err) => { if (err)
-                this.logger.error(`Failed to delete temp file: ${file.path}`, err); });
+            fs.unlink(file.path, (err) => {
+                if (err)
+                    this.logger.error(`Failed to delete temp file: ${file.path}`, err);
+            });
             throw new BadRequestException('Only .xlsx and .txt files are allowed!');
         }
     }
@@ -420,7 +428,7 @@ let CallService = CallService_1 = class CallService {
                 statusDescription = 'Xatolik yuz berdi';
                 break;
             default:
-                statusDescription = 'Noma\'lum status';
+                statusDescription = "Noma'lum status";
         }
         return {
             ...session,
@@ -437,7 +445,7 @@ let CallService = CallService_1 = class CallService {
             orderBy: { createdAt: 'desc' },
             take: limit,
         });
-        return sessions.map(session => {
+        return sessions.map((session) => {
             let durationSeconds = null;
             if (session.completedAt) {
                 durationSeconds = Math.floor((session.completedAt.getTime() - session.startedAt.getTime()) / 1000);
@@ -480,7 +488,7 @@ let CallService = CallService_1 = class CallService {
                     statusDescription = 'Xatolik yuz berdi';
                     break;
                 default:
-                    statusDescription = 'Noma\'lum status';
+                    statusDescription = "Noma'lum status";
                     break;
             }
             return {

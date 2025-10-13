@@ -37,16 +37,22 @@ export class UserController {
   @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
   create(
     @OrganizationId() organizationId: number,
-    @Body() createUserDto: CreateUserDto
+    @Body() createUserDto: CreateUserDto,
   ) {
     return this.userService.create(organizationId, createUserDto);
   }
 
   @Get()
   @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERADMIN)
-  @ApiOperation({ summary: 'O\'z organizatsiyasidagi barcha userlarni ko\'rish' })
-  findAll(@OrganizationId() organizationId: number) {
-    return this.userService.findAll(organizationId);
+  @ApiOperation({ summary: "O'z organizatsiyasidagi barcha userlarni ko'rish" })
+  @ApiQuery({ name: 'branchId', required: false })
+  @ApiQuery({ name: 'departmentId', required: false })
+  findAll(
+    @OrganizationId() organizationId: number,
+    @Query('branchId') branchId?: string,
+    @Query('departmentId') departmentId?: string,
+  ) {
+    return this.userService.findAll(organizationId, { branchId, departmentId });
   }
 
   @Get(':id/statistics')

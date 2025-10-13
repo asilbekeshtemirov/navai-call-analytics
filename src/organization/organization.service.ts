@@ -18,7 +18,9 @@ export class OrganizationService {
     });
 
     if (existingOrg) {
-      throw new ConflictException(`Organization with slug "${createOrganizationDto.slug}" already exists`);
+      throw new ConflictException(
+        `Organization with slug "${createOrganizationDto.slug}" already exists`,
+      );
     }
 
     // Check if phone already exists (across all organizations)
@@ -27,7 +29,9 @@ export class OrganizationService {
     });
 
     if (existingUser) {
-      throw new ConflictException(`User with phone "${createOrganizationDto.adminPhone}" already exists`);
+      throw new ConflictException(
+        `User with phone "${createOrganizationDto.adminPhone}" already exists`,
+      );
     }
 
     // Create organization with related data in a transaction
@@ -62,7 +66,10 @@ export class OrganizationService {
       });
 
       // 4. Create admin user
-      const hashedPassword = await bcrypt.hash(createOrganizationDto.adminPassword, 10);
+      const hashedPassword = await bcrypt.hash(
+        createOrganizationDto.adminPassword,
+        10,
+      );
       const adminUser = await tx.user.create({
         data: {
           organizationId: organization.id,
@@ -85,18 +92,38 @@ export class OrganizationService {
           scoringMode: 'TEN',
           excludeSeconds: 0,
           language: 'uz',
-          syncSchedule: '50 23 * * *',  // Default: 23:50 daily
-          autoSyncOnStartup: true,       // Auto-sync from month start on startup
+          syncSchedule: '50 23 * * *', // Default: 23:50 daily
+          autoSyncOnStartup: true, // Auto-sync from month start on startup
         },
       });
 
       // 6. Create default criteria
       const defaultCriteria = [
-        { name: 'Приветствие', weight: 1, description: 'Дружелюбное приветствие клиента' },
-        { name: 'Выявление потребностей', weight: 2, description: 'Выяснение потребностей клиента' },
-        { name: 'Презентация продукта/услуги', weight: 2, description: 'Четкое описание продукта' },
-        { name: 'Работа с возражениями', weight: 2, description: 'Ответы на вопросы клиента' },
-        { name: 'Завершение разговора', weight: 1, description: 'Профессиональное завершение звонка' },
+        {
+          name: 'Приветствие',
+          weight: 1,
+          description: 'Дружелюбное приветствие клиента',
+        },
+        {
+          name: 'Выявление потребностей',
+          weight: 2,
+          description: 'Выяснение потребностей клиента',
+        },
+        {
+          name: 'Презентация продукта/услуги',
+          weight: 2,
+          description: 'Четкое описание продукта',
+        },
+        {
+          name: 'Работа с возражениями',
+          weight: 2,
+          description: 'Ответы на вопросы клиента',
+        },
+        {
+          name: 'Завершение разговора',
+          weight: 1,
+          description: 'Профессиональное завершение звонка',
+        },
       ];
 
       for (const criteria of defaultCriteria) {

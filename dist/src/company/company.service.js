@@ -41,7 +41,7 @@ let CompanyService = class CompanyService {
         const employees = await this.prisma.user.findMany({
             where: {
                 organizationId,
-                role: 'EMPLOYEE'
+                role: 'EMPLOYEE',
             },
             select: {
                 id: true,

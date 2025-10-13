@@ -80,11 +80,31 @@ let OrganizationService = OrganizationService_1 = class OrganizationService {
                 },
             });
             const defaultCriteria = [
-                { name: 'Приветствие', weight: 1, description: 'Дружелюбное приветствие клиента' },
-                { name: 'Выявление потребностей', weight: 2, description: 'Выяснение потребностей клиента' },
-                { name: 'Презентация продукта/услуги', weight: 2, description: 'Четкое описание продукта' },
-                { name: 'Работа с возражениями', weight: 2, description: 'Ответы на вопросы клиента' },
-                { name: 'Завершение разговора', weight: 1, description: 'Профессиональное завершение звонка' },
+                {
+                    name: 'Приветствие',
+                    weight: 1,
+                    description: 'Дружелюбное приветствие клиента',
+                },
+                {
+                    name: 'Выявление потребностей',
+                    weight: 2,
+                    description: 'Выяснение потребностей клиента',
+                },
+                {
+                    name: 'Презентация продукта/услуги',
+                    weight: 2,
+                    description: 'Четкое описание продукта',
+                },
+                {
+                    name: 'Работа с возражениями',
+                    weight: 2,
+                    description: 'Ответы на вопросы клиента',
+                },
+                {
+                    name: 'Завершение разговора',
+                    weight: 1,
+                    description: 'Профессиональное завершение звонка',
+                },
             ];
             for (const criteria of defaultCriteria) {
                 await tx.criteria.create({

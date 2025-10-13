@@ -28,7 +28,6 @@ import * as fs from 'fs';
 import { Public } from '../auth/public.decorator.js';
 import { OrganizationId } from '../auth/organization-id.decorator.js';
 
-
 export const numbersStorage = diskStorage({
   destination: (req, file, cb) => {
     const uploadPath = './numbers';
@@ -36,7 +35,6 @@ export const numbersStorage = diskStorage({
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
-
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, file.fieldname + '-' + uniqueSuffix + '-' + file.originalname);
   },
@@ -79,14 +77,46 @@ export class CallController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE, UserRole.SUPERADMIN)
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.MANAGER,
+    UserRole.EMPLOYEE,
+    UserRole.SUPERADMIN,
+  )
   @ApiOperation({ summary: 'Get all calls with filters' })
-  @ApiQuery({ name: 'branchId', required: false, description: "Ixtiyoriy: Filial ID si bo'yicha filter" })
-  @ApiQuery({ name: 'departmentId', required: false, description: "Ixtiyoriy: Bo'lim ID si bo'yicha filter" })
-  @ApiQuery({ name: 'employeeId', required: false, description: "Ixtiyoriy: Xodim ID si bo'yicha filter" })
-  @ApiQuery({ name: 'status', required: false, description: "Ixtiyoriy: Qo'ng'iroq holati bo'yicha filter (UPLOADED, PROCESSING, DONE, ERROR)" })
-  @ApiQuery({ name: 'dateFrom', required: false, description: 'Ixtiyoriy: Boshlanish sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)' })
-  @ApiQuery({ name: 'dateTo', required: false, description: 'Ixtiyoriy: Tugash sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)' })
+  @ApiQuery({
+    name: 'branchId',
+    required: false,
+    description: "Ixtiyoriy: Filial ID si bo'yicha filter",
+  })
+  @ApiQuery({
+    name: 'departmentId',
+    required: false,
+    description: "Ixtiyoriy: Bo'lim ID si bo'yicha filter",
+  })
+  @ApiQuery({
+    name: 'employeeId',
+    required: false,
+    description: "Ixtiyoriy: Xodim ID si bo'yicha filter",
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description:
+      "Ixtiyoriy: Qo'ng'iroq holati bo'yicha filter (UPLOADED, PROCESSING, DONE, ERROR)",
+  })
+  @ApiQuery({
+    name: 'dateFrom',
+    required: false,
+    description:
+      'Ixtiyoriy: Boshlanish sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)',
+  })
+  @ApiQuery({
+    name: 'dateTo',
+    required: false,
+    description:
+      'Ixtiyoriy: Tugash sanasi (YYYY-MM-DD yoki YYYY-MM-DDTHH:mm:ss.sssZ)',
+  })
   findAll(
     @OrganizationId() organizationId: number,
     @Query('branchId') branchId?: string,
@@ -96,21 +126,35 @@ export class CallController {
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
   ) {
-    return this.callService.findAll(organizationId, { branchId, departmentId, employeeId, status, dateFrom, dateTo });
+    return this.callService.findAll(organizationId, {
+      branchId,
+      departmentId,
+      employeeId,
+      status,
+      dateFrom,
+      dateTo,
+    });
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE, UserRole.SUPERADMIN)
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.MANAGER,
+    UserRole.EMPLOYEE,
+    UserRole.SUPERADMIN,
+  )
   @ApiOperation({ summary: 'Get call by ID with full details' })
-  findOne(
-    @OrganizationId() organizationId: number,
-    @Param('id') id: string
-  ) {
+  findOne(@OrganizationId() organizationId: number, @Param('id') id: string) {
     return this.callService.findOne(organizationId, id);
   }
 
   @Get(':id/transcript')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE, UserRole.SUPERADMIN)
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.MANAGER,
+    UserRole.EMPLOYEE,
+    UserRole.SUPERADMIN,
+  )
   @ApiOperation({ summary: 'Get call transcript segments' })
   getTranscript(@Param('id') id: string) {
     return this.callService.getTranscript(id);
@@ -131,7 +175,7 @@ export class CallController {
       - totalNumbers, processedNumbers, connectedCalls, failedCalls: Statistika
 
       Real-time monitoring uchun har 3-5 sekundda polling qilish tavsiya etiladi.
-    `
+    `,
   })
   getSessionStatus(@Param('sessionId') sessionId: string) {
     return this.callService.getSessionStatus(sessionId);
@@ -151,9 +195,13 @@ export class CallController {
       - Status tavsifi (o'zbekcha)
 
       Sessions eng yangilaridan eskilariga qarab tartiblangan.
-    `
+    `,
   })
-  @ApiQuery({ name: 'limit', required: false, description: 'Limit the number of sessions returned (default: 50)' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Limit the number of sessions returned (default: 50)',
+  })
   getAllSessions(@Query('limit') limit?: string) {
     const limitNum = limit ? parseInt(limit, 10) : 50;
     return this.callService.getAllSessions(limitNum);

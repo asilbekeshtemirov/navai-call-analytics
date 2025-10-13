@@ -13,4 +13,9 @@ export declare class StatisticsService {
     private getFilteredDailyStats;
     private getFilteredMonthlyStats;
     private getFilteredSummary;
+    exportReports(filters: {
+        dateFrom?: string;
+        dateTo?: string;
+        organizationId: number;
+    }): Promise<string>;
 }

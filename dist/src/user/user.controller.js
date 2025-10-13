@@ -14,7 +14,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, } 
 import { UserService } from './user.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
-import { ApiTags, ApiOperation, ApiBearerAuth, } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/roles.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
@@ -30,8 +30,8 @@ let UserController = class UserController {
     create(organizationId, createUserDto) {
         return this.userService.create(organizationId, createUserDto);
     }
-    findAll(organizationId) {
-        return this.userService.findAll(organizationId);
+    findAll(organizationId, branchId, departmentId) {
+        return this.userService.findAll(organizationId, { branchId, departmentId });
     }
     async getUnifiedUserStatistics(id, filters) {
         return this.userService.getUnifiedUserStatistics(id, filters);
@@ -61,10 +61,14 @@ __decorate([
 __decorate([
     Get(),
     Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERADMIN),
-    ApiOperation({ summary: 'O\'z organizatsiyasidagi barcha userlarni ko\'rish' }),
+    ApiOperation({ summary: "O'z organizatsiyasidagi barcha userlarni ko'rish" }),
+    ApiQuery({ name: 'branchId', required: false }),
+    ApiQuery({ name: 'departmentId', required: false }),
     __param(0, OrganizationId()),
+    __param(1, Query('branchId')),
+    __param(2, Query('departmentId')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [Number, String, String]),
     __metadata("design:returntype", void 0)
 ], UserController.prototype, "findAll", null);
 __decorate([

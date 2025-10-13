@@ -39,7 +39,10 @@ __decorate([
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "phone", void 0);
 __decorate([
-    ApiProperty({ required: false, description: 'Extension code (e.g., 201, 202)' }),
+    ApiProperty({
+        required: false,
+        description: 'Extension code (e.g., 201, 202)',
+    }),
     IsString(),
     IsOptional(),
     __metadata("design:type", String)
