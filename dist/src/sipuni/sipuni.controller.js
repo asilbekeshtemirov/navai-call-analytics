@@ -64,6 +64,38 @@ let SipuniController = SipuniController_1 = class SipuniController {
             };
         }
     }
+    async step1FetchCSV(organizationId, limit) {
+        try {
+            this.logger.log(`[CONTROLLER] Step 1: Fetching CSV for org ${organizationId}, limit=${limit}`);
+            const recordLimit = limit ? parseInt(limit) : 500;
+            const result = await this.sipuniService.step1FetchAndSaveCSV(organizationId, recordLimit);
+            return result;
+        }
+        catch (error) {
+            this.logger.error(`[CONTROLLER] Step 1 failed: ${error.message}`);
+            return {
+                success: false,
+                message: `Step 1 failed: ${error.message}`,
+                totalRecords: 0,
+                csvPath: '',
+            };
+        }
+    }
+    async step2ProcessRecordings(organizationId, from, to) {
+        try {
+            this.logger.log(`[CONTROLLER] Step 2: Processing recordings for org ${organizationId}, from=${from}, to=${to}`);
+            const result = await this.sipuniService.step2ProcessCSVAndDownloadRecordings(organizationId, from, to);
+            return result;
+        }
+        catch (error) {
+            this.logger.error(`[CONTROLLER] Step 2 failed: ${error.message}`);
+            return {
+                success: false,
+                message: `Step 2 failed: ${error.message}`,
+                recordsProcessed: 0,
+            };
+        }
+    }
 };
 __decorate([
     Get('test-connection'),
@@ -93,6 +125,35 @@ __decorate([
     __metadata("design:paramtypes", [Number, String, String, String]),
     __metadata("design:returntype", Promise)
 ], SipuniController.prototype, "syncAndProcess", null);
+__decorate([
+    Post('step1-fetch-csv'),
+    Roles(UserRole.ADMIN, UserRole.SUPERADMIN),
+    ApiOperation({
+        summary: 'STEP 1: Sipuni API dan CSV faylni yuklash',
+        description: 'Sipuni API dan barcha qo\'ng\'iroqlarni oladi va CSV faylga saqlaydi',
+    }),
+    ApiResponse({ status: 200, description: 'CSV successfully fetched and saved' }),
+    __param(0, OrganizationId()),
+    __param(1, Query('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, String]),
+    __metadata("design:returntype", Promise)
+], SipuniController.prototype, "step1FetchCSV", null);
+__decorate([
+    Post('step2-process-recordings'),
+    Roles(UserRole.ADMIN, UserRole.SUPERADMIN),
+    ApiOperation({
+        summary: 'STEP 2: CSV fayldan ma\'lumotlarni o\'qish va recordinglarni yuklash',
+        description: 'CSV fayldan qo\'ng\'iroqlarni o\'qiydi, recording fayllarni yuklaydi va DB ga saqlaydi. from va to parametrlari: DD.MM.YYYY formatida',
+    }),
+    ApiResponse({ status: 200, description: 'Recordings successfully processed' }),
+    __param(0, OrganizationId()),
+    __param(1, Query('from')),
+    __param(2, Query('to')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, String, String]),
+    __metadata("design:returntype", Promise)
+], SipuniController.prototype, "step2ProcessRecordings", null);
 SipuniController = SipuniController_1 = __decorate([
     ApiTags('sipuni'),
     Controller('sipuni'),

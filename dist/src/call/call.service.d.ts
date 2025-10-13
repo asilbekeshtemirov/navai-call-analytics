@@ -45,8 +45,8 @@ export declare class CallService {
             id: string;
             score: number;
             callId: string;
-            criteriaId: string;
             notes: string | null;
+            criteriaId: string;
         })[];
         violations: {
             id: string;
@@ -131,8 +131,8 @@ export declare class CallService {
             id: string;
             score: number;
             callId: string;
-            criteriaId: string;
             notes: string | null;
+            criteriaId: string;
         })[];
         segments: {
             id: string;

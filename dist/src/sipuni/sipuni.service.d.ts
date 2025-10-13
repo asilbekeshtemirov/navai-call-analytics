@@ -62,6 +62,17 @@ export declare class SipuniService implements OnModuleInit {
     private transcribeAudio;
     fetchAllRecords(organizationId: number, limit?: number, order?: string, page?: number): Promise<SipuniRecord[]>;
     downloadRecordingById(organizationId: number, recordId: string, filename: string): Promise<string>;
+    step1FetchAndSaveCSV(organizationId: number, limit?: number): Promise<{
+        success: boolean;
+        message: string;
+        totalRecords: number;
+        csvPath: string;
+    }>;
+    step2ProcessCSVAndDownloadRecordings(organizationId: number, fromDate?: string, toDate?: string): Promise<{
+        success: boolean;
+        message: string;
+        recordsProcessed: number;
+    }>;
     syncAndProcessRecordings(organizationId: number, limit?: number, fromDate?: string, toDate?: string): Promise<{
         success: boolean;
         message: string;

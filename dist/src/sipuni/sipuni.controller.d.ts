@@ -26,6 +26,17 @@ export declare class SipuniController {
         message: string;
         recordsProcessed: number;
     }>;
+    step1FetchCSV(organizationId: number, limit?: string): Promise<{
+        success: boolean;
+        message: string;
+        totalRecords: number;
+        csvPath: string;
+    }>;
+    step2ProcessRecordings(organizationId: number, from?: string, to?: string): Promise<{
+        success: boolean;
+        message: string;
+        recordsProcessed: number;
+    }>;
 }
 export declare class SipuniWebhookController {
     private readonly sipuniService;

@@ -108,6 +108,77 @@ export class SipuniController {
       };
     }
   }
+
+  @Post('step1-fetch-csv')
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({
+    summary: 'STEP 1: Sipuni API dan CSV faylni yuklash',
+    description:
+      'Sipuni API dan barcha qo\'ng\'iroqlarni oladi va CSV faylga saqlaydi',
+  })
+  @ApiResponse({ status: 200, description: 'CSV successfully fetched and saved' })
+  async step1FetchCSV(
+    @OrganizationId() organizationId: number,
+    @Query('limit') limit?: string,
+  ) {
+    try {
+      this.logger.log(
+        `[CONTROLLER] Step 1: Fetching CSV for org ${organizationId}, limit=${limit}`,
+      );
+
+      const recordLimit = limit ? parseInt(limit) : 500;
+      const result = await this.sipuniService.step1FetchAndSaveCSV(
+        organizationId,
+        recordLimit,
+      );
+
+      return result;
+    } catch (error) {
+      this.logger.error(`[CONTROLLER] Step 1 failed: ${error.message}`);
+      return {
+        success: false,
+        message: `Step 1 failed: ${error.message}`,
+        totalRecords: 0,
+        csvPath: '',
+      };
+    }
+  }
+
+  @Post('step2-process-recordings')
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({
+    summary: 'STEP 2: CSV fayldan ma\'lumotlarni o\'qish va recordinglarni yuklash',
+    description:
+      'CSV fayldan qo\'ng\'iroqlarni o\'qiydi, recording fayllarni yuklaydi va DB ga saqlaydi. from va to parametrlari: DD.MM.YYYY formatida',
+  })
+  @ApiResponse({ status: 200, description: 'Recordings successfully processed' })
+  async step2ProcessRecordings(
+    @OrganizationId() organizationId: number,
+    @Query('from') from?: string, // DD.MM.YYYY format
+    @Query('to') to?: string, // DD.MM.YYYY format
+  ) {
+    try {
+      this.logger.log(
+        `[CONTROLLER] Step 2: Processing recordings for org ${organizationId}, from=${from}, to=${to}`,
+      );
+
+      const result =
+        await this.sipuniService.step2ProcessCSVAndDownloadRecordings(
+          organizationId,
+          from,
+          to,
+        );
+
+      return result;
+    } catch (error) {
+      this.logger.error(`[CONTROLLER] Step 2 failed: ${error.message}`);
+      return {
+        success: false,
+        message: `Step 2 failed: ${error.message}`,
+        recordsProcessed: 0,
+      };
+    }
+  }
 }
 
 @ApiTags('sipuni-webhook')

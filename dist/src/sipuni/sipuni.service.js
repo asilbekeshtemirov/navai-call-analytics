@@ -434,6 +434,192 @@ let SipuniService = SipuniService_1 = class SipuniService {
             throw error;
         }
     }
+    async step1FetchAndSaveCSV(organizationId, limit = 500) {
+        try {
+            this.logger.log(`[STEP1] Fetching records from Sipuni API for org ${organizationId}...`);
+            const records = await this.fetchAllRecords(organizationId, limit);
+            if (records.length === 0) {
+                return {
+                    success: false,
+                    message: 'No records found from Sipuni API',
+                    totalRecords: 0,
+                    csvPath: '',
+                };
+            }
+            const csvPath = await this.saveRecordsToCSV(records, organizationId);
+            this.logger.log(`[STEP1] Successfully saved ${records.length} records to CSV`);
+            return {
+                success: true,
+                message: `Successfully fetched and saved ${records.length} records to CSV`,
+                totalRecords: records.length,
+                csvPath,
+            };
+        }
+        catch (error) {
+            this.logger.error(`[STEP1] Failed to fetch and save CSV: ${error.message}`);
+            return {
+                success: false,
+                message: `Failed to fetch CSV: ${error.message}`,
+                totalRecords: 0,
+                csvPath: '',
+            };
+        }
+    }
+    async step2ProcessCSVAndDownloadRecordings(organizationId, fromDate, toDate) {
+        try {
+            this.logger.log(`[STEP2] Processing CSV and downloading recordings for org ${organizationId}...`);
+            const csvPath = path.join(process.cwd(), 'sipuni-all-records.csv');
+            if (!fs.existsSync(csvPath)) {
+                return {
+                    success: false,
+                    message: 'CSV file not found. Please run Step 1 first.',
+                    recordsProcessed: 0,
+                };
+            }
+            const csvContent = fs.readFileSync(csvPath, 'utf-8');
+            const lines = csvContent.split('\n').filter((l) => l.trim());
+            const records = lines.slice(1).map((line) => {
+                const cols = line.split(';');
+                return {
+                    type: cols[0],
+                    status: cols[1],
+                    time: cols[2],
+                    tree: cols[3],
+                    from: cols[4],
+                    to: cols[5],
+                    answered: cols[6],
+                    duration: cols[7],
+                    talkDuration: cols[8],
+                    answerTime: cols[9],
+                    rating: cols[10],
+                    recordId: cols[11],
+                    label: cols[12],
+                    tags: cols[13],
+                    orderId: cols[14],
+                    recordExists: cols[15],
+                    newClient: cols[16],
+                };
+            });
+            this.logger.log(`[STEP2] Loaded ${records.length} records from CSV`);
+            let processed = 0;
+            let skipped = 0;
+            let failed = 0;
+            let filteredRecords = records;
+            if (fromDate && toDate) {
+                const fromDateTime = this.parseSipuniDate(`${fromDate} 00:00:00`);
+                const toDateTime = this.parseSipuniDate(`${toDate} 23:59:59`);
+                filteredRecords = records.filter((record) => {
+                    try {
+                        const recordDate = this.parseSipuniDate(record.time);
+                        return recordDate >= fromDateTime && recordDate <= toDateTime;
+                    }
+                    catch (error) {
+                        this.logger.warn(`Failed to parse date for record: ${record.time}`);
+                        return false;
+                    }
+                });
+                this.logger.log(`[STEP2] Filtered ${filteredRecords.length} records from ${records.length} total (date range: ${fromDate} - ${toDate})`);
+            }
+            for (const record of filteredRecords) {
+                try {
+                    let extCode = record.from;
+                    if (record.type === 'Входящий' &&
+                        record.answered &&
+                        !record.answered.startsWith('+')) {
+                        extCode = record.answered;
+                    }
+                    const employee = await this.prisma.user.findFirst({
+                        where: { extCode: extCode },
+                    });
+                    if (!employee) {
+                        this.logger.warn(`[STEP2] Employee not found for extCode: ${extCode}, skipping call ${record.recordId}`);
+                        skipped++;
+                        continue;
+                    }
+                    const externalId = record.recordId && record.recordId.trim() !== ''
+                        ? record.recordId
+                        : record.orderId && record.orderId.trim() !== ''
+                            ? record.orderId
+                            : `sipuni_${record.time}_${record.from}_${record.to}`.replace(/[:\s]/g, '_');
+                    const existingCall = await this.prisma.call.findFirst({
+                        where: {
+                            organizationId: employee.organizationId,
+                            externalId,
+                        },
+                    });
+                    if (existingCall) {
+                        this.logger.log(`[STEP2] Call ${externalId} already exists, skipping`);
+                        skipped++;
+                        continue;
+                    }
+                    const hasRecording = record.recordId && record.recordId.trim() !== '';
+                    let audioFile = 'no-audio.mp3';
+                    if (hasRecording) {
+                        try {
+                            const filename = `sipuni_${record.time.replace(/[:\s]/g, '_')}`;
+                            audioFile = await this.downloadRecordingById(employee.organizationId, record.recordId, filename);
+                        }
+                        catch (downloadError) {
+                            if (downloadError.message.includes('404') ||
+                                downloadError.message.includes('not found')) {
+                                this.logger.warn(`[STEP2] Recording not available for ${record.recordId}, skipping`);
+                                skipped++;
+                                continue;
+                            }
+                            throw downloadError;
+                        }
+                    }
+                    const callDate = this.parseSipuniDate(record.time);
+                    const call = await this.prisma.call.create({
+                        data: {
+                            organizationId: employee.organizationId,
+                            externalId,
+                            employeeId: employee.id,
+                            branchId: employee.branchId,
+                            departmentId: employee.departmentId,
+                            fileUrl: audioFile,
+                            status: hasRecording ? 'UPLOADED' : 'DONE',
+                            callerNumber: record.from,
+                            calleeNumber: record.to,
+                            callDate: callDate,
+                            durationSec: parseInt(record.talkDuration) || 0,
+                        },
+                    });
+                    this.logger.log(`[STEP2] Created call record ${call.id} for ${externalId}`);
+                    if (hasRecording) {
+                        this.aiService.processCall(call.id).catch((error) => {
+                            this.logger.error(`[STEP2] Background AI processing failed for ${call.id}: ${error.message}`);
+                        });
+                    }
+                    processed++;
+                    this.logger.log(`[STEP2] Processed ${processed}/${filteredRecords.length} records`);
+                    await new Promise((resolve) => setTimeout(resolve, 10));
+                }
+                catch (error) {
+                    if (error.message &&
+                        error.message.includes('Unique constraint failed')) {
+                        this.logger.warn(`[STEP2] Skipping duplicate record ${record.recordId}`);
+                        skipped++;
+                    }
+                    else {
+                        this.logger.error(`[STEP2] Failed to process record ${record.recordId}: ${error.message}`);
+                        failed++;
+                    }
+                }
+            }
+            const message = `Processed: ${processed}, Skipped: ${skipped}, Failed: ${failed}`;
+            this.logger.log(`[STEP2] ${message}`);
+            return { success: true, message, recordsProcessed: processed };
+        }
+        catch (error) {
+            this.logger.error(`[STEP2] Failed: ${error.message}`);
+            return {
+                success: false,
+                message: `Step 2 failed: ${error.message}`,
+                recordsProcessed: 0,
+            };
+        }
+    }
     async syncAndProcessRecordings(organizationId, limit = 500, fromDate, toDate) {
         try {
             this.logger.log(`[SYNC] Starting Sipuni sync for org ${organizationId} with limit ${limit}...`);
@@ -605,9 +791,11 @@ let SipuniService = SipuniService_1 = class SipuniService {
                 .join('\n');
             fs.writeFileSync(csvPath, header + rows, 'utf-8');
             this.logger.log(`[CSV] Saved ${records.length} records to ${csvPath}`);
+            return csvPath;
         }
         catch (error) {
             this.logger.error(`[CSV] Failed to save records: ${error.message}`);
+            throw error;
         }
     }
     async updateCSVFromSipuni(organizationId) {
