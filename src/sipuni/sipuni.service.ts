@@ -307,7 +307,7 @@ export class SipuniService implements OnModuleInit {
         new URLSearchParams(params).toString(),
         {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          timeout: 30000,
+          timeout: 120000, // Increased to 120 seconds (2 minutes)
         },
       );
 
@@ -538,7 +538,7 @@ export class SipuniService implements OnModuleInit {
         }).toString(),
         {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          timeout: 30000,
+          timeout: 120000, // Increased to 120 seconds (2 minutes)
         },
       );
 

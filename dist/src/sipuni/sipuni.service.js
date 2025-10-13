@@ -211,7 +211,7 @@ let SipuniService = SipuniService_1 = class SipuniService {
             };
             const response = await this.http.axiosRef.post(`${credentials.apiUrl}/statistic/export`, new URLSearchParams(params).toString(), {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                timeout: 30000,
+                timeout: 120000,
             });
             const responseData = response.data;
             if (typeof responseData === 'string' && responseData.includes('<html>')) {
@@ -354,7 +354,7 @@ let SipuniService = SipuniService_1 = class SipuniService {
                 hash,
             }).toString(), {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                timeout: 30000,
+                timeout: 120000,
             });
             const csvData = response.data;
             const lines = csvData.split('\n').filter((l) => l.trim());

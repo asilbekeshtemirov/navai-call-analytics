@@ -20,6 +20,8 @@ let AiService = AiService_1 = class AiService {
     config;
     logger = new Logger(AiService_1.name);
     geminiAi;
+    transcriptionQueue = [];
+    isProcessingQueue = false;
     constructor(prisma, config) {
         this.prisma = prisma;
         this.config = config;
@@ -34,6 +36,11 @@ let AiService = AiService_1 = class AiService {
         this.logger.log(`Transcribing audio from file: ${audioFileUrl}`);
         const sttApiUrl = this.config.get('STT_API_URL') ||
             'https://ai.navai.pro/v1/asr/transcribe';
+        const sttApiKey = this.config.get('STT_API_KEY');
+        if (!sttApiKey) {
+            this.logger.error('STT_API_KEY is not set in environment variables.');
+            throw new Error('STT API key is missing.');
+        }
         if (!fs.existsSync(audioFileUrl)) {
             this.logger.error(`Audio file not found: ${audioFileUrl}`);
             return [];
@@ -42,21 +49,20 @@ let AiService = AiService_1 = class AiService {
         const fileStats = fs.statSync(audioFileUrl);
         const fileSizeMB = (fileStats.size / (1024 * 1024)).toFixed(2);
         const baseTimeout = 600000;
-        const perMbTimeout = 120000;
+        const perMbTimeout = 180000;
         const dynamicTimeout = baseTimeout + (fileStats.size / (1024 * 1024)) * perMbTimeout;
-        const timeout = Math.min(dynamicTimeout, 3600000);
+        const timeout = Math.min(dynamicTimeout, 7200000);
         this.logger.log(`[STT] File size: ${fileSizeMB}MB, Timeout: ${Math.round(timeout / 1000)}s`);
         try {
             const formData = new FormData();
             formData.append('file', fs.createReadStream(audioFileUrl));
-            formData.append('diarization', 'true');
-            formData.append('language', 'uz');
             this.logger.log(`[STT] Uploading audio file to: ${sttApiUrl}`);
             this.logger.log(`[STT] File path: ${audioFileUrl}`);
             this.logger.log(`[STT] Attempt ${retryCount + 1}/${maxRetries + 1}`);
             const response = await axios.post(sttApiUrl, formData, {
                 headers: {
                     ...formData.getHeaders(),
+                    'X-API-Key': sttApiKey,
                 },
                 timeout: timeout,
                 maxContentLength: Infinity,
@@ -64,17 +70,25 @@ let AiService = AiService_1 = class AiService {
             });
             this.logger.log(`[STT] Response status: ${response.status}`);
             this.logger.log(`[STT] Response data: ${JSON.stringify(response.data).substring(0, 500)}`);
-            if (response.data && Array.isArray(response.data.segments)) {
-                const segments = response.data.segments.map((seg) => ({
-                    speaker: seg.speaker || 'agent',
-                    text: seg.text || '',
-                    startMs: seg.start_ms || seg.startMs || 0,
-                    endMs: seg.end_ms || seg.endMs || 0,
+            if (response.status === 400 && response.data?.detail?.includes('inappropriate')) {
+                this.logger.warn(`[STT] Content flagged as inappropriate by moderation system`);
+                throw new Error('Transcribed content flagged as inappropriate by moderation system');
+            }
+            if (response.data && response.data.text) {
+                const transcriptText = response.data.text;
+                const duration = response.data.duration || 0;
+                const sentences = transcriptText.split(/[.!?]+/).filter((s) => s.trim().length > 0);
+                const segmentDuration = duration > 0 ? (duration * 1000) / sentences.length : 5000;
+                const segments = sentences.map((text, index) => ({
+                    speaker: 'agent',
+                    text: text.trim(),
+                    startMs: Math.floor(index * segmentDuration),
+                    endMs: Math.floor((index + 1) * segmentDuration),
                 }));
-                this.logger.log(`[STT] Successfully transcribed ${segments.length} segments`);
+                this.logger.log(`[STT] Successfully transcribed ${segments.length} segments from ${duration}s audio`);
                 return segments;
             }
-            this.logger.warn('[STT] API returned unexpected format - no segments found');
+            this.logger.warn('[STT] API returned unexpected format - no text found');
             this.logger.warn(`[STT] Full response: ${JSON.stringify(response.data)}`);
             return [];
         }
@@ -85,6 +99,13 @@ let AiService = AiService_1 = class AiService {
                 const shouldRetry = this.shouldRetrySTT(error, retryCount, maxRetries);
                 if (error.response) {
                     this.logger.error(`[STT] Response status: ${error.response.status}`);
+                    if (error.response.status === 400) {
+                        const errorDetail = error.response.data?.detail || '';
+                        if (errorDetail.includes('inappropriate')) {
+                            this.logger.warn(`[STT] Audio content flagged as inappropriate`);
+                            throw new Error('Audio contains inappropriate language and cannot be processed');
+                        }
+                    }
                     if (error.response.status === 413) {
                         this.logger.warn(`[STT] File too large (${fileSizeMB}MB) - Payload Too Large error`);
                     }
@@ -223,6 +244,51 @@ Javobni AYNAN quyidagi JSON formatida bering:
 MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushuntirish bermaslik kerak.
     `.trim();
     }
+    async addToTranscriptionQueue(callId, audioFileUrl, priority = 0) {
+        this.logger.log(`Adding call ${callId} to transcription queue (priority: ${priority})`);
+        const existsInQueue = this.transcriptionQueue.some(item => item.callId === callId);
+        if (existsInQueue) {
+            this.logger.warn(`Call ${callId} already in queue, skipping`);
+            return;
+        }
+        this.transcriptionQueue.push({ callId, audioFileUrl, priority });
+        this.transcriptionQueue.sort((a, b) => b.priority - a.priority);
+        this.logger.log(`Queue size: ${this.transcriptionQueue.length}`);
+        if (!this.isProcessingQueue) {
+            this.processTranscriptionQueue();
+        }
+    }
+    async processTranscriptionQueue() {
+        if (this.isProcessingQueue) {
+            this.logger.log('Queue processor already running');
+            return;
+        }
+        this.isProcessingQueue = true;
+        this.logger.log('Starting queue processor...');
+        while (this.transcriptionQueue.length > 0) {
+            const item = this.transcriptionQueue.shift();
+            if (!item)
+                break;
+            this.logger.log(`Processing queue item: ${item.callId} (${this.transcriptionQueue.length} remaining)`);
+            try {
+                await this.processCall(item.callId);
+                this.logger.log(`Successfully processed call ${item.callId} from queue`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            catch (error) {
+                this.logger.error(`Failed to process call ${item.callId} from queue: ${error.message}`);
+            }
+        }
+        this.isProcessingQueue = false;
+        this.logger.log('Queue processor finished - all items processed');
+    }
+    getQueueStatus() {
+        return {
+            queueLength: this.transcriptionQueue.length,
+            isProcessing: this.isProcessingQueue,
+            items: [...this.transcriptionQueue],
+        };
+    }
     async processCall(callId) {
         this.logger.log(`Processing call: ${callId}`);
         try {
@@ -296,15 +362,6 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
                     durationSec: Math.floor(segments[segments.length - 1]?.endMs / 1000) || 0,
                 },
             });
-            try {
-                if (fs.existsSync(call.fileUrl)) {
-                    fs.unlinkSync(call.fileUrl);
-                    this.logger.log(`Deleted audio file: ${call.fileUrl}`);
-                }
-            }
-            catch (deleteError) {
-                this.logger.warn(`Failed to delete audio file ${call.fileUrl}: ${deleteError.message}`);
-            }
             const analysis = await this.analyzeTranscript(callId, segments);
             await this.prisma.call.update({
                 where: { id: callId },
@@ -402,18 +459,14 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
                 this.logger.log('No uploaded calls found to process');
                 return;
             }
+            let priority = uploadedCalls.length;
             for (const call of uploadedCalls) {
-                try {
-                    this.logger.log(`Processing call: ${call.id} (${call.externalId})`);
-                    await this.processCall(call.id);
-                    this.logger.log(`Successfully processed call: ${call.id}`);
-                    await new Promise((resolve) => setTimeout(resolve, 2000));
-                }
-                catch (error) {
-                    this.logger.error(`Failed to process call ${call.id}: ${error.message}`);
-                }
+                this.logger.log(`Adding call ${call.id} (${call.externalId}) to queue with priority ${priority}`);
+                await this.addToTranscriptionQueue(call.id, call.fileUrl, priority);
+                priority--;
             }
-            this.logger.log('Finished processing all uploaded calls');
+            this.logger.log('All uploaded calls added to processing queue');
+            this.logger.log(`Queue status: ${JSON.stringify(this.getQueueStatus())}`);
         }
         catch (error) {
             this.logger.error(`Error in processAllUploadedCalls: ${error.message}`);

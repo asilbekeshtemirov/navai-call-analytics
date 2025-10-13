@@ -28,10 +28,18 @@ interface Criteria {
   description: string | null;
 }
 
+interface QueueItem {
+  callId: string;
+  audioFileUrl: string;
+  priority: number;
+}
+
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
   private readonly geminiAi: GoogleGenerativeAI;
+  private transcriptionQueue: QueueItem[] = [];
+  private isProcessingQueue = false;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -52,6 +60,12 @@ export class AiService {
       this.config.get<string>('STT_API_URL') ||
       'https://ai.navai.pro/v1/asr/transcribe';
 
+    const sttApiKey = this.config.get<string>('STT_API_KEY');
+    if (!sttApiKey) {
+      this.logger.error('STT_API_KEY is not set in environment variables.');
+      throw new Error('STT API key is missing.');
+    }
+
     if (!fs.existsSync(audioFileUrl)) {
       this.logger.error(`Audio file not found: ${audioFileUrl}`);
       return [];
@@ -61,20 +75,18 @@ export class AiService {
     const fileStats = fs.statSync(audioFileUrl);
     const fileSizeMB = (fileStats.size / (1024 * 1024)).toFixed(2);
 
-    // Dynamic timeout based on file size
-    // Base: 10 minutes (600000ms) + 2 minutes per MB
+    // Dynamic timeout based on file size - no limit mentioned, so we can handle large files
+    // Base: 10 minutes (600000ms) + 3 minutes per MB
     const baseTimeout = 600000; // 10 minutes base
-    const perMbTimeout = 120000; // 2 minutes per MB
+    const perMbTimeout = 180000; // 3 minutes per MB
     const dynamicTimeout = baseTimeout + (fileStats.size / (1024 * 1024)) * perMbTimeout;
-    const timeout = Math.min(dynamicTimeout, 3600000); // Max 60 minutes (1 hour) for 50MB+ files
+    const timeout = Math.min(dynamicTimeout, 7200000); // Max 120 minutes (2 hours) for very large files
 
     this.logger.log(`[STT] File size: ${fileSizeMB}MB, Timeout: ${Math.round(timeout / 1000)}s`);
 
     try {
       const formData = new FormData();
       formData.append('file', fs.createReadStream(audioFileUrl));
-      formData.append('diarization', 'true');
-      formData.append('language', 'uz');
 
       this.logger.log(`[STT] Uploading audio file to: ${sttApiUrl}`);
       this.logger.log(`[STT] File path: ${audioFileUrl}`);
@@ -83,6 +95,7 @@ export class AiService {
       const response = await axios.post(sttApiUrl, formData, {
         headers: {
           ...formData.getHeaders(),
+          'X-API-Key': sttApiKey,
         },
         timeout: timeout,
         maxContentLength: Infinity,
@@ -94,24 +107,36 @@ export class AiService {
         `[STT] Response data: ${JSON.stringify(response.data).substring(0, 500)}`,
       );
 
-      if (response.data && Array.isArray(response.data.segments)) {
-        const segments: TranscriptSegment[] = response.data.segments.map(
-          (seg: any) => ({
-            speaker: seg.speaker || 'agent',
-            text: seg.text || '',
-            startMs: seg.start_ms || seg.startMs || 0,
-            endMs: seg.end_ms || seg.endMs || 0,
-          }),
-        );
+      // Check for 400 error with inappropriate content message
+      if (response.status === 400 && response.data?.detail?.includes('inappropriate')) {
+        this.logger.warn(`[STT] Content flagged as inappropriate by moderation system`);
+        throw new Error('Transcribed content flagged as inappropriate by moderation system');
+      }
+
+      // New API returns: { text: string, language: string, duration: number }
+      if (response.data && response.data.text) {
+        const transcriptText = response.data.text;
+        const duration = response.data.duration || 0;
+
+        // Parse the text into segments (simple split by sentences or periods)
+        const sentences = transcriptText.split(/[.!?]+/).filter((s: string) => s.trim().length > 0);
+        const segmentDuration = duration > 0 ? (duration * 1000) / sentences.length : 5000;
+
+        const segments: TranscriptSegment[] = sentences.map((text: string, index: number) => ({
+          speaker: 'agent', // Default to agent, can be enhanced later
+          text: text.trim(),
+          startMs: Math.floor(index * segmentDuration),
+          endMs: Math.floor((index + 1) * segmentDuration),
+        }));
 
         this.logger.log(
-          `[STT] Successfully transcribed ${segments.length} segments`,
+          `[STT] Successfully transcribed ${segments.length} segments from ${duration}s audio`,
         );
         return segments;
       }
 
       this.logger.warn(
-        '[STT] API returned unexpected format - no segments found',
+        '[STT] API returned unexpected format - no text found',
       );
       this.logger.warn(`[STT] Full response: ${JSON.stringify(response.data)}`);
       return [];
@@ -125,6 +150,15 @@ export class AiService {
 
         if (error.response) {
           this.logger.error(`[STT] Response status: ${error.response.status}`);
+
+          // Handle 400 Bad Request for inappropriate content
+          if (error.response.status === 400) {
+            const errorDetail = error.response.data?.detail || '';
+            if (errorDetail.includes('inappropriate')) {
+              this.logger.warn(`[STT] Audio content flagged as inappropriate`);
+              throw new Error('Audio contains inappropriate language and cannot be processed');
+            }
+          }
 
           if (error.response.status === 413) {
             this.logger.warn(`[STT] File too large (${fileSizeMB}MB) - Payload Too Large error`);
@@ -319,6 +353,79 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
   }
 
   /**
+   * Add a call to the transcription queue for sequential processing
+   */
+  async addToTranscriptionQueue(callId: string, audioFileUrl: string, priority: number = 0): Promise<void> {
+    this.logger.log(`Adding call ${callId} to transcription queue (priority: ${priority})`);
+
+    // Check if already in queue
+    const existsInQueue = this.transcriptionQueue.some(item => item.callId === callId);
+    if (existsInQueue) {
+      this.logger.warn(`Call ${callId} already in queue, skipping`);
+      return;
+    }
+
+    this.transcriptionQueue.push({ callId, audioFileUrl, priority });
+
+    // Sort by priority (higher priority first)
+    this.transcriptionQueue.sort((a, b) => b.priority - a.priority);
+
+    this.logger.log(`Queue size: ${this.transcriptionQueue.length}`);
+
+    // Start processing if not already running
+    if (!this.isProcessingQueue) {
+      this.processTranscriptionQueue();
+    }
+  }
+
+  /**
+   * Process the transcription queue sequentially
+   * Each audio file waits for the previous one to complete STT before starting
+   */
+  private async processTranscriptionQueue(): Promise<void> {
+    if (this.isProcessingQueue) {
+      this.logger.log('Queue processor already running');
+      return;
+    }
+
+    this.isProcessingQueue = true;
+    this.logger.log('Starting queue processor...');
+
+    while (this.transcriptionQueue.length > 0) {
+      const item = this.transcriptionQueue.shift();
+      if (!item) break;
+
+      this.logger.log(`Processing queue item: ${item.callId} (${this.transcriptionQueue.length} remaining)`);
+
+      try {
+        // Process this call completely (transcribe + analyze)
+        await this.processCall(item.callId);
+        this.logger.log(`Successfully processed call ${item.callId} from queue`);
+
+        // Small delay between items to avoid overwhelming the system
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        this.logger.error(`Failed to process call ${item.callId} from queue: ${error.message}`);
+        // Continue with next item even if this one fails
+      }
+    }
+
+    this.isProcessingQueue = false;
+    this.logger.log('Queue processor finished - all items processed');
+  }
+
+  /**
+   * Get current queue status
+   */
+  getQueueStatus(): { queueLength: number; isProcessing: boolean; items: QueueItem[] } {
+    return {
+      queueLength: this.transcriptionQueue.length,
+      isProcessing: this.isProcessingQueue,
+      items: [...this.transcriptionQueue],
+    };
+  }
+
+  /**
    * Process a call: transcribe + analyze + save results
    */
   async processCall(callId: string): Promise<void> {
@@ -414,19 +521,6 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
             Math.floor(segments[segments.length - 1]?.endMs / 1000) || 0,
         },
       });
-
-      // Delete the audio file after successful transcription
-      try {
-        if (fs.existsSync(call.fileUrl)) {
-          fs.unlinkSync(call.fileUrl);
-          this.logger.log(`Deleted audio file: ${call.fileUrl}`);
-        }
-      } catch (deleteError) {
-        this.logger.warn(
-          `Failed to delete audio file ${call.fileUrl}: ${deleteError.message}`,
-        );
-        // Don't throw error, continue processing
-      }
 
       // Step 2: Analyze transcript
       const analysis = await this.analyzeTranscript(callId, segments);
@@ -545,6 +639,7 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
 
   /**
    * Process all uploaded calls that haven't been analyzed yet
+   * Uses sequential queue to ensure proper ordering and avoid overwhelming STT API
    */
   async processAllUploadedCalls(): Promise<void> {
     this.logger.log('Starting to process all uploaded calls...');
@@ -565,24 +660,17 @@ MUHIM: Javobda faqat JSON bo'lishi kerak, hech qanday qo'shimcha matn yoki tushu
         return;
       }
 
-      // Process each call one by one
+      // Add all calls to the queue with priority based on creation time
+      // Older calls get higher priority
+      let priority = uploadedCalls.length;
       for (const call of uploadedCalls) {
-        try {
-          this.logger.log(`Processing call: ${call.id} (${call.externalId})`);
-          await this.processCall(call.id);
-          this.logger.log(`Successfully processed call: ${call.id}`);
-
-          // Add small delay between calls to avoid overwhelming APIs
-          await new Promise((resolve) => setTimeout(resolve, 2000)); // 2 second delay
-        } catch (error) {
-          this.logger.error(
-            `Failed to process call ${call.id}: ${error.message}`,
-          );
-          // Continue with next call even if one fails
-        }
+        this.logger.log(`Adding call ${call.id} (${call.externalId}) to queue with priority ${priority}`);
+        await this.addToTranscriptionQueue(call.id, call.fileUrl, priority);
+        priority--;
       }
 
-      this.logger.log('Finished processing all uploaded calls');
+      this.logger.log('All uploaded calls added to processing queue');
+      this.logger.log(`Queue status: ${JSON.stringify(this.getQueueStatus())}`);
     } catch (error) {
       this.logger.error(`Error in processAllUploadedCalls: ${error.message}`);
       throw error;
