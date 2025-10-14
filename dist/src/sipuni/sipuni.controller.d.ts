@@ -37,6 +37,11 @@ export declare class SipuniController {
         message: string;
         recordsProcessed: number;
     }>;
+    updateMissingDurations(organizationId: number): Promise<{
+        success: boolean;
+        message: string;
+        updated: number;
+    }>;
 }
 export declare class SipuniWebhookController {
     private readonly sipuniService;

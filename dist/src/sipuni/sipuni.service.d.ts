@@ -82,5 +82,10 @@ export declare class SipuniService implements OnModuleInit {
     private saveRecordsToCSV;
     private updateCSVFromSipuni;
     private updateEmployeesFromCSV;
+    updateMissingDurations(organizationId: number): Promise<{
+        success: boolean;
+        message: string;
+        updated: number;
+    }>;
 }
 export {};

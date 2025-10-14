@@ -179,6 +179,40 @@ export class SipuniController {
       };
     }
   }
+
+  @Post('update-missing-durations')
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({
+    summary: 'Update missing call durations from Sipuni',
+    description:
+      'Sipuni API dan yangi ma\'lumotlarni olib, durationSec = 0 yoki null bo\'lgan qo\'ng\'iroqlarni yangilaydi',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully updated missing durations',
+  })
+  async updateMissingDurations(@OrganizationId() organizationId: number) {
+    try {
+      this.logger.log(
+        `[CONTROLLER] Updating missing durations for org ${organizationId}`,
+      );
+
+      const result = await this.sipuniService.updateMissingDurations(
+        organizationId,
+      );
+
+      return result;
+    } catch (error) {
+      this.logger.error(
+        `[CONTROLLER] Update missing durations failed: ${error.message}`,
+      );
+      return {
+        success: false,
+        message: `Update failed: ${error.message}`,
+        updated: 0,
+      };
+    }
+  }
 }
 
 @ApiTags('sipuni-webhook')

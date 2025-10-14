@@ -932,6 +932,76 @@ let SipuniService = SipuniService_1 = class SipuniService {
             this.logger.error(`[EMPLOYEES-UPDATE] Failed to update employees: ${error.message}`);
         }
     }
+    async updateMissingDurations(organizationId) {
+        try {
+            this.logger.log(`[UPDATE-DURATION] Updating missing durations for org ${organizationId}...`);
+            this.logger.log(`[UPDATE-DURATION] Fetching fresh data from Sipuni...`);
+            const records = await this.fetchAllRecords(organizationId, 1000);
+            await this.saveRecordsToCSV(records, organizationId);
+            const callsWithMissingDuration = await this.prisma.call.findMany({
+                where: {
+                    organizationId,
+                    OR: [{ durationSec: null }, { durationSec: 0 }],
+                },
+                include: {
+                    employee: true,
+                },
+            });
+            this.logger.log(`[UPDATE-DURATION] Found ${callsWithMissingDuration.length} calls with missing duration`);
+            if (callsWithMissingDuration.length === 0) {
+                return {
+                    success: true,
+                    message: 'No calls with missing duration found',
+                    updated: 0,
+                };
+            }
+            const sipuniMap = new Map();
+            for (const record of records) {
+                if (record.recordId) {
+                    sipuniMap.set(record.recordId, record);
+                }
+            }
+            let updated = 0;
+            let notFound = 0;
+            for (const call of callsWithMissingDuration) {
+                try {
+                    const sipuniRecord = sipuniMap.get(call.externalId);
+                    if (sipuniRecord && sipuniRecord.talkDuration) {
+                        const duration = parseInt(sipuniRecord.talkDuration) || 0;
+                        if (duration > 0) {
+                            await this.prisma.call.update({
+                                where: { id: call.id },
+                                data: { durationSec: duration },
+                            });
+                            this.logger.log(`[UPDATE-DURATION] Updated call ${call.id} (${call.externalId}) with duration ${duration}s`);
+                            updated++;
+                        }
+                    }
+                    else {
+                        notFound++;
+                    }
+                }
+                catch (error) {
+                    this.logger.error(`[UPDATE-DURATION] Failed to update call ${call.id}: ${error.message}`);
+                }
+            }
+            const message = `Updated ${updated} calls, ${notFound} not found in Sipuni data`;
+            this.logger.log(`[UPDATE-DURATION] ${message}`);
+            return {
+                success: true,
+                message,
+                updated,
+            };
+        }
+        catch (error) {
+            this.logger.error(`[UPDATE-DURATION] Failed to update durations: ${error.message}`);
+            return {
+                success: false,
+                message: `Failed to update durations: ${error.message}`,
+                updated: 0,
+            };
+        }
+    }
 };
 SipuniService = SipuniService_1 = __decorate([
     Injectable(),

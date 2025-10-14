@@ -96,6 +96,21 @@ let SipuniController = SipuniController_1 = class SipuniController {
             };
         }
     }
+    async updateMissingDurations(organizationId) {
+        try {
+            this.logger.log(`[CONTROLLER] Updating missing durations for org ${organizationId}`);
+            const result = await this.sipuniService.updateMissingDurations(organizationId);
+            return result;
+        }
+        catch (error) {
+            this.logger.error(`[CONTROLLER] Update missing durations failed: ${error.message}`);
+            return {
+                success: false,
+                message: `Update failed: ${error.message}`,
+                updated: 0,
+            };
+        }
+    }
 };
 __decorate([
     Get('test-connection'),
@@ -154,6 +169,22 @@ __decorate([
     __metadata("design:paramtypes", [Number, String, String]),
     __metadata("design:returntype", Promise)
 ], SipuniController.prototype, "step2ProcessRecordings", null);
+__decorate([
+    Post('update-missing-durations'),
+    Roles(UserRole.ADMIN, UserRole.SUPERADMIN),
+    ApiOperation({
+        summary: 'Update missing call durations from Sipuni',
+        description: 'Sipuni API dan yangi ma\'lumotlarni olib, durationSec = 0 yoki null bo\'lgan qo\'ng\'iroqlarni yangilaydi',
+    }),
+    ApiResponse({
+        status: 200,
+        description: 'Successfully updated missing durations',
+    }),
+    __param(0, OrganizationId()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], SipuniController.prototype, "updateMissingDurations", null);
 SipuniController = SipuniController_1 = __decorate([
     ApiTags('sipuni'),
     Controller('sipuni'),

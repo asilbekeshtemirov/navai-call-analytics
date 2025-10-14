@@ -1460,6 +1460,107 @@ export class SipuniService implements OnModuleInit {
   }
 
   /**
+   * Update missing call durations from Sipuni CSV file
+   */
+  async updateMissingDurations(organizationId: number): Promise<{
+    success: boolean;
+    message: string;
+    updated: number;
+  }> {
+    try {
+      this.logger.log(
+        `[UPDATE-DURATION] Updating missing durations for org ${organizationId}...`,
+      );
+
+      // First, fetch fresh data from Sipuni API
+      this.logger.log(`[UPDATE-DURATION] Fetching fresh data from Sipuni...`);
+      const records = await this.fetchAllRecords(organizationId, 1000);
+      await this.saveRecordsToCSV(records, organizationId);
+
+      // Find all calls with missing or zero duration
+      const callsWithMissingDuration = await this.prisma.call.findMany({
+        where: {
+          organizationId,
+          OR: [{ durationSec: null }, { durationSec: 0 }],
+        },
+        include: {
+          employee: true,
+        },
+      });
+
+      this.logger.log(
+        `[UPDATE-DURATION] Found ${callsWithMissingDuration.length} calls with missing duration`,
+      );
+
+      if (callsWithMissingDuration.length === 0) {
+        return {
+          success: true,
+          message: 'No calls with missing duration found',
+          updated: 0,
+        };
+      }
+
+      // Create a map of Sipuni records by recordId for quick lookup
+      const sipuniMap = new Map<string, SipuniRecord>();
+      for (const record of records) {
+        if (record.recordId) {
+          sipuniMap.set(record.recordId, record);
+        }
+      }
+
+      let updated = 0;
+      let notFound = 0;
+
+      for (const call of callsWithMissingDuration) {
+        try {
+          // Try to find this call in Sipuni records by externalId
+          const sipuniRecord = sipuniMap.get(call.externalId);
+
+          if (sipuniRecord && sipuniRecord.talkDuration) {
+            const duration = parseInt(sipuniRecord.talkDuration) || 0;
+
+            if (duration > 0) {
+              await this.prisma.call.update({
+                where: { id: call.id },
+                data: { durationSec: duration },
+              });
+
+              this.logger.log(
+                `[UPDATE-DURATION] Updated call ${call.id} (${call.externalId}) with duration ${duration}s`,
+              );
+              updated++;
+            }
+          } else {
+            notFound++;
+          }
+        } catch (error: any) {
+          this.logger.error(
+            `[UPDATE-DURATION] Failed to update call ${call.id}: ${error.message}`,
+          );
+        }
+      }
+
+      const message = `Updated ${updated} calls, ${notFound} not found in Sipuni data`;
+      this.logger.log(`[UPDATE-DURATION] ${message}`);
+
+      return {
+        success: true,
+        message,
+        updated,
+      };
+    } catch (error: any) {
+      this.logger.error(
+        `[UPDATE-DURATION] Failed to update durations: ${error.message}`,
+      );
+      return {
+        success: false,
+        message: `Failed to update durations: ${error.message}`,
+        updated: 0,
+      };
+    }
+  }
+
+  /**
    * Note: Static cron job removed - now using dynamic cron jobs per organization
    * Each organization can configure their own sync schedule via Settings.syncSchedule
    * Dynamic cron jobs are setup in onModuleInit() and can be customized per organization
