@@ -31,17 +31,29 @@ export class UserService {
 
   findAll(
     organizationId?: number,
-    filters?: { branchId?: string; departmentId?: string },
+    filters?: { branchId?: string; departmentId?: string; excludeSuperAdmin?: boolean },
   ) {
-    const where: any = {
-      organizationId,
-    };
+    const where: any = {};
+
+    if (organizationId !== undefined) {
+      where.organizationId = organizationId;
+    }
+
     if (filters?.branchId) {
       where.branchId = filters.branchId;
     }
+
     if (filters?.departmentId) {
       where.departmentId = filters.departmentId;
     }
+
+    // ADMIN va MANAGER uchun SUPERADMIN'ni ko'rsatmaslik
+    if (filters?.excludeSuperAdmin) {
+      where.role = {
+        not: 'SUPERADMIN',
+      };
+    }
+
     return this.prisma.user.findMany({
       where,
       include: {

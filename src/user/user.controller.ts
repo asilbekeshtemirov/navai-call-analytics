@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Query,
+  Request,
 } from '@nestjs/common';
 import { UserService } from './user.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
@@ -44,15 +45,22 @@ export class UserController {
 
   @Get()
   @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERADMIN)
-  @ApiOperation({ summary: "O'z organizatsiyasidagi barcha userlarni ko'rish" })
+  @ApiOperation({ summary: "O'z organizatsiyasidagi barcha userlarni ko'rish (SUPERADMIN barcha organizatsiyalarni ko'radi, ADMIN/MANAGER SUPERADMIN'ni ko'rmaydi)" })
   @ApiQuery({ name: 'branchId', required: false })
   @ApiQuery({ name: 'departmentId', required: false })
   findAll(
+    @Request() req: any,
     @OrganizationId() organizationId: number,
     @Query('branchId') branchId?: string,
     @Query('departmentId') departmentId?: string,
   ) {
-    return this.userService.findAll(organizationId, { branchId, departmentId });
+    // SUPERADMIN barcha organizatsiyadagi userlarni ko'rishi mumkin
+    const filterOrgId = req.user.role === UserRole.SUPERADMIN ? undefined : organizationId;
+
+    // ADMIN va MANAGER SUPERADMIN'ni ko'rmasligi kerak
+    const excludeSuperAdmin = req.user.role !== UserRole.SUPERADMIN;
+
+    return this.userService.findAll(filterOrgId, { branchId, departmentId, excludeSuperAdmin });
   }
 
   @Get(':id/statistics')

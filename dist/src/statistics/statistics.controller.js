@@ -20,8 +20,8 @@ let StatisticsController = class StatisticsController {
     constructor(statisticsService) {
         this.statisticsService = statisticsService;
     }
-    async getUnifiedStatistics(filters) {
-        return this.statisticsService.getUnifiedStatistics(filters);
+    async getUnifiedStatistics(organizationId, filters) {
+        return this.statisticsService.getUnifiedStatistics(organizationId, filters);
     }
     async exportReports(organizationId, res, dateFrom, dateTo) {
         const csv = await this.statisticsService.exportReports({
@@ -45,9 +45,10 @@ __decorate([
         summary: 'Birlashtirilgan statistika - barcha statistika turlarini bir joyda olish',
         description: "Bu endpoint orqali daily, monthly, summary ma'lumotlarini sana oralig'i bilan filter qilish mumkin",
     }),
-    __param(0, Query()),
+    __param(0, OrganizationId()),
+    __param(1, Query()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [UnifiedStatisticsDto]),
+    __metadata("design:paramtypes", [Number, UnifiedStatisticsDto]),
     __metadata("design:returntype", Promise)
 ], StatisticsController.prototype, "getUnifiedStatistics", null);
 __decorate([

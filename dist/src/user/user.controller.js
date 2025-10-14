@@ -10,7 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request, } from '@nestjs/common';
 import { UserService } from './user.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
@@ -30,8 +30,10 @@ let UserController = class UserController {
     create(organizationId, createUserDto) {
         return this.userService.create(organizationId, createUserDto);
     }
-    findAll(organizationId, branchId, departmentId) {
-        return this.userService.findAll(organizationId, { branchId, departmentId });
+    findAll(req, organizationId, branchId, departmentId) {
+        const filterOrgId = req.user.role === UserRole.SUPERADMIN ? undefined : organizationId;
+        const excludeSuperAdmin = req.user.role !== UserRole.SUPERADMIN;
+        return this.userService.findAll(filterOrgId, { branchId, departmentId, excludeSuperAdmin });
     }
     async getUnifiedUserStatistics(id, filters) {
         return this.userService.getUnifiedUserStatistics(id, filters);
@@ -61,14 +63,15 @@ __decorate([
 __decorate([
     Get(),
     Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERADMIN),
-    ApiOperation({ summary: "O'z organizatsiyasidagi barcha userlarni ko'rish" }),
+    ApiOperation({ summary: "O'z organizatsiyasidagi barcha userlarni ko'rish (SUPERADMIN barcha organizatsiyalarni ko'radi, ADMIN/MANAGER SUPERADMIN'ni ko'rmaydi)" }),
     ApiQuery({ name: 'branchId', required: false }),
     ApiQuery({ name: 'departmentId', required: false }),
-    __param(0, OrganizationId()),
-    __param(1, Query('branchId')),
-    __param(2, Query('departmentId')),
+    __param(0, Request()),
+    __param(1, OrganizationId()),
+    __param(2, Query('branchId')),
+    __param(3, Query('departmentId')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, String, String]),
+    __metadata("design:paramtypes", [Object, Number, String, String]),
     __metadata("design:returntype", void 0)
 ], UserController.prototype, "findAll", null);
 __decorate([

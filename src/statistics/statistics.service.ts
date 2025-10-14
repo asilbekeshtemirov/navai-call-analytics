@@ -34,15 +34,21 @@ export class StatisticsService {
           },
           status: 'DONE',
         },
-        // include: {
-        //   callScores: true,
-        // },
+        include: {
+          employee: true,
+          scores: {
+            include: {
+              criteria: true,
+            },
+          },
+        },
       });
 
-      // ExtCode bo'yicha guruhlash
-      const statsByExtCode = new Map<
+      // Organization va ExtCode bo'yicha guruhlash
+      const statsByOrgAndExtCode = new Map<
         string,
         {
+          organizationId: number;
           callsCount: number;
           totalDuration: number;
           totalScore: number;
@@ -51,10 +57,13 @@ export class StatisticsService {
       >();
 
       for (const call of calls) {
-        const extCode = (call as any).extCode || 'unknown';
+        const extCode = call.employee.extCode || 'unknown';
+        const organizationId = call.organizationId;
+        const key = `${organizationId}-${extCode}`;
 
-        if (!statsByExtCode.has(extCode)) {
-          statsByExtCode.set(extCode, {
+        if (!statsByOrgAndExtCode.has(key)) {
+          statsByOrgAndExtCode.set(key, {
+            organizationId,
             callsCount: 0,
             totalDuration: 0,
             totalScore: 0,
@@ -62,22 +71,37 @@ export class StatisticsService {
           });
         }
 
-        const stats = statsByExtCode.get(extCode)!;
+        const stats = statsByOrgAndExtCode.get(key)!;
         stats.callsCount++;
-        stats.totalDuration += (call as any).duration || 0;
+        stats.totalDuration += call.durationSec || 0;
 
-        // Hozircha score hisoblashni o'tkazib yuboramiz
-        // Schema yangilanganidan keyin qo'shamiz
+        // Score hisoblash
+        if (call.scores && call.scores.length > 0) {
+          const totalWeight = call.scores.reduce(
+            (sum, s) => sum + s.criteria.weight,
+            0,
+          );
+          const weightedScore = call.scores.reduce(
+            (sum, s) => sum + s.score * s.criteria.weight,
+            0,
+          );
+          if (totalWeight > 0) {
+            stats.totalScore += weightedScore / totalWeight;
+            stats.scoreCount++;
+          }
+        }
       }
 
-      // Har bir extCode uchun daily stats saqlash
-      for (const [extCode, stats] of statsByExtCode) {
+      // Har bir organizationId va extCode uchun daily stats saqlash
+      for (const [key, stats] of statsByOrgAndExtCode) {
+        const extCode = key.split('-')[1];
         const averageScore =
           stats.scoreCount > 0 ? stats.totalScore / stats.scoreCount : null;
 
         await (this.prisma as any).dailyStats.upsert({
           where: {
-            date_extCode: {
+            organizationId_date_extCode: {
+              organizationId: stats.organizationId,
               date: yesterday,
               extCode,
             },
@@ -89,6 +113,7 @@ export class StatisticsService {
             totalScore: stats.totalScore,
           },
           create: {
+            organizationId: stats.organizationId,
             date: yesterday,
             extCode,
             callsCount: stats.callsCount,
@@ -99,7 +124,7 @@ export class StatisticsService {
         });
 
         this.logger.log(
-          `Daily stats for ${extCode}: ${stats.callsCount} calls, ${Math.round(stats.totalDuration / 60)} minutes, avg score: ${averageScore?.toFixed(2) || 'N/A'}`,
+          `Daily stats for org ${stats.organizationId}, ${extCode}: ${stats.callsCount} calls, ${Math.round(stats.totalDuration / 60)} minutes, avg score: ${averageScore?.toFixed(2) || 'N/A'}`,
         );
       }
 
@@ -127,10 +152,11 @@ export class StatisticsService {
       },
     });
 
-    // ExtCode bo'yicha guruhlash
-    const monthlyStatsByExtCode = new Map<
+    // Organization va ExtCode bo'yicha guruhlash
+    const monthlyStatsByOrgAndExtCode = new Map<
       string,
       {
+        organizationId: number;
         callsCount: number;
         totalDuration: number;
         totalScore: number;
@@ -140,9 +166,12 @@ export class StatisticsService {
 
     for (const daily of dailyStats) {
       const extCode = daily.extCode;
+      const organizationId = daily.organizationId;
+      const key = `${organizationId}-${extCode}`;
 
-      if (!monthlyStatsByExtCode.has(extCode)) {
-        monthlyStatsByExtCode.set(extCode, {
+      if (!monthlyStatsByOrgAndExtCode.has(key)) {
+        monthlyStatsByOrgAndExtCode.set(key, {
+          organizationId,
           callsCount: 0,
           totalDuration: 0,
           totalScore: 0,
@@ -150,7 +179,7 @@ export class StatisticsService {
         });
       }
 
-      const stats = monthlyStatsByExtCode.get(extCode)!;
+      const stats = monthlyStatsByOrgAndExtCode.get(key)!;
       stats.callsCount += daily.callsCount;
       stats.totalDuration += daily.totalDuration;
       stats.totalScore += daily.totalScore;
@@ -159,14 +188,16 @@ export class StatisticsService {
       }
     }
 
-    // Har bir extCode uchun monthly stats saqlash
-    for (const [extCode, stats] of monthlyStatsByExtCode) {
+    // Har bir organizationId va extCode uchun monthly stats saqlash
+    for (const [key, stats] of monthlyStatsByOrgAndExtCode) {
+      const extCode = key.split('-')[1];
       const averageScore =
         stats.scoreCount > 0 ? stats.totalScore / stats.scoreCount : null;
 
       await (this.prisma as any).monthlyStats.upsert({
         where: {
-          year_month_extCode: {
+          organizationId_year_month_extCode: {
+            organizationId: stats.organizationId,
             year,
             month,
             extCode,
@@ -179,6 +210,7 @@ export class StatisticsService {
           totalScore: stats.totalScore,
         },
         create: {
+          organizationId: stats.organizationId,
           year,
           month,
           extCode,
@@ -217,6 +249,23 @@ export class StatisticsService {
     });
   }
 
+  // Kunlik statistikani olish (organizationId bilan)
+  private async getDailyStatsFiltered(
+    organizationId: number,
+    date: Date,
+    extCode?: string,
+  ) {
+    const where: any = { organizationId, date };
+    if (extCode) {
+      where.extCode = extCode;
+    }
+
+    return (this.prisma as any).dailyStats.findMany({
+      where,
+      orderBy: { extCode: 'asc' },
+    });
+  }
+
   // Oylik statistikani olish
   async getMonthlyStats(year: number, month: number, extCode?: string) {
     const where: any = { year, month };
@@ -230,8 +279,29 @@ export class StatisticsService {
     });
   }
 
+  // Oylik statistikani olish (organizationId bilan)
+  private async getMonthlyStatsFiltered(
+    organizationId: number,
+    year: number,
+    month: number,
+    extCode?: string,
+  ) {
+    const where: any = { organizationId, year, month };
+    if (extCode) {
+      where.extCode = extCode;
+    }
+
+    return (this.prisma as any).monthlyStats.findMany({
+      where,
+      orderBy: { extCode: 'asc' },
+    });
+  }
+
   // Birlashtirilgan statistika - barcha endpoint larni bir joyga birlashtiradi
-  async getUnifiedStatistics(filters: UnifiedStatisticsDto) {
+  async getUnifiedStatistics(
+    organizationId: number,
+    filters: UnifiedStatisticsDto,
+  ) {
     const { type, dateFrom, dateTo, extCode } = filters;
 
     const result: any = {
@@ -247,17 +317,26 @@ export class StatisticsService {
     try {
       // Agar type ALL yoki DAILY bo'lsa
       if (type === StatisticsType.ALL || type === StatisticsType.DAILY) {
-        result.data.daily = await this.getFilteredDailyStats(filters);
+        result.data.daily = await this.getFilteredDailyStats(
+          organizationId,
+          filters,
+        );
       }
 
       // Agar type ALL yoki MONTHLY bo'lsa
       if (type === StatisticsType.ALL || type === StatisticsType.MONTHLY) {
-        result.data.monthly = await this.getFilteredMonthlyStats(filters);
+        result.data.monthly = await this.getFilteredMonthlyStats(
+          organizationId,
+          filters,
+        );
       }
 
       // Agar type ALL yoki SUMMARY bo'lsa
       if (type === StatisticsType.ALL || type === StatisticsType.SUMMARY) {
-        result.data.summary = await this.getFilteredSummary(filters);
+        result.data.summary = await this.getFilteredSummary(
+          organizationId,
+          filters,
+        );
       }
 
       return result;
@@ -267,7 +346,10 @@ export class StatisticsService {
   }
 
   // Filterlangan kunlik statistika
-  private async getFilteredDailyStats(filters: UnifiedStatisticsDto) {
+  private async getFilteredDailyStats(
+    organizationId: number,
+    filters: UnifiedStatisticsDto,
+  ) {
     const { dateFrom, dateTo, extCode } = filters;
 
     if (dateFrom && dateTo) {
@@ -277,7 +359,8 @@ export class StatisticsService {
       const endDate = new Date(dateTo);
 
       while (currentDate <= endDate) {
-        const dailyStat = await this.getDailyStats(
+        const dailyStat = await this.getDailyStatsFiltered(
+          organizationId,
           new Date(currentDate),
           extCode,
         );
@@ -291,15 +374,22 @@ export class StatisticsService {
       return stats;
     } else if (dateFrom) {
       // Faqat bitta kun
-      return await this.getDailyStats(new Date(dateFrom), extCode);
+      return await this.getDailyStatsFiltered(
+        organizationId,
+        new Date(dateFrom),
+        extCode,
+      );
     } else {
       // Bugungi kun
-      return await this.getDailyStats(new Date(), extCode);
+      return await this.getDailyStatsFiltered(organizationId, new Date(), extCode);
     }
   }
 
   // Filterlangan oylik statistika
-  private async getFilteredMonthlyStats(filters: UnifiedStatisticsDto) {
+  private async getFilteredMonthlyStats(
+    organizationId: number,
+    filters: UnifiedStatisticsDto,
+  ) {
     const { dateFrom, dateTo, extCode } = filters;
 
     if (dateFrom && dateTo) {
@@ -316,7 +406,8 @@ export class StatisticsService {
         (currentYear === endDate.getFullYear() &&
           currentMonth <= endDate.getMonth() + 1)
       ) {
-        const monthlyStat = await this.getMonthlyStats(
+        const monthlyStat = await this.getMonthlyStatsFiltered(
+          organizationId,
           currentYear,
           currentMonth,
           extCode,
@@ -338,7 +429,8 @@ export class StatisticsService {
     } else {
       // Joriy oy
       const now = new Date();
-      return await this.getMonthlyStats(
+      return await this.getMonthlyStatsFiltered(
+        organizationId,
         now.getFullYear(),
         now.getMonth() + 1,
         extCode,
@@ -347,7 +439,10 @@ export class StatisticsService {
   }
 
   // Filterlangan umumiy xulosalar
-  private async getFilteredSummary(filters: UnifiedStatisticsDto) {
+  private async getFilteredSummary(
+    organizationId: number,
+    filters: UnifiedStatisticsDto,
+  ) {
     const { dateFrom, dateTo, extCode } = filters;
 
     // Agar sana berilmagan bo'lsa, default summary qaytaramiz
@@ -362,8 +457,8 @@ export class StatisticsService {
     const endDate = dateTo ? new Date(dateTo) : today;
 
     const [dailyStats, monthlyStats] = await Promise.all([
-      this.getDailyStats(startDate, extCode),
-      this.getMonthlyStats(currentYear, currentMonth, extCode),
+      this.getDailyStatsFiltered(organizationId, startDate, extCode),
+      this.getMonthlyStatsFiltered(organizationId, currentYear, currentMonth, extCode),
     ]);
 
     return {

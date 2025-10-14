@@ -34,27 +34,48 @@ let StatisticsService = StatisticsService_1 = class StatisticsService {
                     },
                     status: 'DONE',
                 },
+                include: {
+                    employee: true,
+                    scores: {
+                        include: {
+                            criteria: true,
+                        },
+                    },
+                },
             });
-            const statsByExtCode = new Map();
+            const statsByOrgAndExtCode = new Map();
             for (const call of calls) {
-                const extCode = call.extCode || 'unknown';
-                if (!statsByExtCode.has(extCode)) {
-                    statsByExtCode.set(extCode, {
+                const extCode = call.employee.extCode || 'unknown';
+                const organizationId = call.organizationId;
+                const key = `${organizationId}-${extCode}`;
+                if (!statsByOrgAndExtCode.has(key)) {
+                    statsByOrgAndExtCode.set(key, {
+                        organizationId,
                         callsCount: 0,
                         totalDuration: 0,
                         totalScore: 0,
                         scoreCount: 0,
                     });
                 }
-                const stats = statsByExtCode.get(extCode);
+                const stats = statsByOrgAndExtCode.get(key);
                 stats.callsCount++;
-                stats.totalDuration += call.duration || 0;
+                stats.totalDuration += call.durationSec || 0;
+                if (call.scores && call.scores.length > 0) {
+                    const totalWeight = call.scores.reduce((sum, s) => sum + s.criteria.weight, 0);
+                    const weightedScore = call.scores.reduce((sum, s) => sum + s.score * s.criteria.weight, 0);
+                    if (totalWeight > 0) {
+                        stats.totalScore += weightedScore / totalWeight;
+                        stats.scoreCount++;
+                    }
+                }
             }
-            for (const [extCode, stats] of statsByExtCode) {
+            for (const [key, stats] of statsByOrgAndExtCode) {
+                const extCode = key.split('-')[1];
                 const averageScore = stats.scoreCount > 0 ? stats.totalScore / stats.scoreCount : null;
                 await this.prisma.dailyStats.upsert({
                     where: {
-                        date_extCode: {
+                        organizationId_date_extCode: {
+                            organizationId: stats.organizationId,
                             date: yesterday,
                             extCode,
                         },
@@ -66,6 +87,7 @@ let StatisticsService = StatisticsService_1 = class StatisticsService {
                         totalScore: stats.totalScore,
                     },
                     create: {
+                        organizationId: stats.organizationId,
                         date: yesterday,
                         extCode,
                         callsCount: stats.callsCount,
@@ -74,7 +96,7 @@ let StatisticsService = StatisticsService_1 = class StatisticsService {
                         totalScore: stats.totalScore,
                     },
                 });
-                this.logger.log(`Daily stats for ${extCode}: ${stats.callsCount} calls, ${Math.round(stats.totalDuration / 60)} minutes, avg score: ${averageScore?.toFixed(2) || 'N/A'}`);
+                this.logger.log(`Daily stats for org ${stats.organizationId}, ${extCode}: ${stats.callsCount} calls, ${Math.round(stats.totalDuration / 60)} minutes, avg score: ${averageScore?.toFixed(2) || 'N/A'}`);
             }
             await this.updateMonthlyStats(yesterday);
         }
@@ -95,18 +117,21 @@ let StatisticsService = StatisticsService_1 = class StatisticsService {
                 },
             },
         });
-        const monthlyStatsByExtCode = new Map();
+        const monthlyStatsByOrgAndExtCode = new Map();
         for (const daily of dailyStats) {
             const extCode = daily.extCode;
-            if (!monthlyStatsByExtCode.has(extCode)) {
-                monthlyStatsByExtCode.set(extCode, {
+            const organizationId = daily.organizationId;
+            const key = `${organizationId}-${extCode}`;
+            if (!monthlyStatsByOrgAndExtCode.has(key)) {
+                monthlyStatsByOrgAndExtCode.set(key, {
+                    organizationId,
                     callsCount: 0,
                     totalDuration: 0,
                     totalScore: 0,
                     scoreCount: 0,
                 });
             }
-            const stats = monthlyStatsByExtCode.get(extCode);
+            const stats = monthlyStatsByOrgAndExtCode.get(key);
             stats.callsCount += daily.callsCount;
             stats.totalDuration += daily.totalDuration;
             stats.totalScore += daily.totalScore;
@@ -114,11 +139,13 @@ let StatisticsService = StatisticsService_1 = class StatisticsService {
                 stats.scoreCount += daily.callsCount;
             }
         }
-        for (const [extCode, stats] of monthlyStatsByExtCode) {
+        for (const [key, stats] of monthlyStatsByOrgAndExtCode) {
+            const extCode = key.split('-')[1];
             const averageScore = stats.scoreCount > 0 ? stats.totalScore / stats.scoreCount : null;
             await this.prisma.monthlyStats.upsert({
                 where: {
-                    year_month_extCode: {
+                    organizationId_year_month_extCode: {
+                        organizationId: stats.organizationId,
                         year,
                         month,
                         extCode,
@@ -131,6 +158,7 @@ let StatisticsService = StatisticsService_1 = class StatisticsService {
                     totalScore: stats.totalScore,
                 },
                 create: {
+                    organizationId: stats.organizationId,
                     year,
                     month,
                     extCode,
@@ -158,6 +186,16 @@ let StatisticsService = StatisticsService_1 = class StatisticsService {
             orderBy: { extCode: 'asc' },
         });
     }
+    async getDailyStatsFiltered(organizationId, date, extCode) {
+        const where = { organizationId, date };
+        if (extCode) {
+            where.extCode = extCode;
+        }
+        return this.prisma.dailyStats.findMany({
+            where,
+            orderBy: { extCode: 'asc' },
+        });
+    }
     async getMonthlyStats(year, month, extCode) {
         const where = { year, month };
         if (extCode) {
@@ -168,7 +206,17 @@ let StatisticsService = StatisticsService_1 = class StatisticsService {
             orderBy: { extCode: 'asc' },
         });
     }
-    async getUnifiedStatistics(filters) {
+    async getMonthlyStatsFiltered(organizationId, year, month, extCode) {
+        const where = { organizationId, year, month };
+        if (extCode) {
+            where.extCode = extCode;
+        }
+        return this.prisma.monthlyStats.findMany({
+            where,
+            orderBy: { extCode: 'asc' },
+        });
+    }
+    async getUnifiedStatistics(organizationId, filters) {
         const { type, dateFrom, dateTo, extCode } = filters;
         const result = {
             filters: {
@@ -181,13 +229,13 @@ let StatisticsService = StatisticsService_1 = class StatisticsService {
         };
         try {
             if (type === StatisticsType.ALL || type === StatisticsType.DAILY) {
-                result.data.daily = await this.getFilteredDailyStats(filters);
+                result.data.daily = await this.getFilteredDailyStats(organizationId, filters);
             }
             if (type === StatisticsType.ALL || type === StatisticsType.MONTHLY) {
-                result.data.monthly = await this.getFilteredMonthlyStats(filters);
+                result.data.monthly = await this.getFilteredMonthlyStats(organizationId, filters);
             }
             if (type === StatisticsType.ALL || type === StatisticsType.SUMMARY) {
-                result.data.summary = await this.getFilteredSummary(filters);
+                result.data.summary = await this.getFilteredSummary(organizationId, filters);
             }
             return result;
         }
@@ -195,14 +243,14 @@ let StatisticsService = StatisticsService_1 = class StatisticsService {
             throw new Error(`Unified statistics error: ${error.message}`);
         }
     }
-    async getFilteredDailyStats(filters) {
+    async getFilteredDailyStats(organizationId, filters) {
         const { dateFrom, dateTo, extCode } = filters;
         if (dateFrom && dateTo) {
             const stats = [];
             const currentDate = new Date(dateFrom);
             const endDate = new Date(dateTo);
             while (currentDate <= endDate) {
-                const dailyStat = await this.getDailyStats(new Date(currentDate), extCode);
+                const dailyStat = await this.getDailyStatsFiltered(organizationId, new Date(currentDate), extCode);
                 stats.push({
                     date: currentDate.toISOString().split('T')[0],
                     stats: dailyStat,
@@ -212,13 +260,13 @@ let StatisticsService = StatisticsService_1 = class StatisticsService {
             return stats;
         }
         else if (dateFrom) {
-            return await this.getDailyStats(new Date(dateFrom), extCode);
+            return await this.getDailyStatsFiltered(organizationId, new Date(dateFrom), extCode);
         }
         else {
-            return await this.getDailyStats(new Date(), extCode);
+            return await this.getDailyStatsFiltered(organizationId, new Date(), extCode);
         }
     }
-    async getFilteredMonthlyStats(filters) {
+    async getFilteredMonthlyStats(organizationId, filters) {
         const { dateFrom, dateTo, extCode } = filters;
         if (dateFrom && dateTo) {
             const stats = [];
@@ -229,7 +277,7 @@ let StatisticsService = StatisticsService_1 = class StatisticsService {
             while (currentYear < endDate.getFullYear() ||
                 (currentYear === endDate.getFullYear() &&
                     currentMonth <= endDate.getMonth() + 1)) {
-                const monthlyStat = await this.getMonthlyStats(currentYear, currentMonth, extCode);
+                const monthlyStat = await this.getMonthlyStatsFiltered(organizationId, currentYear, currentMonth, extCode);
                 stats.push({
                     year: currentYear,
                     month: currentMonth,
@@ -245,10 +293,10 @@ let StatisticsService = StatisticsService_1 = class StatisticsService {
         }
         else {
             const now = new Date();
-            return await this.getMonthlyStats(now.getFullYear(), now.getMonth() + 1, extCode);
+            return await this.getMonthlyStatsFiltered(organizationId, now.getFullYear(), now.getMonth() + 1, extCode);
         }
     }
-    async getFilteredSummary(filters) {
+    async getFilteredSummary(organizationId, filters) {
         const { dateFrom, dateTo, extCode } = filters;
         const today = new Date();
         const yesterday = new Date(today);
@@ -258,8 +306,8 @@ let StatisticsService = StatisticsService_1 = class StatisticsService {
         const startDate = dateFrom ? new Date(dateFrom) : yesterday;
         const endDate = dateTo ? new Date(dateTo) : today;
         const [dailyStats, monthlyStats] = await Promise.all([
-            this.getDailyStats(startDate, extCode),
-            this.getMonthlyStats(currentYear, currentMonth, extCode),
+            this.getDailyStatsFiltered(organizationId, startDate, extCode),
+            this.getMonthlyStatsFiltered(organizationId, currentYear, currentMonth, extCode),
         ]);
         return {
             period: {

@@ -23,8 +23,14 @@ export class StatisticsController {
     description:
       "Bu endpoint orqali daily, monthly, summary ma'lumotlarini sana oralig'i bilan filter qilish mumkin",
   })
-  async getUnifiedStatistics(@Query() filters: UnifiedStatisticsDto) {
-    return this.statisticsService.getUnifiedStatistics(filters);
+  async getUnifiedStatistics(
+    @OrganizationId() organizationId: number,
+    @Query() filters: UnifiedStatisticsDto,
+  ) {
+    return this.statisticsService.getUnifiedStatistics(
+      organizationId,
+      filters,
+    );
   }
 
   @Get('export')

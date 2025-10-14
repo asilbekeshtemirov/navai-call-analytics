@@ -31,14 +31,20 @@ let UserService = class UserService {
         });
     }
     findAll(organizationId, filters) {
-        const where = {
-            organizationId,
-        };
+        const where = {};
+        if (organizationId !== undefined) {
+            where.organizationId = organizationId;
+        }
         if (filters?.branchId) {
             where.branchId = filters.branchId;
         }
         if (filters?.departmentId) {
             where.departmentId = filters.departmentId;
+        }
+        if (filters?.excludeSuperAdmin) {
+            where.role = {
+                not: 'SUPERADMIN',
+            };
         }
         return this.prisma.user.findMany({
             where,

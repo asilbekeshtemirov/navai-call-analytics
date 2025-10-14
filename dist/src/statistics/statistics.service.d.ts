@@ -8,8 +8,10 @@ export declare class StatisticsService {
     private updateMonthlyStats;
     calculateStatsForDate(date: Date): Promise<void>;
     getDailyStats(date: Date, extCode?: string): Promise<any>;
+    private getDailyStatsFiltered;
     getMonthlyStats(year: number, month: number, extCode?: string): Promise<any>;
-    getUnifiedStatistics(filters: UnifiedStatisticsDto): Promise<any>;
+    private getMonthlyStatsFiltered;
+    getUnifiedStatistics(organizationId: number, filters: UnifiedStatisticsDto): Promise<any>;
     private getFilteredDailyStats;
     private getFilteredMonthlyStats;
     private getFilteredSummary;
