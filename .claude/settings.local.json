@@ -17,7 +17,10 @@
       "Bash(npm run dev)",
       "Bash(curl -X GET \"http://localhost:3000/statistics?type=all\" -H \"Accept: application/json\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3NWI1YzJiNi1lNTUzLTRjN2YtODU4Yy03NjAxOGU0ZWM5MDYiLCJwaG9uZSI6Iis5OTg5MDEyMzQ1NjciLCJyb2xlIjoiU1VQRVJBRE1JTiIsIm9yZ2FuaXphdGlvbklkIjoxLCJpYXQiOjE3NjA0MjAzMzMsImV4cCI6MTc2MDUwNjczM30.CjkgljeDKgwVa8us9vC0xsLL5Ea9p9NH-82gA7HYFw0\")",
       "Bash(curl -X POST \"http://localhost:3000/auth/login\" -H \"Content-Type: application/json\" -d \"{\"\"phone\"\": \"\"+998901234568\"\", \"\"password\"\": \"\"admin123\"\"}\")",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npx prisma:*)"
     ],
     "deny": [],
     "ask": []

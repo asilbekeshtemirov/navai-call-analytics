@@ -273,10 +273,20 @@ export class CompanyService {
       const endDate = new Date(dateTo);
 
       while (currentDate <= endDate) {
-        const dailyStat = await this.statisticsService.getDailyStats(
+        // Avval daily_stats jadvalidan tekshiramiz
+        let dailyStat = await this.statisticsService.getDailyStats(
           new Date(currentDate),
           extCode,
         );
+
+        // Agar daily_stats bo'sh bo'lsa, real-time hisoblash
+        if (!dailyStat || dailyStat.length === 0) {
+          dailyStat = await this.calculateRealTimeDailyStats(
+            new Date(currentDate),
+            extCode,
+          );
+        }
+
         stats.push({
           date: currentDate.toISOString().split('T')[0],
           stats: dailyStat,
@@ -287,13 +297,52 @@ export class CompanyService {
       return stats;
     } else if (dateFrom) {
       // Faqat bitta kun
-      return await this.statisticsService.getDailyStats(
+      let dailyStat = await this.statisticsService.getDailyStats(
         new Date(dateFrom),
         extCode,
       );
+
+      // Agar daily_stats bo'sh bo'lsa, real-time hisoblash
+      if (!dailyStat || dailyStat.length === 0) {
+        dailyStat = await this.calculateRealTimeDailyStats(
+          new Date(dateFrom),
+          extCode,
+        );
+      }
+
+      return dailyStat;
     } else {
-      // Bugungi kun
-      return await this.statisticsService.getDailyStats(new Date(), extCode);
+      // Sana ko'rsatilmagan bo'lsa, oxirgi 7 kunlik ma'lumotlarni qaytarish
+      const today = new Date();
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const stats: any[] = [];
+      const currentDate = new Date(sevenDaysAgo);
+
+      while (currentDate <= today) {
+        // Avval daily_stats jadvalidan tekshiramiz
+        let dailyStat = await this.statisticsService.getDailyStats(
+          new Date(currentDate),
+          extCode,
+        );
+
+        // Agar daily_stats bo'sh bo'lsa, real-time hisoblash
+        if (!dailyStat || dailyStat.length === 0) {
+          dailyStat = await this.calculateRealTimeDailyStats(
+            new Date(currentDate),
+            extCode,
+          );
+        }
+
+        stats.push({
+          date: currentDate.toISOString().split('T')[0],
+          stats: dailyStat,
+        });
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      return stats;
     }
   }
 
@@ -339,12 +388,212 @@ export class CompanyService {
     } else {
       // Joriy oy
       const now = new Date();
-      return await this.statisticsService.getMonthlyStats(
+      let monthlyStat = await this.statisticsService.getMonthlyStats(
         now.getFullYear(),
         now.getMonth() + 1,
         extCode,
       );
+
+      // Agar monthly_stats bo'sh bo'lsa, real-time hisoblash
+      if (!monthlyStat || monthlyStat.length === 0) {
+        monthlyStat = await this.calculateRealTimeMonthlyStats(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          extCode,
+        );
+      }
+
+      return monthlyStat;
     }
+  }
+
+  // Real-time kunlik statistika hisoblash (agar daily_stats jadvalida ma'lumot bo'lmasa)
+  private async calculateRealTimeDailyStats(
+    date: Date,
+    extCode?: string,
+  ): Promise<any[]> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const whereCondition: Prisma.CallWhereInput = {
+      status: 'DONE',
+      callDate: {
+        gte: startOfDay,
+        lte: endOfDay,
+      },
+    };
+
+    if (extCode) {
+      whereCondition.employee = { extCode };
+    }
+
+    const calls = await this.prisma.call.findMany({
+      where: whereCondition,
+      include: {
+        employee: true,
+        scores: {
+          include: {
+            criteria: true,
+          },
+        },
+      },
+    });
+
+    // ExtCode bo'yicha guruhlash
+    const statsByExtCode = new Map<
+      string,
+      {
+        extCode: string;
+        callsCount: number;
+        totalDuration: number;
+        totalScore: number;
+        scoreCount: number;
+      }
+    >();
+
+    for (const call of calls) {
+      const empExtCode = call.employee.extCode || 'unknown';
+
+      if (!statsByExtCode.has(empExtCode)) {
+        statsByExtCode.set(empExtCode, {
+          extCode: empExtCode,
+          callsCount: 0,
+          totalDuration: 0,
+          totalScore: 0,
+          scoreCount: 0,
+        });
+      }
+
+      const stats = statsByExtCode.get(empExtCode)!;
+      stats.callsCount++;
+      stats.totalDuration += call.durationSec || 0;
+
+      // Score hisoblash
+      if (call.scores && call.scores.length > 0) {
+        const totalWeight = call.scores.reduce(
+          (sum, s) => sum + s.criteria.weight,
+          0,
+        );
+        const weightedScore = call.scores.reduce(
+          (sum, s) => sum + s.score * s.criteria.weight,
+          0,
+        );
+        if (totalWeight > 0) {
+          stats.totalScore += weightedScore / totalWeight;
+          stats.scoreCount++;
+        }
+      }
+    }
+
+    // Array ga o'tkazish
+    return Array.from(statsByExtCode.values()).map((stats) => ({
+      extCode: stats.extCode,
+      date: startOfDay,
+      callsCount: stats.callsCount,
+      totalDuration: stats.totalDuration,
+      averageScore:
+        stats.scoreCount > 0
+          ? Math.round((stats.totalScore / stats.scoreCount) * 100) / 100
+          : null,
+      totalScore: stats.totalScore,
+    }));
+  }
+
+  // Real-time oylik statistika hisoblash (agar monthly_stats jadvalida ma'lumot bo'lmasa)
+  private async calculateRealTimeMonthlyStats(
+    year: number,
+    month: number,
+    extCode?: string,
+  ): Promise<any[]> {
+    const startOfMonth = new Date(year, month - 1, 1);
+    const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+
+    const whereCondition: Prisma.CallWhereInput = {
+      status: 'DONE',
+      callDate: {
+        gte: startOfMonth,
+        lte: endOfMonth,
+      },
+    };
+
+    if (extCode) {
+      whereCondition.employee = { extCode };
+    }
+
+    const calls = await this.prisma.call.findMany({
+      where: whereCondition,
+      include: {
+        employee: true,
+        scores: {
+          include: {
+            criteria: true,
+          },
+        },
+      },
+    });
+
+    // ExtCode bo'yicha guruhlash
+    const statsByExtCode = new Map<
+      string,
+      {
+        extCode: string;
+        callsCount: number;
+        totalDuration: number;
+        totalScore: number;
+        scoreCount: number;
+      }
+    >();
+
+    for (const call of calls) {
+      const empExtCode = call.employee.extCode || 'unknown';
+
+      if (!statsByExtCode.has(empExtCode)) {
+        statsByExtCode.set(empExtCode, {
+          extCode: empExtCode,
+          callsCount: 0,
+          totalDuration: 0,
+          totalScore: 0,
+          scoreCount: 0,
+        });
+      }
+
+      const stats = statsByExtCode.get(empExtCode)!;
+      stats.callsCount++;
+      stats.totalDuration += call.durationSec || 0;
+
+      // Score hisoblash
+      if (call.scores && call.scores.length > 0) {
+        const totalWeight = call.scores.reduce(
+          (sum, s) => sum + s.criteria.weight,
+          0,
+        );
+        const weightedScore = call.scores.reduce(
+          (sum, s) => sum + s.score * s.criteria.weight,
+          0,
+        );
+        if (totalWeight > 0) {
+          stats.totalScore += weightedScore / totalWeight;
+          stats.scoreCount++;
+        }
+      }
+    }
+
+    // Array ga o'tkazish
+    return Array.from(statsByExtCode.values()).map((stats) => ({
+      extCode: stats.extCode,
+      year,
+      month,
+      callsCount: stats.callsCount,
+      totalDuration: stats.totalDuration,
+      averageScore:
+        stats.scoreCount > 0
+          ? Math.round((stats.totalScore / stats.scoreCount) * 100) / 100
+          : null,
+      totalScore: stats.totalScore,
+    }));
   }
 
   // Filterlangan dashboard ma'lumotlari

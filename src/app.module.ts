@@ -19,6 +19,7 @@ import { BranchModule } from './branch/branch.module.js';
 import { SipuniModule } from './sipuni/sipuni.module.js';
 import { SettingsModule } from './settings/settings.module.js';
 import { OrganizationModule } from './organization/organization.module.js';
+import { AutoCallingModule } from './auto-calling/auto-calling.module.js';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { OrganizationModule } from './organization/organization.module.js';
     BranchModule,
     SipuniModule,
     OrganizationModule,
+    AutoCallingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

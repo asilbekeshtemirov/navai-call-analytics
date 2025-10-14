@@ -13,6 +13,8 @@ export declare class CompanyService {
     private getFilteredOverview;
     private getFilteredDailyStats;
     private getFilteredMonthlyStats;
+    private calculateRealTimeDailyStats;
+    private calculateRealTimeMonthlyStats;
     private getFilteredDashboardData;
     private getFilteredSipuniStats;
     private getFilteredSummary;

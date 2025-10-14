@@ -204,7 +204,10 @@ let CompanyService = class CompanyService {
             const currentDate = new Date(dateFrom);
             const endDate = new Date(dateTo);
             while (currentDate <= endDate) {
-                const dailyStat = await this.statisticsService.getDailyStats(new Date(currentDate), extCode);
+                let dailyStat = await this.statisticsService.getDailyStats(new Date(currentDate), extCode);
+                if (!dailyStat || dailyStat.length === 0) {
+                    dailyStat = await this.calculateRealTimeDailyStats(new Date(currentDate), extCode);
+                }
                 stats.push({
                     date: currentDate.toISOString().split('T')[0],
                     stats: dailyStat,
@@ -214,10 +217,30 @@ let CompanyService = class CompanyService {
             return stats;
         }
         else if (dateFrom) {
-            return await this.statisticsService.getDailyStats(new Date(dateFrom), extCode);
+            let dailyStat = await this.statisticsService.getDailyStats(new Date(dateFrom), extCode);
+            if (!dailyStat || dailyStat.length === 0) {
+                dailyStat = await this.calculateRealTimeDailyStats(new Date(dateFrom), extCode);
+            }
+            return dailyStat;
         }
         else {
-            return await this.statisticsService.getDailyStats(new Date(), extCode);
+            const today = new Date();
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            const stats = [];
+            const currentDate = new Date(sevenDaysAgo);
+            while (currentDate <= today) {
+                let dailyStat = await this.statisticsService.getDailyStats(new Date(currentDate), extCode);
+                if (!dailyStat || dailyStat.length === 0) {
+                    dailyStat = await this.calculateRealTimeDailyStats(new Date(currentDate), extCode);
+                }
+                stats.push({
+                    date: currentDate.toISOString().split('T')[0],
+                    stats: dailyStat,
+                });
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            return stats;
         }
     }
     async getFilteredMonthlyStats(filters) {
@@ -247,8 +270,133 @@ let CompanyService = class CompanyService {
         }
         else {
             const now = new Date();
-            return await this.statisticsService.getMonthlyStats(now.getFullYear(), now.getMonth() + 1, extCode);
+            let monthlyStat = await this.statisticsService.getMonthlyStats(now.getFullYear(), now.getMonth() + 1, extCode);
+            if (!monthlyStat || monthlyStat.length === 0) {
+                monthlyStat = await this.calculateRealTimeMonthlyStats(now.getFullYear(), now.getMonth() + 1, extCode);
+            }
+            return monthlyStat;
         }
+    }
+    async calculateRealTimeDailyStats(date, extCode) {
+        const startOfDay = new Date(date);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(date);
+        endOfDay.setHours(23, 59, 59, 999);
+        const whereCondition = {
+            status: 'DONE',
+            callDate: {
+                gte: startOfDay,
+                lte: endOfDay,
+            },
+        };
+        if (extCode) {
+            whereCondition.employee = { extCode };
+        }
+        const calls = await this.prisma.call.findMany({
+            where: whereCondition,
+            include: {
+                employee: true,
+                scores: {
+                    include: {
+                        criteria: true,
+                    },
+                },
+            },
+        });
+        const statsByExtCode = new Map();
+        for (const call of calls) {
+            const empExtCode = call.employee.extCode || 'unknown';
+            if (!statsByExtCode.has(empExtCode)) {
+                statsByExtCode.set(empExtCode, {
+                    extCode: empExtCode,
+                    callsCount: 0,
+                    totalDuration: 0,
+                    totalScore: 0,
+                    scoreCount: 0,
+                });
+            }
+            const stats = statsByExtCode.get(empExtCode);
+            stats.callsCount++;
+            stats.totalDuration += call.durationSec || 0;
+            if (call.scores && call.scores.length > 0) {
+                const totalWeight = call.scores.reduce((sum, s) => sum + s.criteria.weight, 0);
+                const weightedScore = call.scores.reduce((sum, s) => sum + s.score * s.criteria.weight, 0);
+                if (totalWeight > 0) {
+                    stats.totalScore += weightedScore / totalWeight;
+                    stats.scoreCount++;
+                }
+            }
+        }
+        return Array.from(statsByExtCode.values()).map((stats) => ({
+            extCode: stats.extCode,
+            date: startOfDay,
+            callsCount: stats.callsCount,
+            totalDuration: stats.totalDuration,
+            averageScore: stats.scoreCount > 0
+                ? Math.round((stats.totalScore / stats.scoreCount) * 100) / 100
+                : null,
+            totalScore: stats.totalScore,
+        }));
+    }
+    async calculateRealTimeMonthlyStats(year, month, extCode) {
+        const startOfMonth = new Date(year, month - 1, 1);
+        const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+        const whereCondition = {
+            status: 'DONE',
+            callDate: {
+                gte: startOfMonth,
+                lte: endOfMonth,
+            },
+        };
+        if (extCode) {
+            whereCondition.employee = { extCode };
+        }
+        const calls = await this.prisma.call.findMany({
+            where: whereCondition,
+            include: {
+                employee: true,
+                scores: {
+                    include: {
+                        criteria: true,
+                    },
+                },
+            },
+        });
+        const statsByExtCode = new Map();
+        for (const call of calls) {
+            const empExtCode = call.employee.extCode || 'unknown';
+            if (!statsByExtCode.has(empExtCode)) {
+                statsByExtCode.set(empExtCode, {
+                    extCode: empExtCode,
+                    callsCount: 0,
+                    totalDuration: 0,
+                    totalScore: 0,
+                    scoreCount: 0,
+                });
+            }
+            const stats = statsByExtCode.get(empExtCode);
+            stats.callsCount++;
+            stats.totalDuration += call.durationSec || 0;
+            if (call.scores && call.scores.length > 0) {
+                const totalWeight = call.scores.reduce((sum, s) => sum + s.criteria.weight, 0);
+                const weightedScore = call.scores.reduce((sum, s) => sum + s.score * s.criteria.weight, 0);
+                if (totalWeight > 0) {
+                    stats.totalScore += weightedScore / totalWeight;
+                    stats.scoreCount++;
+                }
+            }
+        }
+        return Array.from(statsByExtCode.values()).map((stats) => ({
+            extCode: stats.extCode,
+            year,
+            month,
+            callsCount: stats.callsCount,
+            totalDuration: stats.totalDuration,
+            averageScore: stats.scoreCount > 0
+                ? Math.round((stats.totalScore / stats.scoreCount) * 100) / 100
+                : null,
+            totalScore: stats.totalScore,
+        }));
     }
     async getFilteredDashboardData(filters) {
         return await this.getFilteredOverview(filters);

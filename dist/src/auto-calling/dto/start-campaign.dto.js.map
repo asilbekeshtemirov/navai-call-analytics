@@ -1,0 +1,1 @@
+{"version":3,"file":"start-campaign.dto.js","sourceRoot":"","sources":["../../../../src/auto-calling/dto/start-campaign.dto.ts"],"names":[],"mappings":";;;;;;;;;AAAA,OAAO,EAAE,MAAM,EAAE,MAAM,iBAAiB,CAAC;AACzC,OAAO,EAAE,WAAW,EAAE,MAAM,iBAAiB,CAAC;AAE9C,MAAM,OAAO,gBAAgB;IAG3B,UAAU,CAAS;CACpB;AADC;IAFC,WAAW,CAAC,EAAE,OAAO,EAAE,oBAAoB,EAAE,CAAC;IAC9C,MAAM,CAAC,GAAG,CAAC;;oDACO"}
