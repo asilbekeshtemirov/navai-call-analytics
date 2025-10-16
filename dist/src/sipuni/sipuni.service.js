@@ -1002,6 +1002,42 @@ let SipuniService = SipuniService_1 = class SipuniService {
             };
         }
     }
+    async streamRecordingById(organizationId, recordId) {
+        try {
+            const credentials = await this.loadSipuniCredentials(organizationId);
+            const hashString = [
+                recordId,
+                credentials.userId,
+                credentials.apiKey,
+            ].join('+');
+            const hash = crypto.createHash('md5').update(hashString).digest('hex');
+            const response = await axios.post(`${credentials.apiUrl}/statistic/record`, new URLSearchParams({
+                id: recordId,
+                user: credentials.userId,
+                hash,
+            }).toString(), {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                responseType: 'arraybuffer',
+                timeout: 60000,
+                validateStatus: (status) => status < 500,
+            });
+            if (response.status === 404) {
+                this.logger.warn(`[STREAM] Recording not found (404) for recordId: ${recordId}`);
+                throw new Error('Recording not found (404)');
+            }
+            if (response.status !== 200) {
+                this.logger.warn(`[STREAM] Unexpected status ${response.status} for recordId: ${recordId}`);
+                throw new Error(`Unexpected status: ${response.status}`);
+            }
+            const sizeKB = Math.round(response.data.length / 1024);
+            this.logger.log(`[STREAM] Streaming ${sizeKB} KB for recordId: ${recordId}`);
+            return Buffer.from(response.data);
+        }
+        catch (error) {
+            this.logger.error(`[STREAM] Failed to stream ${recordId}: ${error.message}`);
+            throw error;
+        }
+    }
 };
 SipuniService = SipuniService_1 = __decorate([
     Injectable(),

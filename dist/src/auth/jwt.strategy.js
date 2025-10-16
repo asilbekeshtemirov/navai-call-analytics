@@ -23,10 +23,15 @@ let JwtStrategy = class JwtStrategy extends PassportStrategy(Strategy) {
         this.userService = userService;
     }
     async validate(payload) {
+        console.log('--- JWT Strategy Validate ---');
+        console.log('Payload received:', payload);
         const user = await this.userService.findOneById(payload.sub);
+        console.log('User found in DB:', user);
         if (!user) {
+            console.error('User not found in DB, throwing UnauthorizedException.');
             throw new UnauthorizedException();
         }
+        console.log('--- JWT Strategy End ---');
         return user;
     }
 };

@@ -1,3 +1,4 @@
+import type { Response } from 'express';
 import { SipuniService } from './sipuni.service.js';
 import { ConfigService } from '@nestjs/config';
 export declare class SipuniController {
@@ -42,6 +43,7 @@ export declare class SipuniController {
         message: string;
         updated: number;
     }>;
+    streamAudio(organizationId: string, recordId: string, res: Response): Promise<void>;
 }
 export declare class SipuniWebhookController {
     private readonly sipuniService;

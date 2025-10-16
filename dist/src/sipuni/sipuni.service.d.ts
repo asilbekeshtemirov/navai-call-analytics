@@ -87,5 +87,6 @@ export declare class SipuniService implements OnModuleInit {
         message: string;
         updated: number;
     }>;
+    streamRecordingById(organizationId: number, recordId: string): Promise<Buffer>;
 }
 export {};

@@ -32,7 +32,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { ContactStatus, CampaignStatus } from '@prisma/client';
 
 @ApiTags('Auto-Calling')
-@ApiBearerAuth()
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard)
 @Controller('auto-calling')
 export class AutoCallingController {
@@ -70,8 +70,9 @@ export class AutoCallingController {
 
   @Get('contacts/:id')
   @ApiOperation({ summary: 'Get contact by ID' })
-  findContactById(@Request() req: any, @Param('id') id: string) {
-    return this.autoCallingService.findContactById(req.user.organizationId, id);
+  async findContactById(@Request() req: any, @Param('id') id: string) {
+    const contact = await this.autoCallingService.findContactById(req.user.organizationId, id);
+    return { data: contact };
   }
 
   @Patch('contacts/:id')
@@ -218,5 +219,30 @@ export class AutoCallingController {
   })
   stopCampaign(@Request() req: any, @Param('id') id: string) {
     return this.autoCallingService.stopCampaign(req.user.organizationId, id);
+  }
+
+  // ========== TWILIO WEBHOOKS (PUBLIC) ==========
+  @Get('twilio/twiml')
+  @ApiOperation({ summary: 'Generate TwiML for call' })
+  getTwiML(@Query('contactId') contactId: string) {
+    return this.autoCallingService.generateTwiMLForContact(contactId);
+  }
+
+  @Post('twilio/status')
+  @ApiOperation({ summary: 'Twilio call status webhook' })
+  handleCallStatus(@Body() body: any) {
+    return this.autoCallingService.handleTwilioCallStatus(body);
+  }
+
+  @Post('twilio/recording')
+  @ApiOperation({ summary: 'Twilio recording webhook' })
+  handleRecording(@Body() body: any) {
+    return this.autoCallingService.handleTwilioRecording(body);
+  }
+
+  @Post('twilio/handle-response')
+  @ApiOperation({ summary: 'Handle call response from user' })
+  handleResponse(@Body() body: any) {
+    return this.autoCallingService.handleUserResponse(body);
   }
 }

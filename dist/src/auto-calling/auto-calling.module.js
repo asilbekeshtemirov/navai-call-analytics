@@ -5,18 +5,20 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AutoCallingController } from './auto-calling.controller.js';
 import { AutoCallingService } from './auto-calling.service.js';
 import { AutoCallingGateway } from './auto-calling.gateway.js';
+import { TwilioService } from './twilio.service.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
 let AutoCallingModule = class AutoCallingModule {
 };
 AutoCallingModule = __decorate([
     Module({
-        imports: [PrismaModule],
+        imports: [PrismaModule, ConfigModule],
         controllers: [AutoCallingController],
-        providers: [AutoCallingService, AutoCallingGateway],
-        exports: [AutoCallingService, AutoCallingGateway],
+        providers: [AutoCallingService, AutoCallingGateway, TwilioService],
+        exports: [AutoCallingService, AutoCallingGateway, TwilioService],
     })
 ], AutoCallingModule);
 export { AutoCallingModule };

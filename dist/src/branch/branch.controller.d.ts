@@ -59,6 +59,7 @@ export declare class BranchController {
             role: import("@prisma/client").$Enums.UserRole;
             passwordHash: string;
             departmentId: string | null;
+            auto_calling: boolean;
         }[];
     } & {
         id: string;

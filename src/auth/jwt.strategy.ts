@@ -21,12 +21,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
+    console.log('--- JWT Strategy Validate ---');
+    console.log('Payload received:', payload);
     // Here, `payload` contains the decoded JWT payload (sub, phone, role)
     // You can fetch the user from the database to ensure they still exist and are active
     const user = await this.userService.findOneById(payload.sub);
+    console.log('User found in DB:', user);
     if (!user) {
+      console.error('User not found in DB, throwing UnauthorizedException.');
       throw new UnauthorizedException();
     }
+    console.log('--- JWT Strategy End ---');
     // Attach the user object to the request
     return user;
   }

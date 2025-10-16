@@ -11,7 +11,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 var SipuniController_1, SipuniWebhookController_1;
-import { Controller, Post, Get, Query, Logger, UseGuards, Headers, UnauthorizedException, Body, } from '@nestjs/common';
+import { Controller, Post, Get, Query, Logger, UseGuards, Headers, UnauthorizedException, Body, Param, Res, NotFoundException, } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiHeader, } from '@nestjs/swagger';
 import { SipuniService } from './sipuni.service.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
@@ -20,6 +20,7 @@ import { Roles } from '../auth/roles.decorator.js';
 import { UserRole } from '@prisma/client';
 import { OrganizationId } from '../auth/organization-id.decorator.js';
 import { ConfigService } from '@nestjs/config';
+import { Public } from '../auth/public.decorator.js';
 let SipuniController = SipuniController_1 = class SipuniController {
     sipuniService;
     config;
@@ -111,6 +112,29 @@ let SipuniController = SipuniController_1 = class SipuniController {
             };
         }
     }
+    async streamAudio(organizationId, recordId, res) {
+        const orgId = parseInt(organizationId, 10);
+        try {
+            this.logger.log(`[CONTROLLER] Streaming audio for recordId: ${recordId}, org: ${organizationId}`);
+            const audioBuffer = await this.sipuniService.streamRecordingById(orgId, recordId);
+            res.set({
+                'Content-Type': 'audio/mpeg',
+                'Content-Length': audioBuffer.length,
+                'Cache-Control': 'public, max-age=31536000',
+            });
+            res.send(audioBuffer);
+        }
+        catch (error) {
+            this.logger.error(`[CONTROLLER] Failed to stream audio: ${error.message}`);
+            if (error.message.includes('404')) {
+                throw new NotFoundException('Recording not found');
+            }
+            res.status(500).json({
+                success: false,
+                message: `Failed to stream audio: ${error.message}`,
+            });
+        }
+    }
 };
 __decorate([
     Get('test-connection'),
@@ -185,6 +209,22 @@ __decorate([
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", Promise)
 ], SipuniController.prototype, "updateMissingDurations", null);
+__decorate([
+    Get('audio/:recordId/:organizationId'),
+    Public(),
+    ApiOperation({
+        summary: 'Stream audio recording by recordId from Sipuni (Public endpoint)',
+        description: 'Proxy endpoint to stream audio from Sipuni API without saving locally',
+    }),
+    ApiResponse({ status: 200, description: 'Audio stream' }),
+    ApiResponse({ status: 404, description: 'Recording not found' }),
+    __param(0, Param('organizationId')),
+    __param(1, Param('recordId')),
+    __param(2, Res()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, Object]),
+    __metadata("design:returntype", Promise)
+], SipuniController.prototype, "streamAudio", null);
 SipuniController = SipuniController_1 = __decorate([
     ApiTags('sipuni'),
     Controller('sipuni'),

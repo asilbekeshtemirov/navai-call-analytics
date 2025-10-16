@@ -1561,6 +1561,65 @@ export class SipuniService implements OnModuleInit {
   }
 
   /**
+   * Stream audio recording by recordId from Sipuni API
+   */
+  async streamRecordingById(
+    organizationId: number,
+    recordId: string,
+  ): Promise<Buffer> {
+    try {
+      // Load credentials from Settings
+      const credentials = await this.loadSipuniCredentials(organizationId);
+
+      // Create hash: id + user + secret
+      const hashString = [
+        recordId,
+        credentials.userId,
+        credentials.apiKey,
+      ].join('+');
+      const hash = crypto.createHash('md5').update(hashString).digest('hex');
+
+      const response = await axios.post(
+        `${credentials.apiUrl}/statistic/record`,
+        new URLSearchParams({
+          id: recordId,
+          user: credentials.userId,
+          hash,
+        }).toString(),
+        {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          responseType: 'arraybuffer',
+          timeout: 60000,
+          validateStatus: (status) => status < 500,
+        },
+      );
+
+      if (response.status === 404) {
+        this.logger.warn(
+          `[STREAM] Recording not found (404) for recordId: ${recordId}`,
+        );
+        throw new Error('Recording not found (404)');
+      }
+
+      if (response.status !== 200) {
+        this.logger.warn(
+          `[STREAM] Unexpected status ${response.status} for recordId: ${recordId}`,
+        );
+        throw new Error(`Unexpected status: ${response.status}`);
+      }
+
+      const sizeKB = Math.round(response.data.length / 1024);
+      this.logger.log(`[STREAM] Streaming ${sizeKB} KB for recordId: ${recordId}`);
+      return Buffer.from(response.data);
+    } catch (error: any) {
+      this.logger.error(
+        `[STREAM] Failed to stream ${recordId}: ${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  /**
    * Note: Static cron job removed - now using dynamic cron jobs per organization
    * Each organization can configure their own sync schedule via Settings.syncSchedule
    * Dynamic cron jobs are setup in onModuleInit() and can be customized per organization

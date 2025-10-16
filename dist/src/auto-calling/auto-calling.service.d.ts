@@ -1,15 +1,20 @@
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateContactDto } from './dto/create-contact.dto.js';
 import { UpdateContactDto } from './dto/update-contact.dto.js';
 import { CreateCampaignDto } from './dto/create-campaign.dto.js';
 import { CampaignStatus, ContactStatus } from '@prisma/client';
 import { AutoCallingGateway } from './auto-calling.gateway.js';
+import { TwilioService } from './twilio.service.js';
 export declare class AutoCallingService {
     private readonly prisma;
     private readonly gateway;
+    private readonly twilioService;
+    private readonly configService;
     private readonly logger;
     private activeCampaigns;
-    constructor(prisma: PrismaService, gateway: AutoCallingGateway);
+    private callSids;
+    constructor(prisma: PrismaService, gateway: AutoCallingGateway, twilioService: TwilioService, configService: ConfigService);
     createContact(organizationId: number, dto: CreateContactDto): Promise<{
         id: string;
         organizationId: number;
@@ -322,6 +327,27 @@ export declare class AutoCallingService {
     }>;
     private processCampaignCalls;
     private makeCall;
+    private makeRealCall;
+    private simulateCall;
+    private generateCallScript;
+    private mapTwilioStatusToCampaignStatus;
+    private getOutcomeFromCallStatus;
     private calculateCampaignStats;
     private delay;
+    generateTwiMLForContact(contactId: string): Promise<{
+        twiml: string;
+        contentType?: undefined;
+    } | {
+        twiml: string;
+        contentType: string;
+    }>;
+    handleTwilioCallStatus(body: any): Promise<{
+        success: boolean;
+    }>;
+    handleTwilioRecording(body: any): Promise<{
+        success: boolean;
+    }>;
+    handleUserResponse(body: any): Promise<{
+        twiml: string;
+    }>;
 }

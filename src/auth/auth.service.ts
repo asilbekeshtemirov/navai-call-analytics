@@ -24,6 +24,7 @@ export class AuthService {
       phone: user.phone,
       role: user.role,
       organizationId: user.organizationId, // Added for multi-tenancy
+      auto_calling: user.auto_calling, // Added for auto-calling feature visibility
     };
     return {
       access_token: await this.jwtService.signAsync(payload),

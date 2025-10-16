@@ -9,18 +9,25 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 var AutoCallingService_1;
 import { Injectable, NotFoundException, BadRequestException, Logger, } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CampaignStatus, CampaignCallStatus } from '@prisma/client';
-import * as ExcelJS from 'exceljs';
+import ExcelJS from 'exceljs';
 import { AutoCallingGateway } from './auto-calling.gateway.js';
+import { TwilioService } from './twilio.service.js';
 let AutoCallingService = AutoCallingService_1 = class AutoCallingService {
     prisma;
     gateway;
+    twilioService;
+    configService;
     logger = new Logger(AutoCallingService_1.name);
     activeCampaigns = new Map();
-    constructor(prisma, gateway) {
+    callSids = new Map();
+    constructor(prisma, gateway, twilioService, configService) {
         this.prisma = prisma;
         this.gateway = gateway;
+        this.twilioService = twilioService;
+        this.configService = configService;
     }
     async createContact(organizationId, dto) {
         const existing = await this.prisma.autoCallContact.findUnique({
@@ -34,7 +41,7 @@ let AutoCallingService = AutoCallingService_1 = class AutoCallingService {
         if (existing) {
             throw new BadRequestException('Contact with this phone already exists');
         }
-        return this.prisma.autoCallContact.create({
+        const contact = await this.prisma.autoCallContact.create({
             data: {
                 organizationId,
                 firstName: dto.firstName,
@@ -45,6 +52,11 @@ let AutoCallingService = AutoCallingService_1 = class AutoCallingService {
                 notes: dto.notes,
             },
         });
+        this.gateway.emitContactUpdate(organizationId, contact.id, {
+            action: 'created',
+            contact,
+        });
+        return contact;
     }
     async findAllContacts(organizationId, page = 1, limit = 50, status) {
         const skip = (page - 1) * limit;
@@ -87,7 +99,7 @@ let AutoCallingService = AutoCallingService_1 = class AutoCallingService {
     }
     async updateContact(organizationId, id, dto) {
         const contact = await this.findContactById(organizationId, id);
-        return this.prisma.autoCallContact.update({
+        const updatedContact = await this.prisma.autoCallContact.update({
             where: { id: contact.id },
             data: {
                 firstName: dto.firstName,
@@ -101,10 +113,19 @@ let AutoCallingService = AutoCallingService_1 = class AutoCallingService {
                 currentConversationOutcome: dto.currentConversationOutcome,
             },
         });
+        this.gateway.emitContactUpdate(organizationId, updatedContact.id, {
+            action: 'updated',
+            contact: updatedContact,
+        });
+        return updatedContact;
     }
     async deleteContact(organizationId, id) {
         const contact = await this.findContactById(organizationId, id);
         await this.prisma.autoCallContact.delete({ where: { id: contact.id } });
+        this.gateway.emitContactUpdate(organizationId, id, {
+            action: 'deleted',
+            contactId: id,
+        });
         return { message: 'Contact deleted successfully' };
     }
     async createCampaign(organizationId, dto) {
@@ -119,7 +140,13 @@ let AutoCallingService = AutoCallingService_1 = class AutoCallingService {
         if (dto.contactIds && dto.contactIds.length > 0) {
             await this.addContactsToCampaign(organizationId, campaign.id, dto.contactIds);
         }
-        return this.getCampaignById(organizationId, campaign.id);
+        const result = await this.getCampaignById(organizationId, campaign.id);
+        this.gateway.emitCampaignUpdate(organizationId, {
+            action: 'created',
+            campaignId: campaign.id,
+            campaign: result,
+        });
+        return result;
     }
     async addContactsToCampaign(organizationId, campaignId, contactIds) {
         const campaign = await this.getCampaignById(organizationId, campaignId);
@@ -146,7 +173,14 @@ let AutoCallingService = AutoCallingService_1 = class AutoCallingService {
             where: { id: campaign.id },
             data: { totalContacts },
         });
-        return this.getCampaignById(organizationId, campaign.id);
+        const result = await this.getCampaignById(organizationId, campaign.id);
+        this.gateway.emitCampaignUpdate(organizationId, {
+            action: 'contacts-added',
+            campaignId: campaign.id,
+            campaign: result,
+            addedContactIds: contactIds,
+        });
+        return result;
     }
     async getCampaignById(organizationId, id) {
         const campaign = await this.prisma.autoCallCampaign.findFirst({
@@ -198,6 +232,10 @@ let AutoCallingService = AutoCallingService_1 = class AutoCallingService {
             throw new BadRequestException('Cannot delete a running campaign. Stop it first.');
         }
         await this.prisma.autoCallCampaign.delete({ where: { id: campaign.id } });
+        this.gateway.emitCampaignUpdate(organizationId, {
+            action: 'deleted',
+            campaignId: id,
+        });
         return { message: 'Campaign deleted successfully' };
     }
     async parseExcelAndCreateContacts(organizationId, file) {
@@ -280,6 +318,11 @@ let AutoCallingService = AutoCallingService_1 = class AutoCallingService {
             },
         });
         this.activeCampaigns.set(campaignId, true);
+        this.gateway.emitCampaignUpdate(organizationId, {
+            action: 'started',
+            campaignId,
+            status: CampaignStatus.RUNNING,
+        });
         this.processCampaignCalls(organizationId, campaignId).catch((error) => {
             this.logger.error(`Campaign ${campaignId} failed:`, error);
         });
@@ -296,6 +339,11 @@ let AutoCallingService = AutoCallingService_1 = class AutoCallingService {
             data: {
                 status: CampaignStatus.PAUSED,
             },
+        });
+        this.gateway.emitCampaignUpdate(organizationId, {
+            action: 'stopped',
+            campaignId,
+            status: CampaignStatus.PAUSED,
         });
         return { message: 'Campaign stopped successfully' };
     }
@@ -325,7 +373,7 @@ let AutoCallingService = AutoCallingService_1 = class AutoCallingService {
                 status: 'calling',
                 contact: campaignContact.contact,
             });
-            const callResult = await this.makeCall(campaignContact.contact);
+            const callResult = await this.makeCall(campaignContact.contact, campaignContact.id);
             await this.prisma.autoCallCampaignContact.update({
                 where: { id: campaignContact.id },
                 data: {
@@ -380,36 +428,179 @@ let AutoCallingService = AutoCallingService_1 = class AutoCallingService {
         this.activeCampaigns.delete(campaignId);
         this.logger.log(`Campaign ${campaignId} completed`);
     }
-    async makeCall(contact) {
-        await this.delay(3000);
+    async makeCall(contact, campaignContactId) {
+        this.logger.log('═══════════════════════════════════════');
+        this.logger.log(`📞 Starting call to: ${contact.firstName} ${contact.lastName}`);
+        this.logger.log(`📱 Phone: ${contact.phone}`);
+        if (contact.customData?.remaining_debt) {
+            this.logger.log(`💰 Debt: ${contact.customData.remaining_debt} so'm`);
+        }
+        this.logger.log('═══════════════════════════════════════');
+        if (this.twilioService.isConfigured()) {
+            this.logger.log('🌐 [REAL MODE] Using Twilio for real phone call');
+            return this.makeRealCall(contact, campaignContactId);
+        }
+        else {
+            this.logger.warn('⚙️  [SIMULATION MODE] Twilio not configured - Using enhanced simulation');
+            return this.simulateCall();
+        }
+    }
+    async makeRealCall(contact, campaignContactId) {
+        try {
+            const baseUrl = this.configService.get('BASE_URL') || 'http://localhost:4000';
+            const script = this.generateCallScript(contact);
+            const twimlUrl = `${baseUrl}/auto-calling/twilio/twiml?contactId=${contact.id}`;
+            this.logger.log(`Making real call to ${contact.phone}`);
+            const callResult = await this.twilioService.makeCall(contact.phone, twimlUrl);
+            if (!callResult.success) {
+                return {
+                    status: CampaignCallStatus.FAILED,
+                    outcome: 'Call failed',
+                    summary: callResult.error || 'Unknown error',
+                    duration: 0,
+                };
+            }
+            if (campaignContactId && callResult.callSid) {
+                this.callSids.set(campaignContactId, callResult.callSid);
+            }
+            await this.delay(5000);
+            if (callResult.callSid) {
+                const callDetails = await this.twilioService.getCallDetails(callResult.callSid);
+                if (callDetails) {
+                    const recordings = await this.twilioService.getCallRecordings(callResult.callSid);
+                    return {
+                        status: this.mapTwilioStatusToCampaignStatus(callDetails.status),
+                        outcome: this.getOutcomeFromCallStatus(callDetails.status),
+                        summary: `Call ${callDetails.status}. Duration: ${callDetails.duration}s`,
+                        duration: callDetails.duration || 0,
+                        recordingUrl: recordings.length > 0 ? recordings[0] : undefined,
+                    };
+                }
+            }
+            return {
+                status: CampaignCallStatus.SUCCESS,
+                outcome: 'Call initiated',
+                summary: 'Call has been placed. Status pending.',
+                duration: 0,
+            };
+        }
+        catch (error) {
+            this.logger.error('Error making real call:', error);
+            return {
+                status: CampaignCallStatus.FAILED,
+                outcome: 'Call failed',
+                summary: error.message,
+                duration: 0,
+            };
+        }
+    }
+    async simulateCall() {
+        this.logger.log('📞 [SIMULATION] Initiating call...');
+        await this.delay(1000 + Math.random() * 1000);
+        this.logger.log('📞 [SIMULATION] Dialing number...');
+        const ringingTime = 2000 + Math.random() * 3000;
+        await this.delay(ringingTime);
+        this.logger.log('📞 [SIMULATION] Phone is ringing...');
         const outcomes = [
             {
                 status: CampaignCallStatus.SUCCESS,
                 outcome: 'Customer answered and agreed to payment plan',
                 summary: 'Contact was cooperative and promised to pay within 7 days',
+                probability: 0.25,
+                conversationTime: 120000,
             },
             {
                 status: CampaignCallStatus.NO_ANSWER,
                 outcome: 'No answer',
                 summary: 'Contact did not pick up the phone',
+                probability: 0.35,
+                conversationTime: 0,
             },
             {
                 status: CampaignCallStatus.PROMISE_TO_PAY,
                 outcome: 'Promised to pay tomorrow',
                 summary: 'Contact acknowledged debt and will pay by tomorrow',
+                probability: 0.25,
+                conversationTime: 90000,
             },
             {
                 status: CampaignCallStatus.REFUSED,
                 outcome: 'Refused to cooperate',
                 summary: 'Contact hung up immediately',
+                probability: 0.15,
+                conversationTime: 15000,
             },
         ];
-        const result = outcomes[Math.floor(Math.random() * outcomes.length)];
+        const rand = Math.random();
+        let cumulative = 0;
+        let selectedOutcome = outcomes[0];
+        for (const outcome of outcomes) {
+            cumulative += outcome.probability;
+            if (rand <= cumulative) {
+                selectedOutcome = outcome;
+                break;
+            }
+        }
+        if (selectedOutcome.status === CampaignCallStatus.NO_ANSWER) {
+            this.logger.warn('⚠️  [SIMULATION] No answer - call timeout');
+        }
+        else {
+            this.logger.log('✅ [SIMULATION] Call connected!');
+            if (selectedOutcome.conversationTime > 0) {
+                const steps = Math.floor(selectedOutcome.conversationTime / 5000);
+                for (let i = 0; i < steps; i++) {
+                    await this.delay(5000);
+                    this.logger.log(`💬 [SIMULATION] Conversation in progress... (${(i + 1) * 5}s)`);
+                }
+            }
+            this.logger.log(`✅ [SIMULATION] Call completed: ${selectedOutcome.outcome}`);
+        }
+        const baseDuration = selectedOutcome.conversationTime / 1000;
+        const duration = Math.floor(baseDuration + (Math.random() * 30 - 15));
         return {
-            ...result,
-            duration: Math.floor(Math.random() * 300) + 30,
+            status: selectedOutcome.status,
+            outcome: selectedOutcome.outcome,
+            summary: selectedOutcome.summary,
+            duration: Math.max(0, duration),
             recordingUrl: undefined,
         };
+    }
+    generateCallScript(contact) {
+        const firstName = contact.firstName || 'Mijoz';
+        const debt = contact.customData?.remaining_debt || contact.customData?.total_debt;
+        let script = `Assalomu alaykum, ${firstName}. `;
+        script += `Bu avtomatik qo'ng'iroq. `;
+        if (debt) {
+            script += `Sizning qarzingiz ${debt} so'm. `;
+            script += `Iltimos, qarzni to'lash uchun bizga murojaat qiling. `;
+        }
+        else {
+            script += `Sizga muhim xabar bor. Iltimos, bizga qayta qo'ng'iroq qiling. `;
+        }
+        script += `Rahmat!`;
+        return script;
+    }
+    mapTwilioStatusToCampaignStatus(twilioStatus) {
+        const statusMap = {
+            'completed': CampaignCallStatus.SUCCESS,
+            'answered': CampaignCallStatus.SUCCESS,
+            'busy': CampaignCallStatus.FAILED,
+            'no-answer': CampaignCallStatus.NO_ANSWER,
+            'failed': CampaignCallStatus.FAILED,
+            'canceled': CampaignCallStatus.FAILED,
+        };
+        return statusMap[twilioStatus] || CampaignCallStatus.FAILED;
+    }
+    getOutcomeFromCallStatus(status) {
+        const outcomes = {
+            'completed': 'Call completed successfully',
+            'answered': 'Customer answered',
+            'busy': 'Line was busy',
+            'no-answer': 'No answer',
+            'failed': 'Call failed',
+            'canceled': 'Call was canceled',
+        };
+        return outcomes[status] || 'Unknown status';
     }
     async calculateCampaignStats(campaignId) {
         const contacts = await this.prisma.autoCallCampaignContact.findMany({
@@ -423,11 +614,71 @@ let AutoCallingService = AutoCallingService_1 = class AutoCallingService {
     delay(ms) {
         return new Promise((resolve) => setTimeout(resolve, ms));
     }
+    async generateTwiMLForContact(contactId) {
+        const contact = await this.prisma.autoCallContact.findUnique({
+            where: { id: contactId },
+        });
+        if (!contact) {
+            const twiml = this.twilioService.generateTwiML('Kechirasiz, kontakt topilmadi.', 'uz-UZ', 'Polly.Zehra');
+            return { twiml };
+        }
+        const script = this.generateCallScript(contact);
+        const twiml = this.twilioService.generateTwiML(script, 'uz-UZ', 'Polly.Zehra');
+        this.logger.log(`Generated TwiML for contact ${contactId}`);
+        return {
+            twiml,
+            contentType: 'application/xml',
+        };
+    }
+    async handleTwilioCallStatus(body) {
+        this.logger.log('Twilio call status update:', body);
+        const { CallSid, CallStatus, CallDuration, To } = body;
+        const contact = await this.prisma.autoCallContact.findFirst({
+            where: { phone: To },
+        });
+        if (contact) {
+            await this.prisma.autoCallContact.update({
+                where: { id: contact.id },
+                data: {
+                    lastConversationDate: new Date(),
+                    lastConversationOutcome: CallStatus,
+                },
+            });
+            const campaignContact = await this.prisma.autoCallCampaignContact.findFirst({
+                where: { contactId: contact.id },
+                orderBy: { createdAt: 'desc' },
+            });
+            if (campaignContact) {
+                await this.prisma.autoCallCampaignContact.update({
+                    where: { id: campaignContact.id },
+                    data: {
+                        callStatus: this.mapTwilioStatusToCampaignStatus(CallStatus),
+                        callDuration: CallDuration ? parseInt(CallDuration) : null,
+                        conversationOutcome: CallStatus,
+                    },
+                });
+            }
+        }
+        return { success: true };
+    }
+    async handleTwilioRecording(body) {
+        this.logger.log('Twilio recording webhook:', body);
+        const { CallSid, RecordingUrl } = body;
+        return { success: true };
+    }
+    async handleUserResponse(body) {
+        this.logger.log('User response:', body);
+        const { SpeechResult, Digits, CallSid } = body;
+        const twiml = this.twilioService.generateTwiML('Rahmat! Javobingiz qabul qilindi. Xayr!', 'uz-UZ', 'Polly.Zehra');
+        return { twiml };
+    }
 };
 AutoCallingService = AutoCallingService_1 = __decorate([
     Injectable(),
     __metadata("design:paramtypes", [PrismaService,
-        AutoCallingGateway])
+        AutoCallingGateway,
+        TwilioService,
+        ConfigService])
 ], AutoCallingService);
 export { AutoCallingService };
 //# sourceMappingURL=auto-calling.service.js.map

@@ -92,6 +92,7 @@ export declare class CallController {
             role: import("@prisma/client").$Enums.UserRole;
             passwordHash: string;
             departmentId: string | null;
+            auto_calling: boolean;
         };
         manager: {
             id: string;
@@ -106,6 +107,7 @@ export declare class CallController {
             role: import("@prisma/client").$Enums.UserRole;
             passwordHash: string;
             departmentId: string | null;
+            auto_calling: boolean;
         } | null;
         scores: ({
             criteria: {

@@ -32,6 +32,7 @@ let AuthService = class AuthService {
             phone: user.phone,
             role: user.role,
             organizationId: user.organizationId,
+            auto_calling: user.auto_calling,
         };
         return {
             access_token: await this.jwtService.signAsync(payload),

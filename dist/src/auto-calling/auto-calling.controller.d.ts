@@ -49,55 +49,57 @@ export declare class AutoCallingController {
         totalPages: number;
     }>;
     findContactById(req: any, id: string): Promise<{
-        campaignContacts: ({
-            campaign: {
+        data: {
+            campaignContacts: ({
+                campaign: {
+                    id: string;
+                    organizationId: number;
+                    name: string;
+                    createdAt: Date;
+                    updatedAt: Date;
+                    status: import("@prisma/client").$Enums.CampaignStatus;
+                    description: string | null;
+                    failedCalls: number;
+                    startedAt: Date | null;
+                    completedAt: Date | null;
+                    campaignType: import("@prisma/client").$Enums.CampaignType;
+                    totalContacts: number;
+                    calledContacts: number;
+                    successfulCalls: number;
+                };
+            } & {
                 id: string;
-                organizationId: number;
-                name: string;
                 createdAt: Date;
                 updatedAt: Date;
-                status: import("@prisma/client").$Enums.CampaignStatus;
-                description: string | null;
-                failedCalls: number;
-                startedAt: Date | null;
-                completedAt: Date | null;
-                campaignType: import("@prisma/client").$Enums.CampaignType;
-                totalContacts: number;
-                calledContacts: number;
-                successfulCalls: number;
-            };
+                notes: string | null;
+                campaignId: string;
+                contactId: string;
+                callStatus: import("@prisma/client").$Enums.CampaignCallStatus;
+                callAttempts: number;
+                lastCallDate: Date | null;
+                conversationOutcome: string | null;
+                conversationSummary: string | null;
+                recordingUrl: string | null;
+                callDuration: number | null;
+            })[];
         } & {
             id: string;
+            organizationId: number;
             createdAt: Date;
             updatedAt: Date;
+            firstName: string;
+            lastName: string;
+            phone: string;
+            status: import("@prisma/client").$Enums.ContactStatus;
             notes: string | null;
-            campaignId: string;
-            contactId: string;
-            callStatus: import("@prisma/client").$Enums.CampaignCallStatus;
-            callAttempts: number;
-            lastCallDate: Date | null;
-            conversationOutcome: string | null;
-            conversationSummary: string | null;
-            recordingUrl: string | null;
-            callDuration: number | null;
-        })[];
-    } & {
-        id: string;
-        organizationId: number;
-        createdAt: Date;
-        updatedAt: Date;
-        firstName: string;
-        lastName: string;
-        phone: string;
-        status: import("@prisma/client").$Enums.ContactStatus;
-        notes: string | null;
-        dateOfBirth: Date | null;
-        customData: import("@prisma/client/runtime/library").JsonValue | null;
-        lastConversationOutcome: string | null;
-        currentConversationOutcome: string | null;
-        lastConversationDate: Date | null;
-        isCalled: boolean;
-        lastContactDate: Date | null;
+            dateOfBirth: Date | null;
+            customData: import("@prisma/client/runtime/library").JsonValue | null;
+            lastConversationOutcome: string | null;
+            currentConversationOutcome: string | null;
+            lastConversationDate: Date | null;
+            isCalled: boolean;
+            lastContactDate: Date | null;
+        };
     }>;
     updateContact(req: any, id: string, updateContactDto: UpdateContactDto): Promise<{
         id: string;
@@ -315,5 +317,21 @@ export declare class AutoCallingController {
     }>;
     stopCampaign(req: any, id: string): Promise<{
         message: string;
+    }>;
+    getTwiML(contactId: string): Promise<{
+        twiml: string;
+        contentType?: undefined;
+    } | {
+        twiml: string;
+        contentType: string;
+    }>;
+    handleCallStatus(body: any): Promise<{
+        success: boolean;
+    }>;
+    handleRecording(body: any): Promise<{
+        success: boolean;
+    }>;
+    handleResponse(body: any): Promise<{
+        twiml: string;
     }>;
 }

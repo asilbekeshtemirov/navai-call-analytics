@@ -30,8 +30,9 @@ let AutoCallingController = class AutoCallingController {
     findAllContacts(req, page, limit, status) {
         return this.autoCallingService.findAllContacts(req.user.organizationId, page, limit, status);
     }
-    findContactById(req, id) {
-        return this.autoCallingService.findContactById(req.user.organizationId, id);
+    async findContactById(req, id) {
+        const contact = await this.autoCallingService.findContactById(req.user.organizationId, id);
+        return { data: contact };
     }
     updateContact(req, id, updateContactDto) {
         return this.autoCallingService.updateContact(req.user.organizationId, id, updateContactDto);
@@ -70,6 +71,18 @@ let AutoCallingController = class AutoCallingController {
     stopCampaign(req, id) {
         return this.autoCallingService.stopCampaign(req.user.organizationId, id);
     }
+    getTwiML(contactId) {
+        return this.autoCallingService.generateTwiMLForContact(contactId);
+    }
+    handleCallStatus(body) {
+        return this.autoCallingService.handleTwilioCallStatus(body);
+    }
+    handleRecording(body) {
+        return this.autoCallingService.handleTwilioRecording(body);
+    }
+    handleResponse(body) {
+        return this.autoCallingService.handleUserResponse(body);
+    }
 };
 __decorate([
     Post('contacts'),
@@ -102,7 +115,7 @@ __decorate([
     __param(1, Param('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], AutoCallingController.prototype, "findContactById", null);
 __decorate([
     Patch('contacts/:id'),
@@ -235,9 +248,41 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
 ], AutoCallingController.prototype, "stopCampaign", null);
+__decorate([
+    Get('twilio/twiml'),
+    ApiOperation({ summary: 'Generate TwiML for call' }),
+    __param(0, Query('contactId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], AutoCallingController.prototype, "getTwiML", null);
+__decorate([
+    Post('twilio/status'),
+    ApiOperation({ summary: 'Twilio call status webhook' }),
+    __param(0, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AutoCallingController.prototype, "handleCallStatus", null);
+__decorate([
+    Post('twilio/recording'),
+    ApiOperation({ summary: 'Twilio recording webhook' }),
+    __param(0, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AutoCallingController.prototype, "handleRecording", null);
+__decorate([
+    Post('twilio/handle-response'),
+    ApiOperation({ summary: 'Handle call response from user' }),
+    __param(0, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AutoCallingController.prototype, "handleResponse", null);
 AutoCallingController = __decorate([
     ApiTags('Auto-Calling'),
-    ApiBearerAuth(),
+    ApiBearerAuth('access-token'),
     UseGuards(JwtAuthGuard),
     Controller('auto-calling'),
     __metadata("design:paramtypes", [AutoCallingService])

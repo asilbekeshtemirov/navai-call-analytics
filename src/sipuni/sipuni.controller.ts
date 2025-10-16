@@ -8,7 +8,11 @@ import {
   Headers,
   UnauthorizedException,
   Body,
+  Param,
+  Res,
+  NotFoundException,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -23,6 +27,7 @@ import { Roles } from '../auth/roles.decorator.js';
 import { UserRole } from '@prisma/client';
 import { OrganizationId } from '../auth/organization-id.decorator.js';
 import { ConfigService } from '@nestjs/config';
+import { Public } from '../auth/public.decorator.js';
 
 @ApiTags('sipuni')
 @Controller('sipuni')
@@ -211,6 +216,53 @@ export class SipuniController {
         message: `Update failed: ${error.message}`,
         updated: 0,
       };
+    }
+  }
+
+  @Get('audio/:recordId/:organizationId')
+  @Public()
+  @ApiOperation({
+    summary: 'Stream audio recording by recordId from Sipuni (Public endpoint)',
+    description: 'Proxy endpoint to stream audio from Sipuni API without saving locally',
+  })
+  @ApiResponse({ status: 200, description: 'Audio stream' })
+  @ApiResponse({ status: 404, description: 'Recording not found' })
+  async streamAudio(
+    @Param('organizationId') organizationId: string,
+    @Param('recordId') recordId: string,
+    @Res() res: Response,
+  ) {
+    const orgId = parseInt(organizationId, 10);
+    try {
+      this.logger.log(
+        `[CONTROLLER] Streaming audio for recordId: ${recordId}, org: ${organizationId}`,
+      );
+
+      const audioBuffer = await this.sipuniService.streamRecordingById(
+        orgId,
+        recordId,
+      );
+
+      res.set({
+        'Content-Type': 'audio/mpeg',
+        'Content-Length': audioBuffer.length,
+        'Cache-Control': 'public, max-age=31536000',
+      });
+
+      res.send(audioBuffer);
+    } catch (error) {
+      this.logger.error(
+        `[CONTROLLER] Failed to stream audio: ${error.message}`,
+      );
+
+      if (error.message.includes('404')) {
+        throw new NotFoundException('Recording not found');
+      }
+
+      res.status(500).json({
+        success: false,
+        message: `Failed to stream audio: ${error.message}`,
+      });
     }
   }
 }
