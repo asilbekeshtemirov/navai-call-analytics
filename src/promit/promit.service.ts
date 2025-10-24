@@ -42,6 +42,18 @@ export class PromitService {
     return prompt;
   }
 
+  async findActive() {
+    const activePrompt = await this.prisma.systemPrompt.findFirst({
+      where: { isActive: true },
+    });
+
+    if (!activePrompt) {
+      throw new NotFoundException('Faol prompt topilmadi');
+    }
+
+    return activePrompt;
+  }
+
   async update(id: string, updatePromitDto: UpdatePromitDto) {
     const prompt = await this.prisma.systemPrompt.findUnique({
       where: { id },

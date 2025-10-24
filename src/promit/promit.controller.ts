@@ -37,6 +37,12 @@ export class PromitController {
     return this.promitService.findAll();
   }
 
+  @Get('active/current')
+  @ApiOperation({ summary: 'Faol promptni olish (faqat SuperAdmin)' })
+  findActive() {
+    return this.promitService.findActive();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Bitta promptni olish (faqat SuperAdmin)' })
   findOne(@Param('id') id: string) {

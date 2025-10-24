@@ -19,7 +19,7 @@ let PromitService = class PromitService {
             data: {
                 ...createPromitDto,
                 isActive: false,
-            },
+            }, 2: 
         });
         return {
             message: 'Prompt muvaffaqiyatli yaratildi',
