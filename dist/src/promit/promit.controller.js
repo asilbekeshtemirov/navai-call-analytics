@@ -42,7 +42,7 @@ let PromitController = class PromitController {
 };
 __decorate([
     Post(),
-    ApiOperation({ summary: 'Yangi promit yaratish (faqat SuperAdmin)' }),
+    ApiOperation({ summary: 'Yangi prompt yaratish (faqat SuperAdmin)' }),
     __param(0, Body()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [CreatePromitDto]),
@@ -50,14 +50,14 @@ __decorate([
 ], PromitController.prototype, "create", null);
 __decorate([
     Get(),
-    ApiOperation({ summary: 'Barcha promitlarni olish (faqat SuperAdmin)' }),
+    ApiOperation({ summary: 'Barcha promptlarni olish (faqat SuperAdmin)' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], PromitController.prototype, "findAll", null);
 __decorate([
     Get(':id'),
-    ApiOperation({ summary: 'Bitta promitni olish (faqat SuperAdmin)' }),
+    ApiOperation({ summary: 'Bitta promptni olish (faqat SuperAdmin)' }),
     __param(0, Param('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -65,7 +65,7 @@ __decorate([
 ], PromitController.prototype, "findOne", null);
 __decorate([
     Patch(':id'),
-    ApiOperation({ summary: 'Promitni yangilash (faqat SuperAdmin)' }),
+    ApiOperation({ summary: 'Promptni yangilash (faqat SuperAdmin)' }),
     __param(0, Param('id')),
     __param(1, Body()),
     __metadata("design:type", Function),
@@ -74,16 +74,16 @@ __decorate([
 ], PromitController.prototype, "update", null);
 __decorate([
     Delete(':id'),
-    ApiOperation({ summary: 'Promitni o\'chirish (faqat SuperAdmin)' }),
+    ApiOperation({ summary: 'Promptni o\'chirish (faqat SuperAdmin)' }),
     __param(0, Param('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], PromitController.prototype, "remove", null);
 PromitController = __decorate([
-    ApiTags('promit'),
+    ApiTags('prompts'),
     ApiBearerAuth('access-token'),
-    Controller('promit'),
+    Controller('prompts'),
     UseGuards(JwtAuthGuard, RolesGuard),
     Roles(UserRole.SUPERADMIN),
     __metadata("design:paramtypes", [PromitService])

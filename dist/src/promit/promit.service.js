@@ -15,59 +15,73 @@ let PromitService = class PromitService {
         this.prisma = prisma;
     }
     async create(createPromitDto) {
-        const promit = await this.prisma.promit.create({
-            data: createPromitDto,
+        const prompt = await this.prisma.systemPrompt.create({
+            data: {
+                ...createPromitDto,
+                isActive: false,
+            },
         });
         return {
-            message: 'Promit muvaffaqiyatli yaratildi',
-            data: promit,
+            message: 'Prompt muvaffaqiyatli yaratildi',
+            data: prompt,
         };
     }
     async findAll() {
-        const promits = await this.prisma.promit.findMany({
+        const prompts = await this.prisma.systemPrompt.findMany({
             orderBy: {
                 createdAt: 'desc',
             },
         });
-        return promits;
+        return prompts;
     }
     async findOne(id) {
-        const promit = await this.prisma.promit.findUnique({
+        const prompt = await this.prisma.systemPrompt.findUnique({
             where: { id },
         });
-        if (!promit) {
-            throw new NotFoundException(`Promit (ID: ${id}) topilmadi`);
+        if (!prompt) {
+            throw new NotFoundException(`Prompt (ID: ${id}) topilmadi`);
         }
-        return promit;
+        return prompt;
     }
     async update(id, updatePromitDto) {
-        const promit = await this.prisma.promit.findUnique({
+        const prompt = await this.prisma.systemPrompt.findUnique({
             where: { id },
         });
-        if (!promit) {
-            throw new NotFoundException(`Promit (ID: ${id}) topilmadi`);
+        if (!prompt) {
+            throw new NotFoundException(`Prompt (ID: ${id}) topilmadi`);
         }
-        const updatedPromit = await this.prisma.promit.update({
+        if (updatePromitDto.isActive === true) {
+            await this.prisma.systemPrompt.updateMany({
+                where: {
+                    id: { not: id },
+                    isActive: true,
+                },
+                data: {
+                    isActive: false,
+                },
+            });
+        }
+        const updatedPrompt = await this.prisma.systemPrompt.update({
             where: { id },
             data: updatePromitDto,
         });
         return {
-            message: 'Promit muvaffaqiyatli yangilandi',
-            data: updatedPromit,
+            message: 'Prompt muvaffaqiyatli yangilandi',
+            data: updatedPrompt,
         };
     }
     async remove(id) {
-        const promit = await this.prisma.promit.findUnique({
+        const prompt = await this.prisma.systemPrompt.findUnique({
             where: { id },
         });
-        if (!promit) {
-            throw new NotFoundException(`Promit (ID: ${id}) topilmadi`);
+        if (!prompt) {
+            throw new NotFoundException(`Prompt (ID: ${id}) topilmadi`);
         }
-        await this.prisma.promit.delete({
+        await this.prisma.systemPrompt.delete({
             where: { id },
         });
         return {
-            message: 'Promit muvaffaqiyatli o\'chirildi',
+            message: 'Prompt muvaffaqiyatli o\'chirildi',
         };
     }
 };

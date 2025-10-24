@@ -17,40 +17,40 @@ import { RolesGuard } from '../auth/roles.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
 import { UserRole } from '@prisma/client';
 
-@ApiTags('promit')
+@ApiTags('prompts')
 @ApiBearerAuth('access-token')
-@Controller('promit')
+@Controller('prompts')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.SUPERADMIN)
 export class PromitController {
   constructor(private readonly promitService: PromitService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Yangi promit yaratish (faqat SuperAdmin)' })
+  @ApiOperation({ summary: 'Yangi prompt yaratish (faqat SuperAdmin)' })
   create(@Body() createPromitDto: CreatePromitDto) {
     return this.promitService.create(createPromitDto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Barcha promitlarni olish (faqat SuperAdmin)' })
+  @ApiOperation({ summary: 'Barcha promptlarni olish (faqat SuperAdmin)' })
   findAll() {
     return this.promitService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Bitta promitni olish (faqat SuperAdmin)' })
+  @ApiOperation({ summary: 'Bitta promptni olish (faqat SuperAdmin)' })
   findOne(@Param('id') id: string) {
     return this.promitService.findOne(id);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Promitni yangilash (faqat SuperAdmin)' })
+  @ApiOperation({ summary: 'Promptni yangilash (faqat SuperAdmin)' })
   update(@Param('id') id: string, @Body() updatePromitDto: UpdatePromitDto) {
     return this.promitService.update(id, updatePromitDto);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Promitni o\'chirish (faqat SuperAdmin)' })
+  @ApiOperation({ summary: 'Promptni o\'chirish (faqat SuperAdmin)' })
   remove(@Param('id') id: string) {
     return this.promitService.remove(id);
   }
