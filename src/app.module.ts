@@ -20,6 +20,7 @@ import { SipuniModule } from './sipuni/sipuni.module.js';
 import { SettingsModule } from './settings/settings.module.js';
 import { OrganizationModule } from './organization/organization.module.js';
 import { AutoCallingModule } from './auto-calling/auto-calling.module.js';
+import { PromitModule } from './promit/promit.module.js';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { AutoCallingModule } from './auto-calling/auto-calling.module.js';
     SipuniModule,
     OrganizationModule,
     AutoCallingModule,
+    PromitModule,
   ],
   controllers: [AppController],
   providers: [AppService],

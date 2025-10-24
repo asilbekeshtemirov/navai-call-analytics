@@ -12,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { StatisticsService } from '../statistics/statistics.service.js';
 import { SipuniService } from '../sipuni/sipuni.service.js';
 import { StatisticsType, } from './dto/unified-statistics.dto.js';
+import ExcelJS from 'exceljs';
 let CompanyService = class CompanyService {
     prisma;
     statisticsService;
@@ -491,6 +492,286 @@ let CompanyService = class CompanyService {
                 branchId: filters.branchId,
             },
         };
+    }
+    async exportEmployeesExcel(organizationId, period = 'today', dateFrom, dateTo) {
+        let startDate;
+        let endDate = new Date();
+        if (dateFrom && dateTo) {
+            startDate = new Date(dateFrom);
+            endDate = new Date(dateTo);
+        }
+        else {
+            switch (period) {
+                case 'week':
+                    startDate = new Date();
+                    startDate.setDate(startDate.getDate() - 7);
+                    break;
+                case 'month':
+                    startDate = new Date();
+                    startDate.setMonth(startDate.getMonth() - 1);
+                    break;
+                default:
+                    startDate = new Date();
+                    startDate.setDate(startDate.getDate() - 1);
+                    endDate = new Date();
+            }
+        }
+        const employees = await this.prisma.user.findMany({
+            where: {
+                organizationId,
+                role: 'EMPLOYEE',
+            },
+            select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                extCode: true,
+                phone: true,
+                department: {
+                    select: {
+                        name: true,
+                        branch: {
+                            select: {
+                                name: true,
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: {
+                lastName: 'asc',
+            },
+        });
+        const employeesWithStats = await Promise.all(employees.map(async (employee) => {
+            const calls = await this.prisma.call.findMany({
+                where: {
+                    organizationId,
+                    employeeId: employee.id,
+                    status: 'DONE',
+                    callDate: {
+                        gte: startDate,
+                        lte: endDate,
+                    },
+                },
+                include: {
+                    scores: {
+                        include: {
+                            criteria: true,
+                        },
+                    },
+                },
+            });
+            const totalCalls = calls.length;
+            const totalDuration = calls.reduce((sum, call) => sum + (call.durationSec || 0), 0);
+            let avgScore = 0;
+            if (calls.length > 0) {
+                const scores = calls
+                    .map((call) => {
+                    if (call.scores && call.scores.length > 0) {
+                        const totalWeight = call.scores.reduce((sum, s) => sum + s.criteria.weight, 0);
+                        const weightedScore = call.scores.reduce((sum, s) => sum + s.score * s.criteria.weight, 0);
+                        return totalWeight > 0 ? weightedScore / totalWeight : 0;
+                    }
+                    return 0;
+                })
+                    .filter((score) => score > 0);
+                avgScore =
+                    scores.length > 0
+                        ? scores.reduce((sum, score) => sum + score, 0) / scores.length
+                        : 0;
+            }
+            const callsWithScores = calls
+                .map((call) => {
+                if (call.scores && call.scores.length > 0) {
+                    const totalWeight = call.scores.reduce((sum, s) => sum + s.criteria.weight, 0);
+                    const weightedScore = call.scores.reduce((sum, s) => sum + s.score * s.criteria.weight, 0);
+                    return {
+                        ...call,
+                        calculatedScore: totalWeight > 0 ? weightedScore / totalWeight : 0,
+                    };
+                }
+                return { ...call, calculatedScore: 0 };
+            })
+                .filter((call) => call.calculatedScore > 0);
+            const bestCall = callsWithScores.length > 0
+                ? callsWithScores.reduce((max, call) => call.calculatedScore > max.calculatedScore ? call : max)
+                : null;
+            const worstCall = callsWithScores.length > 0
+                ? callsWithScores.reduce((min, call) => call.calculatedScore < min.calculatedScore ? call : min)
+                : null;
+            return {
+                fullName: `${employee.firstName} ${employee.lastName}`,
+                extCode: employee.extCode || 'N/A',
+                phone: employee.phone || 'N/A',
+                department: employee.department?.name || 'N/A',
+                branch: employee.department?.branch?.name || 'N/A',
+                totalCalls,
+                totalDuration,
+                avgDuration: totalCalls > 0 ? Math.round(totalDuration / totalCalls) : 0,
+                avgScore: Math.round(avgScore * 100) / 100,
+                bestScore: bestCall
+                    ? Math.round(bestCall.calculatedScore * 100) / 100
+                    : 0,
+                worstScore: worstCall
+                    ? Math.round(worstCall.calculatedScore * 100) / 100
+                    : 0,
+            };
+        }));
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = 'Navai Analytics System';
+        workbook.created = new Date();
+        workbook.modified = new Date();
+        const worksheet = workbook.addWorksheet('Xodimlar Statistikasi', {
+            properties: { defaultRowHeight: 20 },
+            views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }],
+        });
+        worksheet.columns = [
+            { header: '№', key: 'index', width: 5 },
+            { header: 'Ism va Familiya', key: 'fullName', width: 25 },
+            { header: 'Raqam (Ext)', key: 'extCode', width: 12 },
+            { header: 'Telefon', key: 'phone', width: 18 },
+            { header: 'Bo\'lim', key: 'department', width: 20 },
+            { header: 'Filial', key: 'branch', width: 20 },
+            { header: "Jami Qo'ng'iroqlar", key: 'totalCalls', width: 18 },
+            { header: 'Jami Davomiyligi (s)', key: 'totalDuration', width: 20 },
+            { header: "O'rtacha Davomiyligi (s)", key: 'avgDuration', width: 22 },
+            { header: "O'rtacha Ball", key: 'avgScore', width: 15 },
+            { header: 'Eng Yaxshi Ball', key: 'bestScore', width: 18 },
+            { header: 'Eng Yomon Ball', key: 'worstScore', width: 18 },
+        ];
+        const headerRow = worksheet.getRow(1);
+        headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+        headerRow.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF4472C4' },
+        };
+        headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+        headerRow.height = 25;
+        employeesWithStats.forEach((emp, index) => {
+            const row = worksheet.addRow({
+                index: index + 1,
+                fullName: emp.fullName,
+                extCode: emp.extCode,
+                phone: emp.phone,
+                department: emp.department,
+                branch: emp.branch,
+                totalCalls: emp.totalCalls,
+                totalDuration: emp.totalDuration,
+                avgDuration: emp.avgDuration,
+                avgScore: emp.avgScore,
+                bestScore: emp.bestScore,
+                worstScore: emp.worstScore,
+            });
+            row.alignment = { vertical: 'middle', horizontal: 'left' };
+            row.getCell('index').alignment = { horizontal: 'center' };
+            row.getCell('totalCalls').alignment = { horizontal: 'center' };
+            row.getCell('totalDuration').alignment = { horizontal: 'right' };
+            row.getCell('avgDuration').alignment = { horizontal: 'right' };
+            row.getCell('avgScore').alignment = { horizontal: 'center' };
+            row.getCell('bestScore').alignment = { horizontal: 'center' };
+            row.getCell('worstScore').alignment = { horizontal: 'center' };
+            if (emp.avgScore >= 80) {
+                row.getCell('avgScore').fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFC6EFCE' },
+                };
+            }
+            else if (emp.avgScore >= 60) {
+                row.getCell('avgScore').fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFFFC7CE' },
+                };
+            }
+            else if (emp.avgScore > 0) {
+                row.getCell('avgScore').fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFFFC7CE' },
+                };
+                row.getCell('avgScore').font = { color: { argb: 'FF9C0006' } };
+            }
+            if (index % 2 === 0) {
+                row.eachCell((cell, colNumber) => {
+                    if (colNumber !== 10) {
+                        cell.fill = {
+                            type: 'pattern',
+                            pattern: 'solid',
+                            fgColor: { argb: 'FFF2F2F2' },
+                        };
+                    }
+                });
+            }
+        });
+        worksheet.eachRow((row, rowNumber) => {
+            row.eachCell((cell) => {
+                cell.border = {
+                    top: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+                    left: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+                    bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+                    right: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+                };
+            });
+        });
+        const summarySheet = workbook.addWorksheet('Umumiy Statistika');
+        summarySheet.columns = [
+            { header: "Ko'rsatkich", key: 'metric', width: 35 },
+            { header: 'Qiymat', key: 'value', width: 20 },
+        ];
+        const summaryHeaderRow = summarySheet.getRow(1);
+        summaryHeaderRow.font = {
+            bold: true,
+            color: { argb: 'FFFFFFFF' },
+            size: 11,
+        };
+        summaryHeaderRow.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF70AD47' },
+        };
+        summaryHeaderRow.alignment = { vertical: 'middle', horizontal: 'center' };
+        summaryHeaderRow.height = 25;
+        const totalEmployees = employeesWithStats.length;
+        const totalCallsAll = employeesWithStats.reduce((sum, emp) => sum + emp.totalCalls, 0);
+        const totalDurationAll = employeesWithStats.reduce((sum, emp) => sum + emp.totalDuration, 0);
+        const avgScoreAll = totalEmployees > 0
+            ? employeesWithStats.reduce((sum, emp) => sum + emp.avgScore, 0) /
+                totalEmployees
+            : 0;
+        const summaryData = [
+            { metric: 'Davrı', value: `${startDate.toLocaleDateString('uz-UZ')} - ${endDate.toLocaleDateString('uz-UZ')}` },
+            { metric: 'Jami Xodimlar', value: totalEmployees },
+            { metric: "Jami Qo'ng'iroqlar", value: totalCallsAll },
+            { metric: 'Jami Davomiyligi (soat)', value: Math.round(totalDurationAll / 3600 * 100) / 100 },
+            { metric: "O'rtacha Ball (Barcha Xodimlar)", value: Math.round(avgScoreAll * 100) / 100 },
+            { metric: "Xodim boshiga O'rtacha Qo'ng'iroqlar", value: totalEmployees > 0 ? Math.round((totalCallsAll / totalEmployees) * 100) / 100 : 0 },
+        ];
+        summaryData.forEach((data, index) => {
+            const row = summarySheet.addRow(data);
+            row.alignment = { vertical: 'middle' };
+            row.getCell('value').alignment = { horizontal: 'right' };
+            row.eachCell((cell) => {
+                cell.border = {
+                    top: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+                    left: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+                    bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+                    right: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+                };
+            });
+            if (index % 2 === 0) {
+                row.eachCell((cell) => {
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFF2F2F2' },
+                    };
+                });
+            }
+        });
+        const buffer = await workbook.xlsx.writeBuffer();
+        return Buffer.from(buffer);
     }
 };
 CompanyService = __decorate([

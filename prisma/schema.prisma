@@ -113,6 +113,16 @@ model Prompt {
   topic     Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
 }
 
+model Promit {
+  id        String   @id @default(uuid())
+  content   String   @db.Text
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("promits")
+}
+
 model Call {
   id             String              @id @default(uuid())
   organizationId  Int

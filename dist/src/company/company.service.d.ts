@@ -18,4 +18,5 @@ export declare class CompanyService {
     private getFilteredDashboardData;
     private getFilteredSipuniStats;
     private getFilteredSummary;
+    exportEmployeesExcel(organizationId: number, period?: string, dateFrom?: string, dateTo?: string): Promise<Buffer>;
 }

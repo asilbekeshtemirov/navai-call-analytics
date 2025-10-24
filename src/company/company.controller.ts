@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Res } from '@nestjs/common';
 import { CompanyService } from './company.service.js';
 import {
   ApiTags,
@@ -12,6 +12,7 @@ import { Roles } from '../auth/roles.decorator.js';
 import { UserRole } from '@prisma/client';
 import { UnifiedStatisticsDto } from './dto/unified-statistics.dto.js';
 import { OrganizationId } from '../auth/organization-id.decorator.js';
+import type { Response } from 'express';
 
 @ApiTags('company')
 @ApiBearerAuth('access-token')
@@ -62,5 +63,50 @@ export class CompanyController {
     @Query() filters: UnifiedStatisticsDto,
   ): Promise<any> {
     return this.companyService.getUnifiedStatistics(organizationId, filters);
+  }
+
+  @Get('employees/export/excel')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: "Barcha xodimlar statistikasini Excel formatida yuklab olish" })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['today', 'week', 'month'],
+  })
+  @ApiQuery({
+    name: 'dateFrom',
+    required: false,
+    type: String,
+    description: 'YYYY-MM-DD formatida boshlanish sanasi',
+  })
+  @ApiQuery({
+    name: 'dateTo',
+    required: false,
+    type: String,
+    description: 'YYYY-MM-DD formatida tugash sanasi',
+  })
+  async exportEmployeesExcel(
+    @OrganizationId() organizationId: number,
+    @Res() res: Response,
+    @Query('period') period: string = 'today',
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ): Promise<void> {
+    const buffer = await this.companyService.exportEmployeesExcel(
+      organizationId,
+      period,
+      dateFrom,
+      dateTo,
+    );
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=xodimlar_statistikasi_${new Date().toISOString().split('T')[0]}.xlsx`,
+    );
+    res.send(buffer);
   }
 }

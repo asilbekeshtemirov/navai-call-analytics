@@ -10,7 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Res } from '@nestjs/common';
 import { CompanyService } from './company.service.js';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
@@ -32,6 +32,12 @@ let CompanyController = class CompanyController {
     }
     async getUnifiedStatistics(organizationId, filters) {
         return this.companyService.getUnifiedStatistics(organizationId, filters);
+    }
+    async exportEmployeesExcel(organizationId, res, period = 'today', dateFrom, dateTo) {
+        const buffer = await this.companyService.exportEmployeesExcel(organizationId, period, dateFrom, dateTo);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=xodimlar_statistikasi_${new Date().toISOString().split('T')[0]}.xlsx`);
+        res.send(buffer);
     }
 };
 __decorate([
@@ -73,6 +79,36 @@ __decorate([
     __metadata("design:paramtypes", [Number, UnifiedStatisticsDto]),
     __metadata("design:returntype", Promise)
 ], CompanyController.prototype, "getUnifiedStatistics", null);
+__decorate([
+    Get('employees/export/excel'),
+    Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPERADMIN),
+    ApiOperation({ summary: "Barcha xodimlar statistikasini Excel formatida yuklab olish" }),
+    ApiQuery({
+        name: 'period',
+        required: false,
+        enum: ['today', 'week', 'month'],
+    }),
+    ApiQuery({
+        name: 'dateFrom',
+        required: false,
+        type: String,
+        description: 'YYYY-MM-DD formatida boshlanish sanasi',
+    }),
+    ApiQuery({
+        name: 'dateTo',
+        required: false,
+        type: String,
+        description: 'YYYY-MM-DD formatida tugash sanasi',
+    }),
+    __param(0, OrganizationId()),
+    __param(1, Res()),
+    __param(2, Query('period')),
+    __param(3, Query('dateFrom')),
+    __param(4, Query('dateTo')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object, String, String, String]),
+    __metadata("design:returntype", Promise)
+], CompanyController.prototype, "exportEmployeesExcel", null);
 CompanyController = __decorate([
     ApiTags('company'),
     ApiBearerAuth('access-token'),
