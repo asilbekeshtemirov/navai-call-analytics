@@ -16,7 +16,7 @@ export class UpdatePromitDto {
 __decorate([
     ApiPropertyOptional({
         description: 'Promit matnli mazmuni',
-        example: 'Yangilangan system prompt',
+        example: 'Yangilangan promit matni',
     }),
     IsOptional(),
     IsString({ message: 'Content matn bo\'lishi kerak' }),

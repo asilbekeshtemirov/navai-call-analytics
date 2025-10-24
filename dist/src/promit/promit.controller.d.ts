@@ -7,35 +7,35 @@ export declare class PromitController {
     create(createPromitDto: CreatePromitDto): Promise<{
         message: string;
         data: {
+            content: string;
+            isActive: boolean;
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            isActive: boolean;
-            content: string;
         };
     }>;
     findAll(): Promise<{
+        content: string;
+        isActive: boolean;
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        isActive: boolean;
-        content: string;
     }[]>;
     findOne(id: string): Promise<{
+        content: string;
+        isActive: boolean;
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        isActive: boolean;
-        content: string;
     }>;
     update(id: string, updatePromitDto: UpdatePromitDto): Promise<{
         message: string;
         data: {
+            content: string;
+            isActive: boolean;
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            isActive: boolean;
-            content: string;
         };
     }>;
     remove(id: string): Promise<{
