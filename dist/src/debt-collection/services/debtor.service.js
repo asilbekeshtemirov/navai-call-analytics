@@ -1,0 +1,233 @@
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service.js';
+import ExcelJS from 'exceljs';
+let DebtorService = class DebtorService {
+    prisma;
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async create(organizationId, dto) {
+        const dueDate = new Date(dto.dueDate);
+        const today = new Date();
+        const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+        return this.prisma.debtor.create({
+            data: {
+                organizationId,
+                firstName: dto.firstName,
+                lastName: dto.lastName,
+                phone: dto.phone,
+                alternatePhone: dto.alternatePhone,
+                email: dto.email,
+                debtAmount: dto.debtAmount,
+                currency: dto.currency || 'UZS',
+                contractNumber: dto.contractNumber,
+                dueDate: new Date(dto.dueDate),
+                daysOverdue,
+                productService: dto.productService,
+                debtReason: dto.debtReason,
+            },
+        });
+    }
+    async findAll(organizationId, filters) {
+        const where = { organizationId };
+        if (filters?.status) {
+            where.status = filters.status;
+        }
+        if (filters?.search) {
+            where.OR = [
+                { firstName: { contains: filters.search, mode: 'insensitive' } },
+                { lastName: { contains: filters.search, mode: 'insensitive' } },
+                { phone: { contains: filters.search } },
+                { contractNumber: { contains: filters.search, mode: 'insensitive' } },
+            ];
+        }
+        const [debtors, total] = await Promise.all([
+            this.prisma.debtor.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                take: filters?.limit || 50,
+                skip: filters?.skip || 0,
+            }),
+            this.prisma.debtor.count({ where }),
+        ]);
+        return { debtors, total };
+    }
+    async findOne(id, organizationId) {
+        const debtor = await this.prisma.debtor.findFirst({
+            where: { id, organizationId },
+            include: {
+                campaignAssignments: {
+                    include: {
+                        campaign: true,
+                    },
+                    orderBy: { createdAt: 'desc' },
+                },
+            },
+        });
+        if (!debtor) {
+            throw new NotFoundException('Qarzdor topilmadi');
+        }
+        return debtor;
+    }
+    async update(id, organizationId, dto) {
+        const debtor = await this.findOne(id, organizationId);
+        if (dto.contractNumber && dto.contractNumber !== debtor.contractNumber) {
+            const existing = await this.prisma.debtor.findFirst({
+                where: {
+                    organizationId,
+                    contractNumber: dto.contractNumber,
+                    NOT: { id },
+                },
+            });
+            if (existing) {
+                throw new BadRequestException(`Shartnoma raqami "${dto.contractNumber}" allaqachon mavjud`);
+            }
+        }
+        const updateData = {};
+        if (dto.firstName)
+            updateData.firstName = dto.firstName;
+        if (dto.lastName)
+            updateData.lastName = dto.lastName;
+        if (dto.phone)
+            updateData.phone = dto.phone;
+        if (dto.alternatePhone !== undefined)
+            updateData.alternatePhone = dto.alternatePhone;
+        if (dto.email !== undefined)
+            updateData.email = dto.email;
+        if (dto.debtAmount !== undefined)
+            updateData.debtAmount = dto.debtAmount;
+        if (dto.currency)
+            updateData.currency = dto.currency;
+        if (dto.contractNumber)
+            updateData.contractNumber = dto.contractNumber;
+        if (dto.productService)
+            updateData.productService = dto.productService;
+        if (dto.debtReason !== undefined)
+            updateData.debtReason = dto.debtReason;
+        if (dto.status)
+            updateData.status = dto.status;
+        if (dto.dueDate) {
+            const dueDate = new Date(dto.dueDate);
+            const today = new Date();
+            const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)));
+            updateData.dueDate = dueDate;
+            updateData.daysOverdue = daysOverdue;
+        }
+        try {
+            return await this.prisma.debtor.update({
+                where: { id },
+                data: updateData,
+            });
+        }
+        catch (error) {
+            if (error.code === 'P2002') {
+                throw new BadRequestException('Shartnoma raqami yoki telefon raqami allaqachon mavjud');
+            }
+            throw error;
+        }
+    }
+    async remove(id, organizationId) {
+        const debtor = await this.findOne(id, organizationId);
+        return this.prisma.debtor.delete({
+            where: { id },
+        });
+    }
+    async bulkImport(organizationId, file) {
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(file.buffer);
+        const worksheet = workbook.worksheets[0];
+        if (!worksheet) {
+            throw new BadRequestException('Excel fayl bo\'sh');
+        }
+        const debtors = [];
+        const errors = [];
+        worksheet.eachRow((row, rowNumber) => {
+            if (rowNumber === 1)
+                return;
+            try {
+                const debtor = {
+                    firstName: row.getCell(1).value?.toString() || '',
+                    lastName: row.getCell(2).value?.toString() || '',
+                    phone: row.getCell(3).value?.toString() || '',
+                    alternatePhone: row.getCell(4).value?.toString(),
+                    email: row.getCell(5).value?.toString(),
+                    debtAmount: parseFloat(row.getCell(6).value?.toString() || '0'),
+                    currency: row.getCell(7).value?.toString() || 'UZS',
+                    contractNumber: row.getCell(8).value?.toString() || '',
+                    dueDate: this.parseExcelDate(row.getCell(9).value),
+                    productService: row.getCell(10).value?.toString() || '',
+                    debtReason: row.getCell(11).value?.toString(),
+                };
+                if (!debtor.firstName || !debtor.lastName || !debtor.phone || !debtor.contractNumber) {
+                    errors.push(`Qator ${rowNumber}: Ma'lumotlar to'liq emas`);
+                    return;
+                }
+                debtors.push(debtor);
+            }
+            catch (error) {
+                errors.push(`Qator ${rowNumber}: ${error.message}`);
+            }
+        });
+        const created = [];
+        const failed = [];
+        for (const debtor of debtors) {
+            try {
+                const result = await this.create(organizationId, debtor);
+                created.push(result);
+            }
+            catch (error) {
+                failed.push({
+                    debtor,
+                    error: error.message,
+                });
+            }
+        }
+        return {
+            success: created.length,
+            failed: failed.length,
+            errors: [...errors, ...failed.map(f => f.error)],
+            created,
+        };
+    }
+    parseExcelDate(value) {
+        if (!value) {
+            throw new Error('Muddat ko\'rsatilmagan');
+        }
+        if (value instanceof Date) {
+            return value.toISOString().split('T')[0];
+        }
+        if (typeof value === 'string') {
+            return value;
+        }
+        if (typeof value === 'number') {
+            const date = new Date((value - 25569) * 86400 * 1000);
+            return date.toISOString().split('T')[0];
+        }
+        throw new Error('Noto\'g\'ri sana formati');
+    }
+    async updateCallAttempts(id, outcome) {
+        return this.prisma.debtor.update({
+            where: { id },
+            data: {
+                callAttempts: { increment: 1 },
+                lastContactDate: new Date(),
+                lastContactOutcome: outcome,
+            },
+        });
+    }
+};
+DebtorService = __decorate([
+    Injectable(),
+    __metadata("design:paramtypes", [PrismaService])
+], DebtorService);
+export { DebtorService };
+//# sourceMappingURL=debtor.service.js.map

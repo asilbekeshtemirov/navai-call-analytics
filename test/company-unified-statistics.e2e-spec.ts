@@ -52,9 +52,9 @@ describe('Company Unified Statistics', () => {
 
       jest.spyOn(service, 'getUnifiedStatistics').mockResolvedValue(mockResult);
 
-      const result = await service.getUnifiedStatistics(filters);
+      const result = await service.getUnifiedStatistics(1, filters);
       expect(result).toEqual(mockResult);
-      expect(service.getUnifiedStatistics).toHaveBeenCalledWith(filters);
+      expect(service.getUnifiedStatistics).toHaveBeenCalledWith(1, filters);
     });
 
     it('should handle overview only type', async () => {
@@ -69,7 +69,7 @@ describe('Company Unified Statistics', () => {
 
       jest.spyOn(service, 'getUnifiedStatistics').mockResolvedValue(mockResult);
 
-      const result = await service.getUnifiedStatistics(filters);
+      const result = await service.getUnifiedStatistics(1, filters);
       expect(result).toEqual(mockResult);
     });
 
@@ -91,7 +91,7 @@ describe('Company Unified Statistics', () => {
 
       jest.spyOn(service, 'getUnifiedStatistics').mockResolvedValue(mockResult);
 
-      const result = await service.getUnifiedStatistics(filters);
+      const result = await service.getUnifiedStatistics(1, filters);
       expect(result.filters.extCode).toBe('1001');
     });
   });

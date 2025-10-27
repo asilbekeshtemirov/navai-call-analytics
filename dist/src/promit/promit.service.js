@@ -19,7 +19,7 @@ let PromitService = class PromitService {
             data: {
                 ...createPromitDto,
                 isActive: false,
-            }, 2: 
+            },
         });
         return {
             message: 'Prompt muvaffaqiyatli yaratildi',
@@ -42,6 +42,15 @@ let PromitService = class PromitService {
             throw new NotFoundException(`Prompt (ID: ${id}) topilmadi`);
         }
         return prompt;
+    }
+    async findActive() {
+        const activePrompt = await this.prisma.systemPrompt.findFirst({
+            where: { isActive: true },
+        });
+        if (!activePrompt) {
+            throw new NotFoundException('Faol prompt topilmadi');
+        }
+        return activePrompt;
     }
     async update(id, updatePromitDto) {
         const prompt = await this.prisma.systemPrompt.findUnique({

@@ -8,34 +8,41 @@ export declare class PromitController {
         message: string;
         data: {
             id: string;
-            content: string;
-            isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
+            isActive: boolean;
+            content: string;
         };
     }>;
     findAll(): Promise<{
         id: string;
-        content: string;
-        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
+        isActive: boolean;
+        content: string;
     }[]>;
+    findActive(): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        isActive: boolean;
+        content: string;
+    }>;
     findOne(id: string): Promise<{
         id: string;
-        content: string;
-        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
+        isActive: boolean;
+        content: string;
     }>;
     update(id: string, updatePromitDto: UpdatePromitDto): Promise<{
         message: string;
         data: {
             id: string;
-            content: string;
-            isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
+            isActive: boolean;
+            content: string;
         };
     }>;
     remove(id: string): Promise<{

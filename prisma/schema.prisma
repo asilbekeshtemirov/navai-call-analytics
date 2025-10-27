@@ -25,6 +25,8 @@ model Organization {
   monthlyStats      MonthlyStats[]
   autoCallContacts  AutoCallContact[]
   autoCallCampaigns AutoCallCampaign[]
+  debtors           Debtor[]
+  debtCampaigns     DebtCampaign[]
 
   @@map("organizations")
 }
@@ -467,4 +469,164 @@ enum CampaignCallStatus {
   PROMISE_TO_PAY
   REFUSED
   CALLBACK_REQUESTED
+}
+
+// ============================================
+// DEBT COLLECTION MODULE (Minimal Version)
+// ============================================
+
+model Debtor {
+  id                    String                @id @default(uuid())
+  organizationId        Int
+  organization          Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Identity
+  firstName             String                @db.VarChar(120)
+  lastName              String                @db.VarChar(120)
+  phone                 String                @db.VarChar(32)
+  alternatePhone        String?               @db.VarChar(32)
+  email                 String?               @db.VarChar(255)
+
+  // Debt Information
+  debtAmount            Float
+  currency              String                @default("UZS") @db.VarChar(10)
+  contractNumber        String                @db.VarChar(100)
+  dueDate               DateTime
+  daysOverdue           Int                   @default(0)
+  productService        String                @db.VarChar(255)
+  debtReason            String?
+
+  // Status Tracking
+  status                DebtorStatus          @default(ACTIVE)
+  callAttempts          Int                   @default(0)
+  maxCallAttempts       Int                   @default(5)
+  lastContactDate       DateTime?
+  lastContactOutcome    String?               @db.VarChar(50)
+
+  // Collections
+  campaignAssignments   DebtCampaignDebtor[]
+
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@unique([organizationId, contractNumber])
+  @@index([organizationId, status])
+  @@index([phone])
+  @@map("debtors")
+}
+
+model DebtCampaign {
+  id                    String                @id @default(uuid())
+  organizationId        Int
+  organization          Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Campaign Details
+  name                  String                @db.VarChar(255)
+  description           String?
+
+  // Scheduling
+  dailyCallStartHour    Int                   @default(9)
+  dailyCallEndHour      Int                   @default(18)
+  maxCallsPerDay        Int                   @default(100)
+
+  // Status
+  status                DebtCampaignStatus    @default(DRAFT)
+
+  // Progress Tracking
+  totalDebtors          Int                   @default(0)
+  calledDebtors         Int                   @default(0)
+  successfulCalls       Int                   @default(0)
+  failedCalls           Int                   @default(0)
+  promisesReceived      Int                   @default(0)
+  disputesReceived      Int                   @default(0)
+
+  // Collections
+  debtors               DebtCampaignDebtor[]
+
+  createdBy             String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  startedAt             DateTime?
+  completedAt           DateTime?
+
+  @@index([organizationId, status])
+  @@map("debt_campaigns")
+}
+
+model DebtCampaignDebtor {
+  id                    String                @id @default(uuid())
+
+  campaignId            String
+  campaign              DebtCampaign          @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  debtorId              String
+  debtor                Debtor                @relation(fields: [debtorId], references: [id], onDelete: Cascade)
+
+  // Assignment Details
+  priority              Int                   @default(0)
+  assignedAt            DateTime              @default(now())
+
+  // Call Tracking
+  callStatus            DebtCallStatus        @default(PENDING)
+  callAttempts          Int                   @default(0)
+  lastCallAt            DateTime?
+  nextCallAt            DateTime?
+
+  // Call Details
+  liveKitRoomName       String?               @unique
+  pbxCallId             String?
+  callDurationSeconds   Int?
+
+  // Context for agent (JSON with all debtor info)
+  callContext           Json?
+
+  // Outcome
+  outcome               DebtCallOutcome?
+  promisedAmount        Float?
+  promisedDate          DateTime?
+  notes                 String?               @db.Text
+
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@unique([campaignId, debtorId])
+  @@index([campaignId, callStatus])
+  @@index([nextCallAt])
+  @@index([liveKitRoomName])
+  @@map("debt_campaign_debtors")
+}
+
+enum DebtorStatus {
+  ACTIVE
+  PAID
+  DISPUTED
+  DO_NOT_CALL
+  LEGAL_ACTION
+}
+
+enum DebtCampaignStatus {
+  DRAFT
+  RUNNING
+  PAUSED
+  COMPLETED
+  STOPPED
+}
+
+enum DebtCallStatus {
+  PENDING
+  CALLING
+  SUCCESS
+  FAILED
+  NO_ANSWER
+  BUSY
+}
+
+enum DebtCallOutcome {
+  PROMISE
+  DISPUTED
+  REFUSED
+  NO_ANSWER
+  WRONG_NUMBER
+  CALLBACK_REQUESTED
+  PAID
 }

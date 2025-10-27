@@ -6,7 +6,10 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from './public.decorator.js';
-import { Observable } from 'rxjs';
+
+// Type declaration for Observable to avoid module resolution issues
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type Observable<T> = any;
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {

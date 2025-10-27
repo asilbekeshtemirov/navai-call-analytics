@@ -30,6 +30,9 @@ let PromitController = class PromitController {
     findAll() {
         return this.promitService.findAll();
     }
+    findActive() {
+        return this.promitService.findActive();
+    }
     findOne(id) {
         return this.promitService.findOne(id);
     }
@@ -55,6 +58,13 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], PromitController.prototype, "findAll", null);
+__decorate([
+    Get('active/current'),
+    ApiOperation({ summary: 'Faol promptni olish (faqat SuperAdmin)' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], PromitController.prototype, "findActive", null);
 __decorate([
     Get(':id'),
     ApiOperation({ summary: 'Bitta promptni olish (faqat SuperAdmin)' }),

@@ -25,6 +25,7 @@ import { SettingsModule } from './settings/settings.module.js';
 import { OrganizationModule } from './organization/organization.module.js';
 import { AutoCallingModule } from './auto-calling/auto-calling.module.js';
 import { PromitModule } from './promit/promit.module.js';
+import { DebtCollectionModule } from './debt-collection/debt-collection.module.js';
 let AppModule = class AppModule {
 };
 AppModule = __decorate([
@@ -48,6 +49,7 @@ AppModule = __decorate([
             OrganizationModule,
             AutoCallingModule,
             PromitModule,
+            DebtCollectionModule,
         ],
         controllers: [AppController],
         providers: [AppService],
