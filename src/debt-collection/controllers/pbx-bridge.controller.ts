@@ -16,8 +16,21 @@ export class PBXBridgeController {
    * This endpoint helps Asterisk find which LiveKit room to route to
    */
   @Post('lookup-room')
-  async lookupRoomByUser(@Body() data: { user: string }) {
-    this.logger.log(`🔍 Room lookup request for user: ${data.user}`);
+  async lookupRoomByUser(@Body() data: { user?: string }) {
+    // Log the raw request for debugging
+    this.logger.log(`🔍 Room lookup request received`);
+    this.logger.log(`📦 Request body: ${JSON.stringify(data)}`);
+
+    if (!data || !data.user) {
+      this.logger.error(`❌ Invalid request: missing user parameter`);
+      return {
+        success: false,
+        error: 'INVALID_REQUEST',
+        message: 'Missing user parameter in request body'
+      };
+    }
+
+    this.logger.log(`🔍 Looking up room for user: ${data.user}`);
 
     try {
       // Find the most recent CALLING assignment

@@ -20,7 +20,17 @@ let PBXBridgeController = PBXBridgeController_1 = class PBXBridgeController {
         this.prisma = prisma;
     }
     async lookupRoomByUser(data) {
-        this.logger.log(`🔍 Room lookup request for user: ${data.user}`);
+        this.logger.log(`🔍 Room lookup request received`);
+        this.logger.log(`📦 Request body: ${JSON.stringify(data)}`);
+        if (!data || !data.user) {
+            this.logger.error(`❌ Invalid request: missing user parameter`);
+            return {
+                success: false,
+                error: 'INVALID_REQUEST',
+                message: 'Missing user parameter in request body'
+            };
+        }
+        this.logger.log(`🔍 Looking up room for user: ${data.user}`);
         try {
             const assignment = await this.prisma.debtCampaignDebtor.findFirst({
                 where: {

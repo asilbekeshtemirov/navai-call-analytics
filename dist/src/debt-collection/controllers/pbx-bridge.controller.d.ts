@@ -4,7 +4,7 @@ export declare class PBXBridgeController {
     private readonly logger;
     constructor(prisma: PrismaService);
     lookupRoomByUser(data: {
-        user: string;
+        user?: string;
     }): Promise<{
         success: boolean;
         roomName: string | null;
