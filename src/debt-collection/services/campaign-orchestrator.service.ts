@@ -193,8 +193,10 @@ export class CampaignOrchestratorService {
         },
       });
 
-      // Generate unique room name
-      const roomName = `debt-call-${assignment.id}-${Date.now()}`;
+      // Generate room name based on phone number (for PBX routing)
+      // Strip all non-digits from phone number
+      const phoneDigits = debtor.phone.replace(/\D/g, '');
+      const roomName = `debt-call-${phoneDigits}`;
 
       // Build context
       const context = await this.contextBuilder.buildContext(
@@ -209,7 +211,44 @@ export class CampaignOrchestratorService {
 
       const roomUrl = this.livekitService.getRoomUrl(roomName);
 
-      // Initiate PBX call
+      // Wait a moment for the agent to connect to the room
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Send phone number as data message to the room with retries
+      const maxRetries = 3;
+      let attempt = 0;
+      let success = false;
+      
+      while (attempt < maxRetries && !success) {
+        try {
+          attempt++;
+          const phoneData = {
+            type: 'phone-number',
+            phone: debtor.phone,
+            timestamp: new Date().toISOString(),
+            attempt: `${attempt}/${maxRetries}`
+          };
+          
+          this.logger.log(`[Attempt ${attempt}/${maxRetries}] Sending phone number data to room ${roomName}:`, JSON.stringify(phoneData, null, 2));
+          
+          await this.livekitService.sendDataToRoom(roomName, phoneData);
+          this.logger.log(`✅ Successfully sent phone number ${debtor.phone} to room ${roomName}`);
+          success = true;
+          
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          this.logger.error(`❌ [Attempt ${attempt}/${maxRetries}] Failed to send phone number to room: ${errorMessage}`);
+          
+          if (attempt < maxRetries) {
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          } else {
+            this.logger.error(`❌ All ${maxRetries} attempts to send phone number failed`);
+          }
+        }
+      }
+
+      // Initiate PBX call - PBX should bridge to LiveKit SIP endpoint
       const callResult = await this.pbxService.initiateCall(debtor.phone, {
         livekit_room: roomUrl,
         room_name: roomName,

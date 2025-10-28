@@ -10,6 +10,8 @@ import { PrismaModule } from '../prisma/prisma.module.js';
 import { DebtorsController } from './controllers/debtors.controller.js';
 import { CampaignsController } from './controllers/campaigns.controller.js';
 import { AgentApiController } from './controllers/agent-api.controller.js';
+import { InboundWebhookController } from './controllers/inbound-webhook.controller.js';
+import { PBXBridgeController } from './controllers/pbx-bridge.controller.js';
 import { DebtorService } from './services/debtor.service.js';
 import { CampaignService } from './services/campaign.service.js';
 import { ContextBuilderService } from './services/context-builder.service.js';
@@ -29,6 +31,8 @@ DebtCollectionModule = __decorate([
             DebtorsController,
             CampaignsController,
             AgentApiController,
+            InboundWebhookController,
+            PBXBridgeController,
         ],
         providers: [
             DebtorService,

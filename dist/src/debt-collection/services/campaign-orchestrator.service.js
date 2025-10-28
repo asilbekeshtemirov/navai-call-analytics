@@ -157,10 +157,40 @@ let CampaignOrchestratorService = CampaignOrchestratorService_1 = class Campaign
                     lastCallAt: new Date(),
                 },
             });
-            const roomName = `debt-call-${assignment.id}-${Date.now()}`;
+            const phoneDigits = debtor.phone.replace(/\D/g, '');
+            const roomName = `debt-call-${phoneDigits}`;
             const context = await this.contextBuilder.buildContext(debtor.id, campaignId, roomName, assignment.id);
             await this.livekitService.createRoom(roomName, context);
             const roomUrl = this.livekitService.getRoomUrl(roomName);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            const maxRetries = 3;
+            let attempt = 0;
+            let success = false;
+            while (attempt < maxRetries && !success) {
+                try {
+                    attempt++;
+                    const phoneData = {
+                        type: 'phone-number',
+                        phone: debtor.phone,
+                        timestamp: new Date().toISOString(),
+                        attempt: `${attempt}/${maxRetries}`
+                    };
+                    this.logger.log(`[Attempt ${attempt}/${maxRetries}] Sending phone number data to room ${roomName}:`, JSON.stringify(phoneData, null, 2));
+                    await this.livekitService.sendDataToRoom(roomName, phoneData);
+                    this.logger.log(`✅ Successfully sent phone number ${debtor.phone} to room ${roomName}`);
+                    success = true;
+                }
+                catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    this.logger.error(`❌ [Attempt ${attempt}/${maxRetries}] Failed to send phone number to room: ${errorMessage}`);
+                    if (attempt < maxRetries) {
+                        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                    }
+                    else {
+                        this.logger.error(`❌ All ${maxRetries} attempts to send phone number failed`);
+                    }
+                }
+            }
             const callResult = await this.pbxService.initiateCall(debtor.phone, {
                 livekit_room: roomUrl,
                 room_name: roomName,
