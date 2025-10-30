@@ -13,6 +13,7 @@ export declare class LiveKitIntegrationService {
     deleteRoom(roomName: string): Promise<void>;
     sendDataToRoom(roomName: string, data: any, participantSid?: string): Promise<void>;
     generateRoomToken(roomName: string, participantName: string): Promise<string>;
+    generateSipParticipantToken(roomName: string, participantIdentity: string, phoneNumber: string): Promise<string>;
     getRoomUrl(roomName: string): string;
     listParticipants(roomName: string): Promise<any[]>;
     removeParticipant(roomName: string, participantIdentity: string): Promise<void>;

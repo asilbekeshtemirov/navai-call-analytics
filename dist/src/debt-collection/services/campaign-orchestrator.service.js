@@ -191,10 +191,15 @@ let CampaignOrchestratorService = CampaignOrchestratorService_1 = class Campaign
                     }
                 }
             }
+            const participantIdentity = `debtor-${phoneDigits}`;
+            this.logger.log(`Generating SIP token for ${participantIdentity} in room ${roomName}`);
+            const sipToken = await this.livekitService.generateSipParticipantToken(roomName, participantIdentity, debtor.phone);
+            this.logger.log(`SIP token generated, length: ${sipToken.length}`);
             const callResult = await this.pbxService.initiateCall(debtor.phone, {
                 livekit_room: roomUrl,
                 room_name: roomName,
                 debtor_id: debtor.id,
+                sip_token: sipToken,
             });
             await this.prisma.debtCampaignDebtor.update({
                 where: { id: assignment.id },

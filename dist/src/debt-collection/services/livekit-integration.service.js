@@ -158,6 +158,31 @@ let LiveKitIntegrationService = LiveKitIntegrationService_1 = class LiveKitInteg
         });
         return await token.toJwt();
     }
+    async generateSipParticipantToken(roomName, participantIdentity, phoneNumber) {
+        try {
+            this.logger.log(`Generating SIP participant token for ${phoneNumber} in room ${roomName}`);
+            if (!this.livekitApiKey || !this.livekitApiSecret) {
+                throw new Error('LiveKit API credentials not configured');
+            }
+            const token = new AccessToken(this.livekitApiKey, this.livekitApiSecret, {
+                identity: participantIdentity,
+                name: `Debtor ${phoneNumber}`,
+            });
+            token.addGrant({
+                roomJoin: true,
+                room: roomName,
+                canPublish: true,
+                canSubscribe: true,
+            });
+            const jwt = await token.toJwt();
+            this.logger.log(`SIP token generated successfully for ${participantIdentity}`);
+            return jwt;
+        }
+        catch (error) {
+            this.logger.error(`Failed to generate SIP token: ${error.message}`);
+            throw error;
+        }
+    }
     getRoomUrl(roomName) {
         return `${this.livekitUrl}/${roomName}`;
     }

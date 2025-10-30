@@ -13,11 +13,14 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 var PBXBridgeController_1;
 import { Controller, Post, Body, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { LiveKitIntegrationService } from '../services/livekit-integration.service.js';
 let PBXBridgeController = PBXBridgeController_1 = class PBXBridgeController {
     prisma;
+    livekitService;
     logger = new Logger(PBXBridgeController_1.name);
-    constructor(prisma) {
+    constructor(prisma, livekitService) {
         this.prisma = prisma;
+        this.livekitService = livekitService;
     }
     async lookupRoomByUser(data) {
         this.logger.log(`🔍 Room lookup request received`);
@@ -51,9 +54,23 @@ let PBXBridgeController = PBXBridgeController_1 = class PBXBridgeController {
                 };
             }
             this.logger.log(`✅ Found room: ${assignment.liveKitRoomName} for debtor: ${assignment.debtor.firstName} ${assignment.debtor.lastName} (${assignment.debtor.phone})`);
+            if (!assignment.liveKitRoomName) {
+                this.logger.error(`❌ No LiveKit room name found for assignment ${assignment.id}`);
+                return {
+                    success: false,
+                    error: 'NO_ROOM_NAME',
+                    message: 'Assignment has no LiveKit room name',
+                };
+            }
+            const phoneDigits = assignment.debtor.phone.replace(/\D/g, '');
+            const participantIdentity = `debtor-${phoneDigits}`;
+            this.logger.log(`🔑 Generating SIP token for ${participantIdentity}`);
+            const sipToken = await this.livekitService.generateSipParticipantToken(assignment.liveKitRoomName, participantIdentity, assignment.debtor.phone);
+            this.logger.log(`✅ SIP token generated, length: ${sipToken.length}`);
             return {
                 success: true,
                 roomName: assignment.liveKitRoomName,
+                sipToken: sipToken,
                 debtorPhone: assignment.debtor.phone,
                 debtorId: assignment.debtorId,
                 debtorName: `${assignment.debtor.firstName} ${assignment.debtor.lastName}`,
@@ -80,7 +97,8 @@ __decorate([
 ], PBXBridgeController.prototype, "lookupRoomByUser", null);
 PBXBridgeController = PBXBridgeController_1 = __decorate([
     Controller('pbx-bridge'),
-    __metadata("design:paramtypes", [PrismaService])
+    __metadata("design:paramtypes", [PrismaService,
+        LiveKitIntegrationService])
 ], PBXBridgeController);
 export { PBXBridgeController };
 //# sourceMappingURL=pbx-bridge.controller.js.map

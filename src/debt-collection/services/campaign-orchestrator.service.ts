@@ -248,11 +248,23 @@ export class CampaignOrchestratorService {
         }
       }
 
-      // Initiate PBX call - PBX should bridge to LiveKit SIP endpoint
+      // Generate SIP participant token for debtor
+      const participantIdentity = `debtor-${phoneDigits}`;
+
+      this.logger.log(`Generating SIP token for ${participantIdentity} in room ${roomName}`);
+      const sipToken = await this.livekitService.generateSipParticipantToken(
+        roomName,
+        participantIdentity,
+        debtor.phone,
+      );
+      this.logger.log(`SIP token generated, length: ${sipToken.length}`);
+
+      // Initiate PBX call with SIP token for direct room join
       const callResult = await this.pbxService.initiateCall(debtor.phone, {
         livekit_room: roomUrl,
         room_name: roomName,
         debtor_id: debtor.id,
+        sip_token: sipToken,  // NEW: Token for LiveKit authentication
       });
 
       // Update assignment with room and call details

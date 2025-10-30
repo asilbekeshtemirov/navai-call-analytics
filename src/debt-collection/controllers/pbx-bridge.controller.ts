@@ -1,11 +1,15 @@
 import { Controller, Post, Body, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { LiveKitIntegrationService } from '../services/livekit-integration.service.js';
 
 @Controller('pbx-bridge')
 export class PBXBridgeController {
   private readonly logger = new Logger(PBXBridgeController.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly livekitService: LiveKitIntegrationService,
+  ) {}
 
   /**
    * Endpoint for Asterisk to lookup room name by PBX user
@@ -59,9 +63,31 @@ export class PBXBridgeController {
         `✅ Found room: ${assignment.liveKitRoomName} for debtor: ${assignment.debtor.firstName} ${assignment.debtor.lastName} (${assignment.debtor.phone})`
       );
 
+      // Generate fresh SIP token for this call
+      if (!assignment.liveKitRoomName) {
+        this.logger.error(`❌ No LiveKit room name found for assignment ${assignment.id}`);
+        return {
+          success: false,
+          error: 'NO_ROOM_NAME',
+          message: 'Assignment has no LiveKit room name',
+        };
+      }
+
+      const phoneDigits = assignment.debtor.phone.replace(/\D/g, '');
+      const participantIdentity = `debtor-${phoneDigits}`;
+
+      this.logger.log(`🔑 Generating SIP token for ${participantIdentity}`);
+      const sipToken = await this.livekitService.generateSipParticipantToken(
+        assignment.liveKitRoomName,
+        participantIdentity,
+        assignment.debtor.phone,
+      );
+      this.logger.log(`✅ SIP token generated, length: ${sipToken.length}`);
+
       return {
         success: true,
         roomName: assignment.liveKitRoomName,
+        sipToken: sipToken,  // NEW: Return token to Asterisk for authentication
         debtorPhone: assignment.debtor.phone,
         debtorId: assignment.debtorId,
         debtorName: `${assignment.debtor.firstName} ${assignment.debtor.lastName}`,
